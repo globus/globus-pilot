@@ -9,7 +9,7 @@ A Command Line tool for managing data in Globus Search as well as transferring c
 Installation
 ------------
 
-Pilot1 tools supports Python 3.5 and higher
+Pilot1 tools supported on Python 3.5 and higher
 
 Install with pip:
 
