@@ -1,0 +1,76 @@
+{
+    "ingest_type" : "GMetaEntry",
+    "ingest_data": {
+        "subject": "UPDATE",
+        "visible_to": ["urn:globus:groups:id:d99b3400-33e7-11e9-8857-0af4690c7c7e"],
+        "content": {
+            "dc": {
+                "titles": [{
+                    "title": "UPDATE"
+                }],
+                "creators": [
+                    {
+                        "affiliations": ["Argonne National Laboratory"],
+                        "creatorName": "Shukla, Maulik",
+                        "familyName": "Shukla",
+                        "givenName": "Maulik"
+                    },
+                    {
+                        "affiliations": ["Argonne National Laboratory"],
+                        "creatorName": "Brettin, Thomas",
+                        "familyName": "Brettin",
+                        "givenName": "Thomas"
+                    },
+                    {
+                        "affiliations": ["Argonne National Laboratory"],
+                        "creatorName": "Yoo, Hyunseung",
+                        "familyName": "Yoo",
+                        "givenName": "Hyunseung"
+                    }
+                ],
+                "descriptions": [
+                    {
+                        "description": "UPDATE",
+                        "descriptionType": "Other"
+                    }
+                ],
+                "publicationYear": "2019",
+                "publisher": "Argonne National Laboratory",
+                "resourceType": {
+                    "resourceType": "Dataset",
+                    "resourceTypeGeneral": "Dataset"
+                },
+                "dates" : [
+                    {
+                        "date": "2019-03-05T17:04:10.315060Z",
+                        "dateType" : "Created"
+
+                    },
+                    {
+                        "date": "2019-03-05T17:04:10.315060Z",
+                        "dateType" : "Updated"
+
+                    }
+                ],
+                "version" : "1",
+                "subjects": [
+                    {
+                        "subject": "machine learning"
+                    },
+                    {
+                        "subject": "genomics"
+                    }
+                ],
+                "formats": [ "text/tab-separated-values" ]
+            },
+            "remote_file_manifest": {
+                "sha256": "UPDATE",
+                "filename": "UPDATE",
+                "url": "UPDATE",
+                "md5": "UPDATE",
+                "length": 0,
+                "mimetype": "text/tab-separated-values" 
+            }
+        }
+    }
+}

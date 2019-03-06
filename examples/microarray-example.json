@@ -1,0 +1,93 @@
+{
+    "ingest_type" : "GMetaEntry",
+    "ingest_data": {
+        "subject": "globus://ebf55996-33bf-11e9-9fa4-0a06afd4a22e:/restricted/dataframes/microarray/combined_marray_data.txt",
+        "visible_to": ["urn:globus:groups:id:d99b3400-33e7-11e9-8857-0af4690c7c7e"],
+        "content": {
+            "dc": {
+                "titles": [{
+                    "title": "Combined Microarray Data"
+                }],
+                "creators": [
+                    {
+                        "affiliations": ["Argonne National Laboratory"],
+                        "creatorName": "Shukla, Maulik",
+                        "familyName": "Shukla",
+                        "givenName": "Maulik"
+                    },
+                    {
+                        "affiliations": ["Argonne National Laboratory"],
+                        "creatorName": "Brettin, Thomas",
+                        "familyName": "Brettin",
+                        "givenName": "Thomas"
+                    },
+                    {
+                        "affiliations": ["Argonne National Laboratory"],
+                        "creatorName": "Yoo, Hyunseung",
+                        "familyName": "Yoo",
+                        "givenName": "Hyunseung"
+                    }
+                ],
+                "descriptions": [
+                    {
+                        "description": "Combined microarray data frame, which combines microarray gene expression data from multiple sources, such as NCI-60,  SCL, SCLC, CCLE, GDSC, and CLDX.",
+                        "descriptionType": "Other"
+                    }
+                ],
+                "publicationYear": "2019",
+                "publisher": "Argonne National Laboratory",
+                "resourceType": {
+                    "resourceType": "Dataset",
+                    "resourceTypeGeneral": "Dataset"
+                },
+                "dates" : [
+                    {
+                        "date": "2019-03-05T17:04:10.315060Z",
+                        "dateType" : "Created"
+
+                    },
+                    {
+                        "date": "2019-03-05T17:04:10.315060Z",
+                        "dateType" : "Updated"
+
+                    }
+                ],
+                "version" : "1",
+                "subjects": [
+                    {
+                        "subject": "machine learning"
+                    },
+                    {
+                        "subject": "genomics"
+                    },
+                    {
+                        "subject": "microarrays"
+                    }
+                ],
+                "formats": [ "text/tab-separated-values" ]
+            },
+            "ncipilot": {
+                "numrows": 2401,
+                "numcols": 14017,
+                "data_type": "Microarray",
+                "dataframe_type": "Matrix",
+                "source": [
+                    "NCI-60",
+                    "SCL",
+                    "SCLC",
+                    "CCLE",
+                    "GDSC",
+                    "CLDX"
+                ]
+            },
+            "remote_file_manifest": {
+                "sha256": "4faa74b57f0adaa6f257421eb0c2287a17101aa9e68d01dc6b45b5fb4ad56811",
+                "filename": "combined_marray_data.txt",
+                "url": "globus://ebf55996-33bf-11e9-9fa4-0a06afd4a22e:/restricted/dataframes/microarray/combined_marray_data.txt",
+                "md5": "937d7173bae07c0214ba8d10617e823a",
+                "length": 568521681,
+                "mimetype": "text/tab-separated-values" 
+            }
+        }
+    }
+}
