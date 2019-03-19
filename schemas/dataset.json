@@ -1,0 +1,23 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Dataset",
+    "description": "Schema for a dataset.",
+    "type": "object",
+    "properties": {
+        "dc": {
+            "$ref": "dc.json#/properties/dc"
+        },
+        "ncipilot": {
+            "$ref": "ncipilot.json#/properties/ncipilot"
+        },
+        "files": {
+            "$ref": "files.json#/properties/files"
+        }
+    },
+    "additionalProperties": false,
+    "required": [
+        "dc",
+        "ncipilot",
+        "files"
+    ]
+}

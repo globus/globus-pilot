@@ -1,0 +1,42 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "NCI Pilot Block Schema",
+    "type": "object",
+    "description": "Administrative metadata.",
+    "properties": {
+        "ncipilot": {
+            "type": "object",
+            "description": "Dataframe details.",
+            "properties": {
+                "numrows": {
+                    "type": "integer",
+                    "description": "Number of data (non-header) rows."
+                },
+                "numcols": {
+                    "type": "integer",
+                    "description": "Number of columns."
+                },
+                "data_type": {
+                    "type": { "enum": ["Drug Descriptor", "Drug Response", "Microarray", "RNA-seq"] },
+                    "description" : 'Data category, may be: "Drug Descriptor", "Drug Response", "Microarray", "RNA-seq"'
+                                },
+                "dataframe_type": {
+                    "type": { "enum": ["List", "Matrix"] },
+                    "description" : 'Dataframe structure, matrix or list'
+                },
+                "units": {
+                    "type": "integer",
+                    "description": "Units or scale (e.g., log, log10) of the data."
+                },
+                "source": {
+                    "type": "array",
+                    "description": "The source data repositories.",
+                    "items": {
+                        "type": "string",
+                        "description": "One repository."
+                    }
+                }
+            }
+        }
+    }
+}

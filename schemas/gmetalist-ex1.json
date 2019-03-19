@@ -1,0 +1,118 @@
+  1 {
+  2   "definitions": {},
+  3   "$schema": "http://json-schema.org/draft-07/schema#",
+  4   "$id": "http://example.com/root.json",
+  5   "type": "object",
+  6   "title": "The Root Schema",
+  7   "required": [
+  8     "gmeta"
+  9   ],
+ 10   "properties": {
+ 11     "gmeta": {
+ 12       "$id": "#/properties/gmeta",
+ 13       "type": "array",
+ 14       "title": "The Gmeta Schema",
+ 15       "items": {
+ 16         "$id": "#/properties/gmeta/items",
+ 17         "type": "object",
+ 18         "title": "The Items Schema",
+ 19         "required": [
+ 20           "subject",
+ 21           "mimetype",
+ 22           "visible_to",
+ 23           "id",
+ 24           "content"
+ 25         ],
+ 26         "properties": {
+ 27           "subject": {
+ 28             "$id": "#/properties/gmeta/items/properties/subject",
+ 29             "type": "string",
+ 30             "title": "The Subject Schema",
+ 31             "default": "",
+ 32             "examples": [
+ 33               "https://datasearch.demo.globus.org/"
+ 34             ],
+ 35             "pattern": "^(.*)$"
+ 36           },
+ 37           "mimetype": {
+ 38             "$id": "#/properties/gmeta/items/properties/mimetype",
+ 39             "type": "string",
+ 40             "title": "The Mimetype Schema",
+ 41             "default": "",
+ 42             "examples": [
+ 43               "application/json"
+ 44             ],
+ 45             "pattern": "^(.*)$"
+ 46           },
+ 47           "visible_to": {
+ 48             "$id": "#/properties/gmeta/items/properties/visible_to",
+ 49             "type": "array",
+ 50             "title": "The Visible_to Schema",
+ 51             "items": {
+ 52               "$id": "#/properties/gmeta/items/properties/visible_to/items",
+ 53               "type": "string",
+ 54               "title": "The Items Schema",
+ 55               "default": "",
+ 56               "examples": [
+ 57                 "public"
+ 58               ],
+ 59               "pattern": "^(.*)$"
+ 60             }
+ 61           },
+ 62           "id": {
+ 63             "$id": "#/properties/gmeta/items/properties/id",
+ 64             "type": "string",
+ 65             "title": "The Id Schema",
+ 66             "default": "",
+ 67             "examples": [
+ 68               "valid_doc_1"
+ 69             ],
+ 70             "pattern": "^(.*)$"
+ 71           },
+ 72           "content": {
+ 73             "$id": "#/properties/gmeta/items/properties/content",
+ 74             "type": "object",
+ 75             "title": "The Content Schema",
+ 76             "required": [
+ 77               "type",
+ 78               "extension",
+ 79               "name"
+ 80             ],
+ 81             "properties": {
+ 82               "type": {
+ 83                 "$id": "#/properties/gmeta/items/properties/content/properties/type",
+ 84                 "type": "string",
+ 85                 "title": "The Type Schema",
+ 86                 "default": "",
+ 87                 "examples": [
+ 88                   "file"
+ 89                 ],
+ 90                 "pattern": "^(.*)$"
+ 91               },
+ 92               "extension": {
+ 93                 "$id": "#/properties/gmeta/items/properties/content/properties/extension",
+ 94                 "type": "string",
+ 95                 "title": "The Extension Schema",
+ 96                 "default": "",
+ 97                 "examples": [
+ 98                   "txt"
+ 99                 ],
+100                 "pattern": "^(.*)$"
+101               },
+102               "name": {
+103                 "$id": "#/properties/gmeta/items/properties/content/properties/name",
+104                 "type": "string",
+105                 "title": "The Name Schema",
+106                 "default": "",
+107                 "examples": [
+108                   "abc.txt"
+109                 ],
+110                 "pattern": "^(.*)$"
+111               }
+112             }
+113           }
+114         }
+115       }
+116     }
+117   }
+      118 }

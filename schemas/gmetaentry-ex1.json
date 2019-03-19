@@ -1,0 +1,103 @@
+  1 {
+  2   "definitions": {},
+  3   "$schema": "http://json-schema.org/draft-07/schema#",
+  4   "$id": "http://example.com/root.json",
+  5   "type": "object",
+  6   "title": "The Root Schema",
+  7   "required": [
+  8     "subject",
+  9     "mimetype",
+ 10     "visible_to",
+ 11     "id",
+ 12     "content"
+ 13   ],
+ 14   "properties": {
+ 15     "subject": {
+ 16       "$id": "#/properties/subject",
+ 17       "type": "string",
+ 18       "title": "The Subject Schema",
+ 19       "default": "",
+ 20       "examples": [
+ 21         "https://search.api.globus.org/abc.txt"
+ 22       ],
+ 23       "pattern": "^(.*)$"
+ 24     },
+ 25     "mimetype": {
+ 26       "$id": "#/properties/mimetype",
+ 27       "type": "string",
+ 28       "title": "The Mimetype Schema",
+ 29       "default": "",
+ 30       "examples": [
+ 31         "application/json"
+ 32       ],
+ 33       "pattern": "^(.*)$"
+ 34     },
+ 35     "visible_to": {
+ 36       "$id": "#/properties/visible_to",
+ 37       "type": "array",
+ 38       "title": "The Visible_to Schema",
+ 39       "items": {
+ 40         "$id": "#/properties/visible_to/items",
+ 41         "type": "string",
+ 42         "title": "The Items Schema",
+ 43         "default": "",
+ 44         "examples": [
+ 45           "urn:globus:auth:identity:46bd0f56-e24f-11e5-a510-131bef46955c"
+ 46         ],
+ 47         "pattern": "^(.*)$"
+ 48       }
+ 49     },
+ 50     "id": {
+ 51       "$id": "#/properties/id",
+ 52       "type": "string",
+ 53       "title": "The Id Schema",
+ 54       "default": "",
+ 55       "examples": [
+ 56         "visible_to_globus@globus.org"
+ 57       ],
+ 58       "pattern": "^(.*)$"
+ 59     },
+ 60     "content": {
+ 61       "$id": "#/properties/content",
+ 62       "type": "object",
+ 63       "title": "The Content Schema",
+ 64       "required": [
+ 65         "http://transfer.api.globus.org/metadata-schema/file#type",
+ 66         "http://transfer.api.globus.org/metadata-schema/file#extension",
+ 67         "http://transfer.api.globus.org/metadata-schema/file#name"
+ 68       ],
+ 69       "properties": {
+ 70         "http://transfer.api.globus.org/metadata-schema/file#type": {
+ 71           "$id": "#/properties/content/properties/http://transfer.api.globus.org/metadata-schema/file#type",
+ 72           "type": "string",
+ 73           "title": "The Http://transfer.api.globus.org/metadata-schema/file#type Schema",
+ 74           "default": "",
+ 75           "examples": [
+ 76             "file"
+ 77           ],
+ 78           "pattern": "^(.*)$"
+ 79         },
+ 80         "http://transfer.api.globus.org/metadata-schema/file#extension": {
+ 81           "$id": "#/properties/content/properties/http://transfer.api.globus.org/metadata-schema/file#extension",
+ 82           "type": "string",
+ 83           "title": "The Http://transfer.api.globus.org/metadata-schema/file#extension Schema",
+ 84           "default": "",
+ 85           "examples": [
+ 86             "txt"
+ 87           ],
+ 88           "pattern": "^(.*)$"
+ 89         },
+ 90         "http://transfer.api.globus.org/metadata-schema/file#name": {
+ 91           "$id": "#/properties/content/properties/http://transfer.api.globus.org/metadata-schema/file#name",
+ 92           "type": "string",
+ 93           "title": "The Http://transfer.api.globus.org/metadata-schema/file#name Schema",
+ 94           "default": "",
+ 95           "examples": [
+ 96             "abc.txt"
+ 97           ],
+ 98           "pattern": "^(.*)$"
+ 99         }
+100       }
+101     }
+102   }
+103 }

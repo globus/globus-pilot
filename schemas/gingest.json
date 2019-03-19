@@ -1,0 +1,18 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "GIngest",
+    "description": "Schema for Globus Search GIngest documents.",
+    "type": "object",
+
+    "properties": {
+        "ingest_type": {
+            "type": "string",
+            "enum": ["GMetaList", "GMetaEntry"]
+        },
+        "ingest_data": {
+            "type": "object"
+        }
+    },
+    
+    "required": ["ingest_type", "ingest_data"]
+}

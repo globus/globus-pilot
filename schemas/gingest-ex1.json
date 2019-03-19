@@ -1,0 +1,124 @@
+  1 {
+  2   "definitions": {},
+  3   "$schema": "http://json-schema.org/draft-07/schema#",
+  4   "$id": "http://example.com/root.json",
+  5   "type": "object",
+  6   "title": "The Root Schema",
+  7   "required": [
+  8     "ingest_type",
+  9     "ingest_data"
+ 10   ],
+ 11   "properties": {
+ 12     "ingest_type": {
+ 13       "$id": "#/properties/ingest_type",
+ 14       "type": "string",
+ 15       "title": "The Ingest_type Schema",
+ 16       "default": "",
+ 17       "examples": [
+ 18         "GMetaEntry"
+ 19       ],
+ 20       "pattern": "^(.*)$"
+ 21     },
+ 22     "ingest_data": {
+ 23       "$id": "#/properties/ingest_data",
+ 24       "type": "object",
+ 25       "title": "The Ingest_data Schema",
+ 26       "required": [
+ 27         "subject",
+ 28         "mimetype",
+ 29         "visible_to",
+ 30         "id",
+ 31         "content"
+ 32       ],
+ 33       "properties": {
+ 34         "subject": {
+ 35           "$id": "#/properties/ingest_data/properties/subject",
+ 36           "type": "string",
+ 37           "title": "The Subject Schema",
+ 38           "default": "",
+ 39           "examples": [
+ 40             "https://search.api.globus.org/"
+ 41           ],
+ 42           "pattern": "^(.*)$"
+ 43         },
+ 44         "mimetype": {
+ 45           "$id": "#/properties/ingest_data/properties/mimetype",
+ 46           "type": "string",
+ 47           "title": "The Mimetype Schema",
+ 48           "default": "",
+ 49           "examples": [
+ 50             "application/json"
+ 51           ],
+ 52           "pattern": "^(.*)$"
+ 53         },
+ 54         "visible_to": {
+ 55           "$id": "#/properties/ingest_data/properties/visible_to",
+ 56           "type": "array",
+ 57           "title": "The Visible_to Schema",
+ 58           "items": {
+ 59             "$id": "#/properties/ingest_data/properties/visible_to/items",
+ 60             "type": "string",
+ 61             "title": "The Items Schema",
+ 62             "default": "",
+ 63             "examples": [
+ 64               "public"
+ 65             ],
+ 66             "pattern": "^(.*)$"
+ 67           }
+ 68         },
+ 69         "id": {
+ 70           "$id": "#/properties/ingest_data/properties/id",
+ 71           "type": "string",
+ 72           "title": "The Id Schema",
+ 73           "default": "",
+ 74           "examples": [
+ 75             "test_doc_2017_06_14"
+ 76           ],
+ 77           "pattern": "^(.*)$"
+ 78         },
+ 79         "content": {
+ 80           "$id": "#/properties/ingest_data/properties/content",
+ 81           "type": "object",
+ 82           "title": "The Content Schema",
+ 83           "required": [
+ 84             "type",
+ 85             "extension",
+ 86             "name"
+ 87           ],
+ 88           "properties": {
+ 89             "type": {
+ 90               "$id": "#/properties/ingest_data/properties/content/properties/type",
+ 91               "type": "string",
+ 92               "title": "The Type Schema",
+ 93               "default": "",
+ 94               "examples": [
+ 95                 "file"
+ 96               ],
+ 97               "pattern": "^(.*)$"
+ 98             },
+ 99             "extension": {
+100               "$id": "#/properties/ingest_data/properties/content/properties/extension",
+101               "type": "string",
+102               "title": "The Extension Schema",
+103               "default": "",
+104               "examples": [
+105                 "txt"
+106               ],
+107               "pattern": "^(.*)$"
+108             },
+109             "name": {
+110               "$id": "#/properties/ingest_data/properties/content/properties/name",
+111               "type": "string",
+112               "title": "The Name Schema",
+113               "default": "",
+114               "examples": [
+115                 "another_document_without_spaces.txt"
+116               ],
+117               "pattern": "^(.*)$"
+118             }
+119           }
+120         }
+121       }
+122     }
+123   }
+      124 }

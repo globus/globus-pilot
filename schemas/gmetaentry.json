@@ -1,0 +1,25 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "GMetaEntry",
+    "description": "Schema for Globus Search GMetaEntry documents.",
+    "type": "object",
+    
+    "properties": {
+        "subject" : "string",
+        "visible_to": {
+            "type" : "array",
+            "items": {
+                "type": "string"
+                
+            }
+        },
+        
+        "id": "string",
+        "mimetype": "string",
+        "content" : {
+            "@context" : "object"
+        }
+    },
+    
+    "required": ["subject"]
+}
