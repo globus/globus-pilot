@@ -1,0 +1,10 @@
+{
+  "remote_file_manifest":[
+  {
+    "filename": "foo.txt",
+    "url": "http://example.com/foo.txt",
+    "length": 10,
+    "md5": "aoeu"
+  }
+]
+}

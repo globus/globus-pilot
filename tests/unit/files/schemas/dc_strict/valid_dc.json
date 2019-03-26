@@ -1,0 +1,20 @@
+{
+  "identifier": {
+    "identifier": "http://mydoi",
+    "identifierType": "DOI"
+  },
+  "creators": [
+    {
+      "creatorName": "Joss Whedon"
+    }
+  ],
+  "titles": [
+    {"title": "Ballad of Serenity"}
+  ],
+  "publisher": "Dark Horse Comics",
+  "publicationYear": "2019",
+  "resourceType": {
+    "resourceTypeGeneral": "Software",
+    "resourceType": "Software"
+  }
+}

@@ -1,0 +1,24 @@
+
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "title": "dc",
+    "description": "Schema for a dataset. Datasets in the MDF are collections of many data records, which correspond to data from a specific group of files.",
+    "type": "object",
+    "properties": {
+        "dc": {
+            "$ref": "dc.json#/properties/dc"
+        },
+        "ncipilot": {
+            "$ref": "mdf.json#/properties/mdf"
+        },
+        "remote_file_manifest": {
+            "$ref": "mrr.json#/properties/mrr"
+        }
+    },
+    "additionalProperties": false,
+    "required": [
+        "dc",
+        "ncipilot",
+        "remote_file_manifest"
+    ]
+}

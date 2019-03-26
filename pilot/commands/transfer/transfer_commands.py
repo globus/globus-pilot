@@ -1,19 +1,29 @@
+import os
+import json
 import click
+import globus_sdk
+from pilot.client import PilotClient
+from pilot.search import gen_remote_file_manifest, gen_gmeta
 
-@click.command()
-@click.argument('dataframe', type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True))
+@click.command(help='Upload dataframe to location on Globus and categorize it '
+                    'in search. \n\nCommand still in development! Destination '
+                    'upload and search indexing limited to testing locations.')
+@click.argument('dataframe',
+                type=click.Path(exists=True, file_okay=True, dir_okay=False,
+                                readable=True, resolve_path=True),
+                )
 @click.argument('destination', type=click.Path())
-@click.option('-j', '--json', 'string',
+@click.option('-j', '--json', 'metadata', type=click.Path(),
               help='Metadata in JSON format')
-@click.option('-u', '--update', is_flag=True,
+@click.option('-u', '--update/--no-update', default=False,
               help='Overwrite an existing dataframe and increment the version')
-@click.option('--validate-only', is_flag=True,
-              help='Don\'t actually create record and upload file, test only')
-@click.option('--x-labels', type=click.Path(),
-              help='Path to x label file')
-@click.option('--y-labels', type=click.Path(),
-              help='Path to y label file')
-def upload():
+# @click.option('--validate-only', is_flag=True,
+#               help='Don\'t actually create record and upload file, test only')
+# @click.option('--x-labels', type=click.Path(),
+#               help='Path to x label file')
+# @click.option('--y-labels', type=click.Path(),
+#               help='Path to y label file')
+def upload(dataframe, destination, metadata, update):
     # pilot upload -j metadata.json <dataframe> <remote rel path>
     # pilot -j metadata.json drug_response.tsv responses
     # check for remote directory
@@ -42,52 +52,62 @@ def upload():
     # what if upload is interrupted?
     # Remote log?
     
-
-    click.echo('upload command')
     # Check for directory, if so, get list from transfer first
     # Should require login if there are publicly visible records
     pc = PilotClient()
     if not pc.is_logged_in():
         click.echo('You are not logged in.')
         return
+
+    if metadata is not None:
+        with open(metadata) as mf_fh:
+            metadata_content = json.load(mf_fh)
     else:
-        search_authorizer = pc.get_authorizers()['search.api.globus.org']
-        sc = globus_sdk.SearchClient(authorizer=search_authorizer)
-        
-    client = NativeClient(client_id=CLIENT_ID, app_name=APP_NAME)
-    client.login(requested_scopes=SCOPES)
+        metadata_content = None
+    filename = os.path.basename(dataframe)
 
-    tokens = client.load_tokens(requested_scopes=SCOPES)
-    auther = globus_sdk.AccessTokenAuthorizer(
-        tokens['search.api.globus.org']['access_token'])
-    sc = globus_sdk.SearchClient(authorizer=auther)
+    current_record = pc.get_search_entry(filename, destination, testing=True)
 
-    preview = ingest_doc['ingest_data']['subject']
-    print(preview)
-    print('Ingest these to "{}"?'.format(
-        sc.get_index(INDEX).data['display_name']))
-    #user_input = input('Y/N> ')
-    #if user_input in ['yes', 'Y', 'y', 'yarr']:
-    result = sc.ingest(INDEX, ingest_doc)
-    print('Finished')
-    print(result)
+    url = pc.get_dataframe_url(filename, destination, testing=True)
+    rfm = gen_remote_file_manifest(dataframe, url)
+    data = {'testing': {'remote_file_manifest': rfm,
+                        'dc': metadata_content}}
+    subject = pc.get_subject(filename, destination, testing=True)
 
-    # Autoactivate the endpoint
-    resp = requests.post(base_url + '/endpoint/' + endpoint_uuid + '/autoactivate',
-                        headers=headers)
-    print(resp.status_code)
-    print(resp.text)
-    
-    # Create the header
-    headers = {'Authorization':'Bearer '+ tokens['tokens']['petrel_https_server']['access_token']}
+    if current_record:
+        if update:
+            from pprint import pprint
+            pprint(current_record)
+            version = int(current_record['testing']['dc']['version'])
+            if data:
+                current_record.update(data)
+            current_record['testing']['dc']['version'] = version + 1
+            gmeta = gen_gmeta(subject, pc.GROUP, data)
+        else:
+            click.echo('Existing record found for {}, specify -u to update.'
+                       ''.format(filename))
+            return
+    else:
+        gmeta = gen_gmeta(subject, pc.GROUP, data)
 
-    # Pass the file pointer reference to the requests library for the PUT
-    image_data = open('vegas.png', 'rb')
+    #@hack require version
+    try:
+        from pprint import pprint
+        pprint(gmeta)
+        gmeta['ingest_data']['gmeta'][0]['content']['testing']['dc']['version']
+    except:
+        raise ValueError('Metadata json must be supplied with a version: Ex.'
+                         '{"version": 1}')
 
-    # Get the user info as JSON
-    resp = requests.put('https://testbed.petrel.host/test/jhtutorial/users/' + username + '/vegas.png',
-                    headers=headers, data=image_data, allow_redirects=False)
-    print(resp.status_code)
+    click.echo('Ingesting record into search...')
+    pc.ingest_entry(gmeta, testing=True)
+    click.echo('Success!')
+    click.echo('Uploading data...')
+    status_code = pc.upload(dataframe, destination, testing=True)
+    if status_code == 200:
+        click.echo('Upload Successful! URL is now {}'.format(url))
+    else:
+        click.echo('Failed with status code: ' + status_code)
 
 @click.command()
 def download():

@@ -1,0 +1,19 @@
+{
+  "remote_file_manifest": {
+    "type": "array",
+    "items": {
+      "type": "object",
+      "properties": {
+        "filename": {"type": "string"},
+        "url": {"type": "string"},
+        "length": {"type": "number"},
+        "md5": {"type": "string"}
+      },
+      "required": [
+        "filename", "url", "length"
+      ],
+      "oneOf": ["md5", "sha256"]
+    },
+    "uniqueItems": true
+  }
+}

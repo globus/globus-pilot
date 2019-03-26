@@ -1,3 +1,4 @@
+import os
 import click
 import globus_sdk
 from pilot.client import PilotClient
@@ -43,8 +44,28 @@ def list():
                 )
 
 @click.command()
-def describe():
-    click.echo('describe command')
+@click.argument('dataframe',
+                type=click.Path(exists=True, file_okay=True, dir_okay=False,
+                                readable=True, resolve_path=True),
+                )
+@click.argument('destination', type=click.Path())
+@click.option('--testing/--no-testing', default=True)
+def describe(dataframe, destination, testing):
+    pc = PilotClient()
+    if not pc.is_logged_in():
+        click.echo('You are not logged in.')
+        return
+
+    filename = os.path.basename(dataframe)
+    j = pc.get_search_entry(filename, destination, testing)
+    if not j:
+        click.echo('Unable to find entry')
+        return
+    j = j['content'][0]
+    if testing:
+        j = j['testing']
+    from pprint import pprint
+    pprint(j)
 
 
 @click.command()
