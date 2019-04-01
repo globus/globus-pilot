@@ -1,9 +1,11 @@
 import os
+import sys
+import traceback
 import pytest
 import json
 import jsonschema
 
-from pilot.schemas import get_schemas
+from pilot.validation import get_schemas
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 SCHEMA_FOLDER = os.path.join(BASE_DIR, 'tests', 'unit', 'files', 'schemas')
@@ -27,7 +29,14 @@ def test_basic_validation(name, schema):
     validator = jsonschema.Draft4Validator(
         jsonschema.Draft4Validator.META_SCHEMA,
         resolver=resolver)
-    validator.validate(schema)
+    try:
+        validator.validate(schema)
+    except jsonschema.exceptions.ValidationError as ve:
+        traceback.print_exc()
+        print('Failed SCHEMA validation for "{}.json"'.format(name),
+              file=sys.stderr)
+        assert False
+
 
 
 @pytest.mark.parametrize("schema_name,filename", schema_test)

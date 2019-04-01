@@ -5,6 +5,8 @@
     "type": "object",
 
     "properties": {
-        "@context" : "object"
+        "@context" : {
+            "type": "object"
+        }
     }
 }

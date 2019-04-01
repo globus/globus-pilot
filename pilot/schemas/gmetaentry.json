@@ -5,7 +5,9 @@
     "type": "object",
     
     "properties": {
-        "subject" : "string",
+        "subject" : {
+            "type": "string"
+        },
         "visible_to": {
             "type" : "array",
             "items": {
@@ -13,9 +15,12 @@
                 
             }
         },
-        
-        "id": "string",
-        "mimetype": "string",
+        "id": {
+            "type": "string"
+        },
+        "mimetype": {
+            "type": "string"
+        },
         "content" : {
             "@context" : "object"
         }

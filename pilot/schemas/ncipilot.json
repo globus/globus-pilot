@@ -17,12 +17,14 @@
                     "description": "Number of columns."
                 },
                 "data_type": {
-                    "type": { "enum": ["Drug Descriptor", "Drug Response", "Microarray", "RNA-seq"] },
-                    "description" : 'Data category, may be: "Drug Descriptor", "Drug Response", "Microarray", "RNA-seq"'
+                    "type": "string",
+                    "enum": ["Drug Descriptor", "Drug Response", "Microarray", "RNA-seq"],
+                    "description" : "Data category, may be: 'Drug Descriptor', 'Drug Response', 'Microarray', 'RNA-seq'"
                                 },
                 "dataframe_type": {
-                    "type": { "enum": ["List", "Matrix"] },
-                    "description" : 'Dataframe structure, matrix or list'
+                    "type": "string",
+                    "enum": ["List", "Matrix"],
+                    "description" : "Dataframe structure, matrix or list"
                 },
                 "units": {
                     "type": "integer",

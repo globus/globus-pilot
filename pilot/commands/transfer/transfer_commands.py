@@ -84,8 +84,8 @@ def upload(dataframe, destination, metadata, update, test, dry_run, verbose):
     current_record = pc.get_search_entry(filename, destination, test)
 
     url = pc.get_globus_http_url(filename, destination, test)
-    rfm = gen_remote_file_manifest(dataframe, url)
-    data = {'testing': {'remote_file_manifest': rfm,
+    rfm = gen_remote_file_manifest(dataframe, url, 'generic_datatype')
+    data = {'testing': {'files': rfm,
                         'dc': metadata_content}}
     subject = pc.get_subject_url(filename, destination, test)
 
