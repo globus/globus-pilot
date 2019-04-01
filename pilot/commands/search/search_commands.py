@@ -2,17 +2,19 @@ import os
 import click
 import globus_sdk
 from pilot.client import PilotClient
-from pilot.config import config
+# from pilot.config import config
 
-def  get_size(size):
-    #2**10 = 1024
+
+def get_size(size):
+    # 2**10 = 1024
     power = 2**10
     n = 0
-    Dic_powerN = {0 : '', 1: 'k', 2: 'M', 3: 'G', 4: 'T'}
+    Dic_powerN = {0: '', 1: 'k', 2: 'M', 3: 'G', 4: 'T'}
     while size > power:
-        size /=  power
+        size /= power
         n += 1
     return size, Dic_powerN[n]+'B'
+
 
 @click.command()
 def list():
@@ -27,7 +29,7 @@ def list():
         # TO DO: iterate instead of upping limit
         search_results = sc.search(index_id=pc.SEARCH_INDEX, q='*', limit=100)
 
-        header = 'Title                Data       Dataframe Rows   Cols   Size   Filename'
+        header = 'Title                Data       Dataframe Rows   Cols   Size   Filename' # noqa
         print(header)
         for i in search_results['gmeta']:
             j = i['content'][0]
@@ -43,27 +45,23 @@ def list():
                 '{:.16}'.format(j['remote_file_manifest']['filename'])
                 )
 
+
 @click.command()
-@click.argument('dataframe',
-                type=click.Path(exists=True, file_okay=True, dir_okay=False,
-                                readable=True, resolve_path=True),
-                )
+@click.argument('dataframe', type=click.Path())
 @click.argument('destination', type=click.Path())
-@click.option('--testing/--no-testing', default=True)
-def describe(dataframe, destination, testing):
+@click.option('--test/--no-test', default=True)
+def describe(dataframe, destination, test):
     pc = PilotClient()
     if not pc.is_logged_in():
         click.echo('You are not logged in.')
         return
 
     filename = os.path.basename(dataframe)
-    j = pc.get_search_entry(filename, destination, testing)
+    j = pc.get_search_entry(filename, destination, test)
+
     if not j:
         click.echo('Unable to find entry')
         return
-    j = j['content'][0]
-    if testing:
-        j = j['testing']
     from pprint import pprint
     pprint(j)
 
