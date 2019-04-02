@@ -4,7 +4,6 @@ import jsonschema
 
 BASE_DIR = os.path.dirname(__file__)
 BASE_SCHEMA_DIR = os.path.join(BASE_DIR, 'schemas')
-print(BASE_SCHEMA_DIR)
 
 
 def get_schemas():

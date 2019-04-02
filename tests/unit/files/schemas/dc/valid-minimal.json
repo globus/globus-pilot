@@ -1,0 +1,19 @@
+{
+  "dc": {
+    "titles": [
+      {
+        "title": "UPDATE"
+      }
+    ],
+    "creators": [
+      {
+        "creatorName": "Shukla, Maulik"
+      }
+    ],
+    "publicationYear": "2019",
+    "publisher": "Argonne National Laboratory",
+    "resourceType": {
+      "resourceTypeGeneral": "Dataset"
+    }
+  }
+}

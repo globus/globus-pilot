@@ -1,0 +1,10 @@
+{
+  "files": [
+    {
+      "filename": "foo.txt",
+      "url": "http://foo.org",
+      "length": 1024,
+      "md5": "themd5hash"
+    }
+  ]
+}
