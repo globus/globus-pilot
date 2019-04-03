@@ -57,6 +57,11 @@ class PilotClient(NativeClient):
         authorizer = self.get_authorizers()['search.api.globus.org']
         return SearchClient(authorizer=authorizer)
 
+    @property
+    def http_headers(self):
+        petrel = self.load_tokens()['petrel.https.server']['access_token']
+        return {'Authorization': 'Bearer {}'.format(petrel)}
+
     def ls(self, dataframe, directory, test):
         tauth = self.get_authorizers()['transfer.api.globus.org']
         tc = globus_sdk.TransferClient(authorizer=tauth)
@@ -128,14 +133,11 @@ class PilotClient(NativeClient):
         return True
 
     def upload(self, dataframe, destination, test=False):
-        petrel = self.load_tokens()['petrel.https.server']['access_token']
-        headers = {'Authorization': 'Bearer {}'.format(petrel)}
-
         filename = os.path.basename(dataframe)
         url = self.get_globus_http_url(filename, destination, test)
 
         with open(dataframe, 'rb') as fh:
             # Get the user info as JSON
             resp = requests.put(
-                url, headers=headers, data=fh, allow_redirects=False)
+                url, headers=self.http_headers, data=fh, allow_redirects=False)
             return resp
