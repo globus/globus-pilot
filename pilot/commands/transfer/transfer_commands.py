@@ -2,8 +2,10 @@ import os
 import json
 import click
 import globus_sdk
+import datetime
+import requests
 import pilot
-from pilot.search import gen_remote_file_manifest, gen_gmeta
+from pilot.search import scrape_metadata, update_metadata, gen_gmeta
 
 
 @click.command(help='Upload dataframe to location on Globus and categorize it '
@@ -16,14 +18,25 @@ from pilot.search import gen_remote_file_manifest, gen_gmeta
               help='Metadata in JSON format')
 @click.option('-u', '--update/--no-update', default=False,
               help='Overwrite an existing dataframe and increment the version')
-@click.option('--test/--no-test', default=True)
-@click.option('--dry-run/--no-dry-run', default=True)
-@click.option('--verbose/--quiet', default=True)
+@click.option('--gcp/--no-gcp', default=True,
+              help='Use Globus Connect Personal to start a transfer instead '
+                   'of uploading using direct HTTP')
+@click.option('--test/--no-test', default=True,
+              help='upload/ingest to test locations')
+@click.option('--dry-run/--no-dry-run', default=True,
+              help='Do checks and validation but do not upload/ingest. ')
+@click.option('--search-test/--no-search-test', default=True,
+              help='Put search data under a special key "testing" to prevent '
+                   'test data breaking Globus Search type indexing. This '
+                   'prevents needing to reset the index if you decide to '
+                   'change the types for your ingested data.')
+@click.option('--verbose/--no-verbose', default=False)
 # @click.option('--x-labels', type=click.Path(),
 #               help='Path to x label file')
 # @click.option('--y-labels', type=click.Path(),
 #               help='Path to y label file')
-def upload(dataframe, destination, metadata, update, test, dry_run, verbose):
+def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
+           search_test, verbose):
     # pilot upload -j metadata.json <dataframe> <remote rel path>
     # pilot -j metadata.json drug_response.tsv responses
     # check for remote directory
@@ -67,7 +80,7 @@ def upload(dataframe, destination, metadata, update, test, dry_run, verbose):
         return
 
     try:
-        current_file_meta = pc.ls(dataframe, destination, test)
+        pc.ls(dataframe, destination, test)
     except globus_sdk.exc.TransferAPIError:
         url = pc.get_globus_app_url('', test)
         click.echo('Directory does not exist: "{}"\nPlease create it at: {}'
@@ -76,56 +89,88 @@ def upload(dataframe, destination, metadata, update, test, dry_run, verbose):
 
     if metadata is not None:
         with open(metadata) as mf_fh:
-            metadata_content = json.load(mf_fh)
+            user_metadata = json.load(mf_fh)
     else:
-        metadata_content = {}
-    filename = os.path.basename(dataframe)
+        user_metadata = {}
 
-    current_record = pc.get_search_entry(filename, destination, test)
+    filename = os.path.basename(dataframe)
+    prev_metadata = pc.get_search_entry(filename, destination, test)
+    if prev_metadata and prev_metadata.get('testing'):
+        prev_metadata = prev_metadata['testing']
 
     url = pc.get_globus_http_url(filename, destination, test)
-    rfm = gen_remote_file_manifest(dataframe, url, 'generic_datatype')
-    data = {'testing': {'files': rfm,
-                        'dc': metadata_content}}
-    subject = pc.get_subject_url(filename, destination, test)
-
-    if current_record:
-        if update:
-            version = int(current_record['testing']['dc']['version'])
-            if data:
-                current_record.update(data)
-            current_record['testing']['dc']['version'] = version + 1
-            gmeta = gen_gmeta(subject, pc.GROUP, data)
-        else:
-            click.echo('Existing record found for {}, specify -u to update.'
-                       ''.format(filename))
-            return
+    new_metadata = scrape_metadata(dataframe, url, 'generic_datatype')
+    if prev_metadata and prev_metadata['files'] == new_metadata['files']:
+        dataframe_changed = False
     else:
-        gmeta = gen_gmeta(subject, pc.GROUP, data)
+        dataframe_changed = True
 
-    # @hack require version
-    try:
-        gmeta['ingest_data']['gmeta'][0]['content']['testing']['dc']['version']
-    except Exception:
-        raise ValueError('Metadata json must be supplied with a version: Ex.'
-                         '{"version": 1}')
+    new_metadata = update_metadata(new_metadata, prev_metadata, user_metadata,
+                                   files_updated=dataframe_changed)
+
+    if search_test:
+        new_metadata = {'testing': new_metadata}
+    subject = pc.get_subject_url(filename, destination, test)
+    gmeta = gen_gmeta(subject, pc.GROUP, new_metadata)
+
+    if prev_metadata and not update:
+        last_updated = prev_metadata['dc']['dates'][-1]['date']
+        dt = datetime.datetime.strptime(last_updated, '%Y-%m-%dT%H:%M:%S.%fZ')
+        click.echo('Existing record found for {}, specify -u to update.\n'
+                   'Last updated: {: %A, %b %d, %Y}'
+                   ''.format(filename, dt))
+        return 1
 
     if dry_run:
         click.echo('Success! (Dry Run -- No changes made.)')
+        click.echo('Pre-existing record: {}'.format(
+            'yes' if prev_metadata else 'no'))
+        if search_test:
+            version = new_metadata['testing']['dc']['version']
+        else:
+            version = new_metadata['dc']['version']
+        click.echo('Version: {}'.format(version))
         click.echo('Search Subject: {}\nURL: {}'.format(
             subject, url
         ))
+        if verbose:
+            click.echo('Ingesting the following data:')
+            click.echo(json.dumps(new_metadata, indent=2))
         return
 
     click.echo('Ingesting record into search...')
     pc.ingest_entry(gmeta, test)
     click.echo('Success!')
-    click.echo('Uploading data...')
-    response = pc.upload(dataframe, destination, test)
-    if response.status_code == 200:
-        click.echo('Upload Successful! URL is now {}'.format(url))
+    if not dataframe_changed:
+        click.echo('Metadata updated, dataframe is already up to date.')
+        return
+    if gcp:
+        local_ep = globus_sdk.LocalGlobusConnectPersonal().endpoint_id
+        if not local_ep:
+            raise Exception('No local GCP client found')
+        auth = pc.get_authorizers()['transfer.api.globus.org']
+        tc = globus_sdk.TransferClient(authorizer=auth)
+        tdata = globus_sdk.TransferData(
+            tc, local_ep, pc.ENDPOINT,
+            label='{} Transfer'.format(pc.APP_NAME),
+            sync_level='checksum')
+        tdata.add_item(dataframe, pc.get_path(filename, destination, test))
+        click.echo('Starting Transfer...')
+        transfer_result = tc.submit_transfer(tdata)
+        click.echo('{}. You can check the status below: \n'
+                   'https://app.globus.org/activity/{}/overview\n'
+                   'URL will be: {}'.format(
+                        transfer_result['message'], transfer_result['task_id'],
+                        url)
+                   )
     else:
-        click.echo('Failed with status code: {}'.format(response.status_code))
+        click.echo('Uploading data...')
+        response = pc.upload(dataframe, destination, test)
+        if response.status_code == 200:
+            click.echo('Upload Successful! URL is \n{}'.format(url))
+        else:
+            click.echo('Failed with status code: {}'.format(
+                response.status_code))
 
 
 @click.command()

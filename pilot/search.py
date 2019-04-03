@@ -1,13 +1,13 @@
 import os
+import copy
 import hashlib
+import pytz
+import datetime
 
-# from pilot.client import PilotClient
-# from pilot.config import config
-import jsonschema
-from pilot.validation import get_schemas
+from pilot.config import config
+from pilot.validation import validate_dataset
 
 DEFAULT_HASH_ALGORITHMS = ['sha256', 'md5']
-DEFAULT_CREATOR_AFFILIATIONS = ['Argonne National Laboratory']
 
 GMETA_LIST = {
     "@version": "2016-11-09",
@@ -28,14 +28,69 @@ GMETA_ENTRY = {
 GROUP_URN_PREFIX = 'urn:globus:groups:id:{}'
 
 
+def get_formatted_date():
+    return datetime.datetime.now(pytz.utc).isoformat().replace('+00:00', 'Z')
+
+
+def scrape_metadata(dataframe, url, dataframe_type):
+    user_info = config.get_user_info()
+    name = user_info['name'].split(' ')
+    if len(name) > 1 and ',' not in user_info['name']:
+        # If the persons name is ['Samuel', 'L.', 'Jackson'], produces:
+        # "Jackson, Samuel L."
+        formal_name = '{}, {}'.format(name[-1:], name[:-1])
+    else:
+        formal_name = user_info['name']
+    return {
+        'dc': {
+            'titles': [
+                {
+                    'title': os.path.basename(dataframe)
+                }
+            ],
+            'creators': [
+                {
+                    'creatorName': formal_name
+                }
+            ],
+            'publicationYear': str(datetime.datetime.now().year),
+            'publisher': user_info['organization'],
+            'resourceType': {
+                'resourceTypeGeneral': 'Dataset'
+            },
+            'dates': [
+                {
+                    'dateType': 'Created',
+                    'date': get_formatted_date()
+                }
+            ],
+            'version': '1'
+        },
+        'files': gen_remote_file_manifest(dataframe, url, dataframe_type),
+        'ncipilot': {},
+    }
+
+
+def update_metadata(new_metadata, prev_metadata, user_metadata, files_updated):
+    metadata = copy.deepcopy(new_metadata)
+    if prev_metadata:
+        metadata.update(prev_metadata)
+        if files_updated:
+            version = int(metadata['dc']['version'])
+            metadata['dc']['version'] = str(version + 1)
+            metadata['dc']['dates'].append({
+                'dateType': 'Updated',
+                'date': get_formatted_date()
+            })
+            metadata['files'] = new_metadata['files']
+    if user_metadata:
+        validate_dataset(user_metadata)
+        metadata.update(user_metadata)
+    return metadata
+
+
 def gen_gmeta(subject, visible_to, content):
-    schemas = get_schemas()
-    print(schemas.keys())
-    if content.get('testing'):
-        rfm_validator = schemas['files']
-        files_block = {'files': content['testing']['files']}
-        jsonschema.validate(files_block,
-                            schema=rfm_validator)
+    validate_dataset(content['testing'])
     entry = GMETA_ENTRY.copy()
     entry['visible_to'] = [GROUP_URN_PREFIX.format(visible_to)]
     entry['subject'] = subject
@@ -43,82 +98,6 @@ def gen_gmeta(subject, visible_to, content):
     gmeta = GMETA_LIST.copy()
     gmeta['ingest_data']['gmeta'].append(entry)
     return gmeta
-
-# def gen_dc_metadata():
-#     name = config.get_user_info()['name']
-#     creator_name = ', '.join(name.split().reverse())
-#     creators = [{
-#
-#     }]
-#     from pprint import pprint
-#     pprint(user_info)
-#     {
-#             "creators": [
-#                 {
-#                     "affiliations": [
-#                         "Argonne National Laboratory"
-#                     ],
-#                     "creatorName": "Shukla, Maulik",
-#                     "familyName": "Shukla",
-#                     "givenName": "Maulik"
-#                 },
-#                 {
-#                     "affiliations": [
-#                         "Argonne National Laboratory"
-#                     ],
-#                     "creatorName": "Brettin, Thomas",
-#                     "familyName": "Brettin",
-#                     "givenName": "Thomas"
-#                 },
-#                 {
-#                     "affiliations": [
-#                         "Argonne National Laboratory"
-#                     ],
-#                     "creatorName": "Yoo, Hyunseung",
-#                     "familyName": "Yoo",
-#                     "givenName": "Hyunseung"
-#                 }
-#             ],
-#             "dates": [
-#                 {
-#                     "date": "2019-03-05T17:04:10.315060Z",
-#                     "dateType": "Created"
-#                 },
-#                 {
-#                     "date": "2019-03-05T17:04:10.315060Z",
-#                     "dateType": "Updated"
-#                 }
-#             ],
-#             "descriptions": [
-#                 {
-#                     "description": "Rescaled combined drug ",
-#                     "descriptionType": "Other"
-#                 }
-#             ],
-#             "formats": [
-#                 "text/tab-separated-values"
-#             ],
-#             "publicationYear": "2019",
-#             "publisher": "Argonne National Laboratory",
-#             "resourceType": {
-#                 "resourceType": "Dataset",
-#                 "resourceTypeGeneral": "Dataset"
-#             },
-#             "subjects": [
-#                 {
-#                     "subject": "machine learning"
-#                 },
-#                 {
-#                     "subject": "genomics"
-#                 }
-#             ],
-#             "titles": [
-#                 {
-#                     "title": "Combined Dose Response - Rescaled"
-#                 }
-#             ],
-#             "version": "1"
-#         }
 
 
 def gen_remote_file_manifest(filepath, url, data_type, metadata={},

@@ -22,6 +22,10 @@ def get_schemas():
     return schemas
 
 
-def validate_ingest_doc(gmeta_json):
-    schema = get_schemas()['globus_search_gmeta_record']
-    jsonschema.validate(schema=schema, instance=gmeta_json)
+def validate_dataset(dataset):
+    schema = get_schemas()['dataset']
+    resolver = jsonschema.RefResolver(
+        base_uri="file://{}/{}".format(BASE_SCHEMA_DIR, 'dataset'),
+        referrer='dataset'
+    )
+    jsonschema.validate(schema=schema, resolver=resolver, instance=dataset)

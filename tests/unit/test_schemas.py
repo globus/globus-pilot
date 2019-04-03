@@ -8,7 +8,8 @@ To add new schemas, drop them into the pilot/schemas directory.
 To add tests for new schemas, drop them into the
 tests/unit/files/schemas/<schema-name>/ directory.
 
-Schema tests starting with 'valid' should pass, 'invalid' should not.
+Schema test names starting with 'valid' should validate, 'invalid' should
+raise a validation error.
 """
 import os
 import sys
