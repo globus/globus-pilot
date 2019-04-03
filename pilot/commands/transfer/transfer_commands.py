@@ -23,7 +23,7 @@ from pilot.search import scrape_metadata, update_metadata, gen_gmeta
                    'of uploading using direct HTTP')
 @click.option('--test/--no-test', default=True,
               help='upload/ingest to test locations')
-@click.option('--dry-run/--no-dry-run', default=True,
+@click.option('--dry-run/--no-dry-run', default=False,
               help='Do checks and validation but do not upload/ingest. ')
 @click.option('--search-test/--no-search-test', default=True,
               help='Put search data under a special key "testing" to prevent '
