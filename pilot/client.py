@@ -108,9 +108,20 @@ class PilotClient(NativeClient):
             return None
 
     def ingest_entry(self, gmeta_entry, test=False):
+        """
+        Ingest a complete gmeta_entry into search. If test is true, the test
+        search index will be used instead.
+        Waits on tasks until they succeed or fail:
+            https://docs.globus.org/api/search/task/
+        :param gmeta_entry:
+        :param test: Use the test index instead?
+        :return: True on success Raises exception on fail
+        """
         sc = self.gsearch
         result = sc.ingest(self.get_index(test), gmeta_entry)
-        time.sleep(2)
+        pending_states = ['PENDING', 'PROGRESS']
+        while sc.get_task(result['task_id'])['state'] in pending_states:
+            time.sleep(.5)
         if sc.get_task(result['task_id'])['state'] != 'SUCCESS':
             # sc.delete_entry(self.SEARCH_INDEX_TEST, subject)
             raise Exception('Failed to ingest search subject')
