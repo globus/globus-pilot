@@ -174,5 +174,31 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
 
 
 @click.command()
-def download():
-    click.echo('download command')
+@click.argument('dataframe', type=click.Path())
+@click.argument('destination', type=click.Path(), required=False)
+@click.option('--test/--no-test', default=True,
+              help='download from test location')
+@click.option('--overwrite', is_flag=True, default=False)
+def download(dataframe, destination, test, overwrite):
+    pc = pilot.commands.get_pilot_client()
+    if not pc.is_logged_in():
+        click.echo('You are not logged in.')
+        return
+
+    filename = os.path.basename(dataframe)
+    if os.path.exists(filename) and not overwrite:
+        click.echo('Aborted! File {} would be overwritten.'.format(filename))
+        return
+    try:
+        if not pc.ls(filename, destination, test):
+            click.echo('File "{}" does not exist.'.format(filename))
+            return 1
+        url = pc.get_globus_http_url(filename, destination, test)
+        response = requests.get(url, headers=pc.http_headers, stream=True)
+        with open(filename, 'wb') as fh:
+            for chunk in response.iter_content(chunk_size=2048):
+                fh.write(chunk)
+        click.echo('Saved {}'.format(filename))
+    except globus_sdk.exc.TransferAPIError:
+        click.echo('Directory "{}" does not exist.'.format(destination))
+        return 1
