@@ -1,0 +1,12 @@
+{
+    "title": 2,
+    "description": "An organic supplement to supply energy to humans at approximately midday",
+    "data_type": "Sandwich",
+    "dataframe_type": "Turkey on Wheat",
+    "source": [
+        "Turkeys",
+        "Wheat Flour",
+        "Eggs",
+        "Cheese"
+    ]
+}

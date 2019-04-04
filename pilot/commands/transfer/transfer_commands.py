@@ -108,10 +108,8 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
     new_metadata = update_metadata(new_metadata, prev_metadata, user_metadata,
                                    files_updated=dataframe_changed)
 
-    if search_test:
-        new_metadata = {'testing': new_metadata}
     subject = pc.get_subject_url(filename, destination, test)
-    gmeta = gen_gmeta(subject, pc.GROUP, new_metadata)
+    gmeta = gen_gmeta(subject, pc.GROUP, new_metadata, search_test)
 
     if prev_metadata and not update:
         last_updated = prev_metadata['dc']['dates'][-1]['date']
@@ -125,11 +123,7 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         click.echo('Success! (Dry Run -- No changes made.)')
         click.echo('Pre-existing record: {}'.format(
             'yes' if prev_metadata else 'no'))
-        if search_test:
-            version = new_metadata['testing']['dc']['version']
-        else:
-            version = new_metadata['dc']['version']
-        click.echo('Version: {}'.format(version))
+        click.echo('Version: {}'.format(new_metadata['dc']['version']))
         click.echo('Search Subject: {}\nURL: {}'.format(
             subject, url
         ))

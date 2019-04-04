@@ -23,9 +23,17 @@ def get_schemas():
 
 
 def validate_dataset(dataset):
-    schema = get_schemas()['dataset']
+    validate_json('dataset', dataset)
+
+
+def validate_user_provided_metadata(metadata):
+    validate_json('user_provided_metadata', metadata)
+
+
+def validate_json(name, json):
+    schema = get_schemas()[name]
     resolver = jsonschema.RefResolver(
-        base_uri="file://{}/{}".format(BASE_SCHEMA_DIR, 'dataset'),
-        referrer='dataset'
+        base_uri="file://{}/{}".format(BASE_SCHEMA_DIR, name),
+        referrer=name
     )
-    jsonschema.validate(schema=schema, resolver=resolver, instance=dataset)
+    jsonschema.validate(schema=schema, resolver=resolver, instance=json)

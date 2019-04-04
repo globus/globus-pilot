@@ -6,7 +6,7 @@ import datetime
 import mimetypes
 
 from pilot.config import config
-from pilot.validation import validate_dataset
+from pilot.validation import validate_dataset, validate_user_provided_metadata
 
 DEFAULT_HASH_ALGORITHMS = ['sha256', 'md5']
 
@@ -27,6 +27,10 @@ GMETA_ENTRY = {
 }
 
 GROUP_URN_PREFIX = 'urn:globus:groups:id:{}'
+
+# Used for user provided metadata. These fields will be stripped out and used
+# in the datacite fields.
+DATACITE_FIELDS = ['title', 'description']
 
 
 def get_formatted_date():
@@ -93,20 +97,48 @@ def update_metadata(new_metadata, prev_metadata, user_metadata, files_updated):
             })
             metadata['files'] = new_metadata['files']
     if user_metadata:
-        validate_dataset(user_metadata)
-        metadata.update(user_metadata)
+        validate_user_provided_metadata(user_metadata)
+        for field_name, value in user_metadata.items():
+            if field_name in DATACITE_FIELDS:
+                set_dc_field(metadata, field_name, value)
+            else:
+                if not metadata.get('ncipilot'):
+                    metadata['ncipilot'] = {}
+                metadata['ncipilot'][field_name] = value
     return metadata
 
 
-def gen_gmeta(subject, visible_to, content):
-    validate_dataset(content['testing'])
+def gen_gmeta(subject, visible_to, content, search_test=False):
+    validate_dataset(content)
     entry = GMETA_ENTRY.copy()
     entry['visible_to'] = [GROUP_URN_PREFIX.format(visible_to)]
     entry['subject'] = subject
-    entry['content'] = content
+    if search_test:
+        entry['content'] = {'testing': content}
+    else:
+        entry['content'] = content
     gmeta = GMETA_LIST.copy()
     gmeta['ingest_data']['gmeta'].append(entry)
     return gmeta
+
+
+def set_dc_field(metadata, field_name, value):
+    dc_fields = {
+        'title': gen_dc_title,
+        'description': gen_dc_description
+    }
+    if field_name not in dc_fields.keys():
+        raise NotImplementedError('Cannot resolve field {}'.format(field_name))
+    return dc_fields[field_name](metadata, value)
+
+
+def gen_dc_title(metadata, title):
+    metadata['dc']['titles'] = [{'title': title}]
+
+
+def gen_dc_description(metadata, description):
+    metadata['dc']['descriptions'] = [{'description': description,
+                                       'descriptionType': 'Other'}]
 
 
 def gen_remote_file_manifest(filepath, url, data_type, metadata={},
