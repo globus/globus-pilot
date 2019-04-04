@@ -1,0 +1,107 @@
+{
+  "dc": {
+    "creators": [
+      {
+        "creatorName": "Nickolaus"
+      }
+    ],
+    "dates": [
+      {
+        "date": "2019-04-03T16:57:16.275651Z",
+        "dateType": "Created"
+      },
+      {
+        "date": "2019-04-03T17:16:38.609641Z",
+        "dateType": "Updated"
+      },
+      {
+        "date": "2019-04-03T17:17:23.930989Z",
+        "dateType": "Updated"
+      },
+      {
+        "date": "2019-04-03T17:33:10.133674Z",
+        "dateType": "Updated"
+      },
+      {
+        "date": "2019-04-03T17:34:26.928886Z",
+        "dateType": "Updated"
+      },
+      {
+        "date": "2019-04-03T17:35:21.917954Z",
+        "dateType": "Updated"
+      },
+      {
+        "date": "2019-04-03T17:35:59.293534Z",
+        "dateType": "Updated"
+      },
+      {
+        "date": "2019-04-03T17:38:12.622376Z",
+        "dateType": "Updated"
+      },
+      {
+        "date": "2019-04-03T17:46:39.049667Z",
+        "dateType": "Updated"
+      },
+      {
+        "date": "2019-04-03T17:47:10.642902Z",
+        "dateType": "Updated"
+      },
+      {
+        "date": "2019-04-03T17:47:44.129687Z",
+        "dateType": "Updated"
+      },
+      {
+        "date": "2019-04-03T17:49:37.675007Z",
+        "dateType": "Updated"
+      },
+      {
+        "date": "2019-04-03T17:53:36.809117Z",
+        "dateType": "Updated"
+      },
+      {
+        "date": "2019-04-03T18:29:41.161273Z",
+        "dateType": "Updated"
+      },
+      {
+        "date": "2019-04-04T18:28:06.651117Z",
+        "dateType": "Updated"
+      }
+    ],
+    "descriptions": [
+      {
+        "description": "Drug identifiers, including InChIKey, SMILES, and PubChem.",
+        "descriptionType": "Other"
+      }
+    ],
+    "publicationYear": "2019",
+    "publisher": "Globus",
+    "resourceType": {
+      "resourceTypeGeneral": "Dataset"
+    },
+    "titles": [
+      {
+        "title": "Drug Identifiers"
+      }
+    ],
+    "version": "16"
+  },
+  "files": [
+    {
+      "data_type": "generic_datatype",
+      "filename": "mydata.png",
+      "length": 91053,
+      "md5": "11c3295304c0fcb303c3182f4fe22e02",
+      "sha256": "60dd8d2b096519dbaf37fc0501215b918cdcbc9225f5601d02f4eb3b09c4c77e",
+      "url": "https://ebf55996-33bf-11e9-9fa4-0a06afd4a22e.e.globus.org/restricted/dataframes/cli_testing/drugs_test/mydata.png"
+    }
+  ],
+  "ncipilot": {
+    "data_type": "Drug Response",
+    "dataframe_type": "List",
+    "source": [
+      "InChIKey",
+      "SMILES",
+      "PubChem"
+    ]
+  }
+}
