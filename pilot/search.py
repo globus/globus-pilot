@@ -3,6 +3,7 @@ import copy
 import hashlib
 import pytz
 import datetime
+import mimetypes
 
 from pilot.config import config
 from pilot.validation import validate_dataset
@@ -33,6 +34,11 @@ def get_formatted_date():
 
 
 def scrape_metadata(dataframe, url, dataframe_type):
+    mimetype = mimetypes.guess_type(dataframe)[0]
+    if mimetype is None:
+        raise ValueError('Unable to determine Mimetype for "{}" (try adding '
+                         'an extension)'.format(os.path.basename(dataframe)))
+
     user_info = config.get_user_info()
     name = user_info['name'].split(' ')
     if len(name) > 1 and ',' not in user_info['name']:
@@ -63,6 +69,9 @@ def scrape_metadata(dataframe, url, dataframe_type):
                     'dateType': 'Created',
                     'date': get_formatted_date()
                 }
+            ],
+            'formats': [
+                mimetypes.guess_type(dataframe)[0]
             ],
             'version': '1'
         },
