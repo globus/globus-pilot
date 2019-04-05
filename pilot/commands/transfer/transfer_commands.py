@@ -150,36 +150,35 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
 
 
 @click.command()
-@click.argument('dataframe', type=click.Path())
-@click.argument('destination', type=click.Path(), required=False)
-@click.option('--test/--no-test', default=True,
+@click.argument('path', type=click.Path())
+@click.option('--test/--no-test', default=False,
               help='download from test location')
 @click.option('--overwrite/--no-overwrite', default=True)
-def download(dataframe, destination, test, overwrite):
+def download(path, test, overwrite):
     pc = pilot.commands.get_pilot_client()
     if not pc.is_logged_in():
         click.echo('You are not logged in.')
         return
 
-    filename = os.path.basename(dataframe)
-    if os.path.exists(filename) and not overwrite:
-        click.echo('Aborted! File {} would be overwritten.'.format(filename))
+    fname, dirname = os.path.basename(path), os.path.dirname(path)
+    if os.path.exists(fname) and not overwrite:
+        click.echo('Aborted! File {} would be overwritten.'.format(fname))
         return
     try:
-        if not pc.ls(filename, destination, test):
-            click.echo('File "{}" does not exist.'.format(filename))
+        if not pc.ls(fname, dirname, test):
+            click.echo('File "{}" does not exist.'.format(path))
             return 1
-        url = pc.get_globus_http_url(filename, destination, test)
+        url = pc.get_globus_http_url(fname, dirname, test)
         response = requests.get(url, headers=pc.http_headers, stream=True)
-        with open(filename, 'wb') as fh:
+        with open(fname, 'wb') as fh:
             # Download content in 1MB chunks
             r_content = response.iter_content(chunk_size=2048)
-            lb = 'Downloading {}'.format(filename)
+            lb = 'Downloading {}'.format(fname)
             with click.progressbar(r_content, label=lb,
                                    show_pos=True) as rc:
                 for chunk in rc:
                     fh.write(chunk)
-        click.echo('Saved {}'.format(filename))
+        click.echo('Saved {}'.format(fname))
     except globus_sdk.exc.TransferAPIError:
-        click.echo('Directory "{}" does not exist.'.format(destination))
+        click.echo('Directory "{}" does not exist.'.format(dirname))
         return 1
