@@ -37,40 +37,22 @@ from pilot.search import scrape_metadata, update_metadata, gen_gmeta
 #               help='Path to y label file')
 def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
            search_test, verbose):
-    # pilot upload -j metadata.json <dataframe> <remote rel path>
-    # pilot -j metadata.json drug_response.tsv responses
-    # check for remote directory
-    # check for existing file in remote destination
-    #   If file, is update flag set? If yes, get version & bump version
-    # Checksum file, get size
-    #   If bumping version, check for existing metadata and reuse
-    #   Cache existing version and metadata
-    #   Update size and checksum, plus any provided metadata
-    # Generate GMeta record
-    # validate GMeta record
-    # Push to Search
-    # get task ID
-    # PUT dataframe via HTTPS
-    # Check status of upload
-    # Check status of Search ingest
-    # Rollback if failed on either
-    # Delete GMetaEntry or dataframe if other fails
+    """
+    Create a search entry and upload this file to the GCS Endpoint.
 
-    # Handling updates
-    # add UUID as id to GMetaEntry
-    # move existing dataframe to "jail"
-    # delete by ID when update succeeds or fails
-
-    # How to handle state?
-    # what if upload is interrupted?
-    # Remote log?
-
-    # Check for directory, if so, get list from transfer first
-    # Should require login if there are publicly visible records
+    # TODO: Fault tolerance for interrupted or failed file uploads (rollback)
+    """
     pc = pilot.commands.get_pilot_client()
     if not pc.is_logged_in():
         click.echo('You are not logged in.')
         return
+
+    if test:
+        click.secho('Using test location: {}'.format(pc.TESTING_DIR),
+                    fg='yellow')
+
+    if search_test:
+        click.secho('Using test index for Globus Search', fg='yellow')
 
     if not destination:
         path = pc.get_path('', '', test)
