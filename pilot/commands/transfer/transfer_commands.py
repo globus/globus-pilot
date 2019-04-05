@@ -154,11 +154,23 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
 @click.option('--test/--no-test', default=False,
               help='download from test location')
 @click.option('--overwrite/--no-overwrite', default=True)
-def download(path, test, overwrite):
+@click.option('--range', help='Download only part of a file. '
+                              'Ex: bytes=0-1, 4-5')
+def download(path, test, overwrite, range):
     pc = pilot.commands.get_pilot_client()
     if not pc.is_logged_in():
         click.echo('You are not logged in.')
         return
+
+    headers = pc.http_headers
+    if range:
+        try:
+            from requests_toolbelt.multipart import decoder
+        except ImportError:
+            click.secho('"requests-toolbelt" package required for ranges.',
+                        bg='red')
+            return 255
+        headers['Range'] = range
 
     fname, dirname = os.path.basename(path), os.path.dirname(path)
     if os.path.exists(fname) and not overwrite:
@@ -169,15 +181,21 @@ def download(path, test, overwrite):
             click.echo('File "{}" does not exist.'.format(path))
             return 1
         url = pc.get_globus_http_url(fname, dirname, test)
-        response = requests.get(url, headers=pc.http_headers, stream=True)
+        response = requests.get(url, headers=headers, stream=True)
         with open(fname, 'wb') as fh:
-            # Download content in 1MB chunks
-            r_content = response.iter_content(chunk_size=2048)
-            lb = 'Downloading {}'.format(fname)
-            with click.progressbar(r_content, label=lb,
-                                   show_pos=True) as rc:
-                for chunk in rc:
-                    fh.write(chunk)
+            if range:
+                r_content = decoder.MultipartDecoder.from_response(response)
+                for part in r_content.parts:
+                    fh.write(part.content)
+            else:
+                # Download content in 1MB chunks
+                r_content = response.iter_content(chunk_size=2048)
+                lb = 'Downloading {}'.format(fname)
+                with click.progressbar(r_content, label=lb,
+                                       show_pos=True) as rc:
+                    for chunk in rc:
+                        fh.write(chunk)
+
         click.echo('Saved {}'.format(fname))
     except globus_sdk.exc.TransferAPIError:
         click.echo('Directory "{}" does not exist.'.format(dirname))
