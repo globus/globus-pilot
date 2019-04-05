@@ -20,7 +20,7 @@ cli.add_command(auth_commands.login)
 cli.add_command(auth_commands.logout)
 cli.add_command(auth_commands.whoami)
 
-cli.add_command(search_commands.list)
+cli.add_command(search_commands.list_command)
 cli.add_command(search_commands.describe)
 cli.add_command(search_commands.validate)
 cli.add_command(search_commands.stage)
