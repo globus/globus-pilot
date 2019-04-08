@@ -17,6 +17,11 @@ Install with pip:
 
     pip install -e git+git@github.com:globusonline/pilot1-tools.git#egg=pilot1-tools
 
+
+You will also need Globus Connect Personal installed on your machine. You can download
+a copy here: https://www.globus.org/globus-connect-personal
+
+
 Usage
 -----
 
