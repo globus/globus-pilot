@@ -18,7 +18,7 @@
                 },
                 "data_type": {
                     "type": "string",
-                    "enum": ["Drug Descriptor", "Drug Response", "Microarray", "RNA-seq"],
+                    "enum": ["Metadata", "Drug Response", "Microarray", "RNA-seq"],
                     "description" : "Data category, may be: 'Drug Descriptor', 'Drug Response', 'Microarray', 'RNA-seq'"
                                 },
                 "dataframe_type": {
