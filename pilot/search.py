@@ -9,6 +9,7 @@ from pilot.config import config
 from pilot.validation import validate_dataset, validate_user_provided_metadata
 
 DEFAULT_HASH_ALGORITHMS = ['sha256', 'md5']
+DEFAULT_PUBLISHER = 'Argonne National Laboratory'
 
 GMETA_LIST = {
     "@version": "2016-11-09",
@@ -48,7 +49,7 @@ def scrape_metadata(dataframe, url, dataframe_type):
     if len(name) > 1 and ',' not in user_info['name']:
         # If the persons name is ['Samuel', 'L.', 'Jackson'], produces:
         # "Jackson, Samuel L."
-        formal_name = '{}, {}'.format(name[-1:], name[:-1])
+        formal_name = '{}, {}'.format(name[-1:][0], ' '.join(name[:-1]))
     else:
         formal_name = user_info['name']
     return {
@@ -64,7 +65,7 @@ def scrape_metadata(dataframe, url, dataframe_type):
                 }
             ],
             'publicationYear': str(datetime.datetime.now().year),
-            'publisher': user_info['organization'],
+            'publisher': DEFAULT_PUBLISHER,
             'resourceType': {
                 'resourceTypeGeneral': 'Dataset'
             },
