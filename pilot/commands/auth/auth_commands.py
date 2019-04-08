@@ -9,7 +9,7 @@ log = logging.getLogger(__name__)
 
 
 @click.command()
-@click.option('--refresh-tokens/--no-refresh-tokens', default=False,
+@click.option('--refresh-tokens/--no-refresh-tokens', default=True,
               help='Request a refresh token to login indefinitely')
 @click.option('--force/--no-force', default=False,
               help='Do a fresh login, ignoring any existing credentials')

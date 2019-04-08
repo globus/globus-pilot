@@ -26,6 +26,9 @@ setup(
     maintainer_email='support@globus.org',
     version=version_ns['__version__'],
     packages=find_packages(),
+    package_data={
+      '': ['*.json'],
+    },
     requires=[],
     entry_points='''
     [console_scripts]

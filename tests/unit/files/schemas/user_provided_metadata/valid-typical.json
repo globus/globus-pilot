@@ -1,0 +1,11 @@
+{
+    "title": "Drug Identifiers",
+    "description": "Drug identifiers, including InChIKey, SMILES, and PubChem.",
+    "data_type": "Drug Response",
+    "dataframe_type": "List",
+    "source": [
+        "InChIKey",
+        "SMILES",
+        "PubChem"
+    ]
+}

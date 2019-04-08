@@ -8,7 +8,7 @@ class Config(ConfigParserTokenStorage):
     def get_user_info(self):
         cfg = self.load()
         if 'profile' in cfg:
-            return self.load()['profile']
+            return dict(self.load()['profile'])
         return {}
 
     def save_user_info(self, user_info):

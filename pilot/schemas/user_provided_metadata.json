@@ -1,0 +1,26 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "User Metadata",
+    "description": "A short combination of Datacite and ncidata fields the user can provide.",
+    "type": "object",
+    "properties": {
+        "title": {
+            "$ref": "dc.json#/properties/dc/properties/titles/items/properties/title"
+        },
+        "description": {
+            "$ref": "dc.json#/properties/dc/properties/descriptions/items/properties/description"
+        },
+        "data_type": {
+            "$ref": "ncipilot.json#/properties/ncipilot/properties/data_type"
+        },
+        "dataframe_type": {
+            "$ref": "ncipilot.json#/properties/ncipilot/properties/dataframe_type"
+        },
+        "source": {
+            "$ref": "ncipilot.json#/properties/ncipilot/properties/source"
+        }
+
+
+
+    }
+}
