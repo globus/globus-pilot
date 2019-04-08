@@ -50,9 +50,11 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
     if test:
         click.secho('Using test location: {}'.format(pc.TESTING_DIR),
                     fg='yellow')
+        click.secho('Using test index for Globus Search', fg='yellow')
+
 
     if search_test:
-        click.secho('Using test index for Globus Search', fg='yellow')
+        click.secho('Hiding search data under "testing" key', fg='yellow')
 
     if not destination:
         path = pc.get_path('', '', test)
