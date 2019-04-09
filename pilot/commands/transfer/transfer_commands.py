@@ -21,11 +21,11 @@ from pilot.search import scrape_metadata, update_metadata, gen_gmeta
 @click.option('--gcp/--no-gcp', default=True,
               help='Use Globus Connect Personal to start a transfer instead '
                    'of uploading using direct HTTP')
-@click.option('--test/--no-test', default=True,
+@click.option('--test/--no-test', default=False,
               help='upload/ingest to test locations')
 @click.option('--dry-run/--no-dry-run', default=False,
               help='Do checks and validation but do not upload/ingest. ')
-@click.option('--search-test/--no-search-test', default=True,
+@click.option('--search-test/--no-search-test', default=False,
               help='Put search data under a special key "testing" to prevent '
                    'test data breaking Globus Search type indexing. This '
                    'prevents needing to reset the index if you decide to '
