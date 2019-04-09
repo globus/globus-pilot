@@ -30,7 +30,7 @@ def get_identifier(result):
     return identifier
 
 
-@click.command(name='list')
+@click.command(name='list', help='List known records in Globus Search')
 @click.option('--test/--no-test', default=False)
 def list_command(test):
     # Should require login if there are publicly visible records
@@ -85,7 +85,7 @@ def get_dates(result):
     return fdates
 
 
-@click.command()
+@click.command(help='Output info about a dataset')
 @click.argument('path', type=click.Path())
 @click.option('--test/--no-test', default=False)
 def describe(path, test):
@@ -140,13 +140,3 @@ def describe(path, test):
 
     output = '\n'.join(formatted_rows)
     click.echo(output)
-
-
-@click.command()
-def validate():
-    click.echo('validate command')
-
-
-@click.command()
-def stage():
-    click.echo('list command')

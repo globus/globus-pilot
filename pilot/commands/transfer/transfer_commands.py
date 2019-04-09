@@ -151,7 +151,7 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
                 response.status_code))
 
 
-@click.command()
+@click.command(help='Download a file to your local directory.')
 @click.argument('path', type=click.Path())
 @click.option('--test/--no-test', default=False,
               help='download from test location')

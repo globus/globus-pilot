@@ -11,7 +11,7 @@ def cli():
     pass
 
 
-@click.command()
+@click.command(help='Show version and exit')
 def version():
     click.echo(__version__)
 
@@ -22,8 +22,6 @@ cli.add_command(auth_commands.whoami)
 
 cli.add_command(search_commands.list_command)
 cli.add_command(search_commands.describe)
-cli.add_command(search_commands.validate)
-cli.add_command(search_commands.stage)
 
 cli.add_command(transfer_commands.upload)
 cli.add_command(transfer_commands.download)
