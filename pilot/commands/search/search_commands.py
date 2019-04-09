@@ -66,7 +66,7 @@ def list_command(test):
             try:
                 row.append(function(content))
             except Exception:
-                row.append('Err')
+                row.append('')
                 # raise
         rows.append(row)
 
