@@ -25,18 +25,13 @@ from pilot.search import scrape_metadata, update_metadata, gen_gmeta
               help='upload/ingest to test locations')
 @click.option('--dry-run/--no-dry-run', default=False,
               help='Do checks and validation but do not upload/ingest. ')
-@click.option('--search-test/--no-search-test', default=False,
-              help='Put search data under a special key "testing" to prevent '
-                   'test data breaking Globus Search type indexing. This '
-                   'prevents needing to reset the index if you decide to '
-                   'change the types for your ingested data.')
 @click.option('--verbose/--no-verbose', default=False)
 # @click.option('--x-labels', type=click.Path(),
 #               help='Path to x label file')
 # @click.option('--y-labels', type=click.Path(),
 #               help='Path to y label file')
 def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
-           search_test, verbose):
+           verbose):
     """
     Create a search entry and upload this file to the GCS Endpoint.
 
@@ -51,10 +46,6 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         click.secho('Using test location: {}'.format(pc.TESTING_DIR),
                     fg='yellow')
         click.secho('Using test index for Globus Search', fg='yellow')
-
-
-    if search_test:
-        click.secho('Hiding search data under "testing" key', fg='yellow')
 
     if not destination:
         path = pc.get_path('', '', test)
@@ -79,8 +70,6 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
 
     filename = os.path.basename(dataframe)
     prev_metadata = pc.get_search_entry(filename, destination, test)
-    if prev_metadata and prev_metadata.get('testing'):
-        prev_metadata = prev_metadata['testing']
 
     url = pc.get_globus_http_url(filename, destination, test)
     new_metadata = scrape_metadata(dataframe, url, 'generic_datatype')
@@ -93,7 +82,7 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
                                    files_updated=dataframe_changed)
 
     subject = pc.get_subject_url(filename, destination, test)
-    gmeta = gen_gmeta(subject, pc.GROUP, new_metadata, search_test)
+    gmeta = gen_gmeta(subject, pc.GROUP, new_metadata)
 
     if prev_metadata and not update:
         last_updated = prev_metadata['dc']['dates'][-1]['date']

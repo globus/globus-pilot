@@ -109,15 +109,12 @@ def update_metadata(new_metadata, prev_metadata, user_metadata, files_updated):
     return metadata
 
 
-def gen_gmeta(subject, visible_to, content, search_test=False):
+def gen_gmeta(subject, visible_to, content):
     validate_dataset(content)
     entry = GMETA_ENTRY.copy()
     entry['visible_to'] = [GROUP_URN_PREFIX.format(visible_to)]
     entry['subject'] = subject
-    if search_test:
-        entry['content'] = {'testing': content}
-    else:
-        entry['content'] = content
+    entry['content'] = content
     gmeta = GMETA_LIST.copy()
     gmeta['ingest_data']['gmeta'].append(entry)
     return gmeta
