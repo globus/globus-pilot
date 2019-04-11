@@ -3,9 +3,12 @@
     "description": "Drug identifiers, including InChIKey, SMILES, and PubChem.",
     "data_type": "Drug Response",
     "dataframe_type": "List",
+    "numcols": 7,
+    "numrows": 27769717,
     "source": [
         "InChIKey",
         "SMILES",
         "PubChem"
-    ]
+    ],
+    "formats": ["mimetype is preferred but not required"]
 }

@@ -15,5 +15,6 @@ def test_upload(mock_command_pilot_cli):
     mock_command_pilot_cli.upload.return_value = upload_response
     mock_command_pilot_cli.get_search_entry.return_value = None
     runner = CliRunner()
-    result = runner.invoke(upload, [test_file, 'my_folder', '--no-gcp'])
+    result = runner.invoke(upload, [test_file, 'my_folder', '--no-gcp',
+                                    '-j', m_file])
     assert result.exit_code == 0

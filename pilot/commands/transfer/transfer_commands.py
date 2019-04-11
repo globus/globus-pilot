@@ -6,6 +6,8 @@ import datetime
 import requests
 import pilot
 from pilot.search import scrape_metadata, update_metadata, gen_gmeta
+from pilot.exc import RequiredUploadFields
+from jsonschema.exceptions import ValidationError
 
 
 @click.command(help='Upload dataframe to location on Globus and categorize it '
@@ -78,11 +80,15 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
     else:
         dataframe_changed = True
 
-    new_metadata = update_metadata(new_metadata, prev_metadata, user_metadata,
-                                   files_updated=dataframe_changed)
-
-    subject = pc.get_subject_url(filename, destination, test)
-    gmeta = gen_gmeta(subject, pc.GROUP, new_metadata)
+    try:
+        new_metadata = update_metadata(new_metadata, prev_metadata,
+                                       user_metadata,
+                                       files_updated=dataframe_changed)
+        subject = pc.get_subject_url(filename, destination, test)
+        gmeta = gen_gmeta(subject, pc.GROUP, new_metadata)
+    except (RequiredUploadFields, ValidationError) as e:
+        click.secho('Error Validating Metadata: {}'.format(e), fg='red')
+        return 1
 
     if prev_metadata and not update:
         last_updated = prev_metadata['dc']['dates'][-1]['date']

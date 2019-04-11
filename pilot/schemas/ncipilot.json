@@ -38,7 +38,9 @@
                         "description": "One repository."
                     }
                 }
-            }
+            },
+            "required": ["data_type", "dataframe_type"]
+
         }
     }
 }

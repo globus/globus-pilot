@@ -4,12 +4,18 @@ import hashlib
 import pytz
 import datetime
 import mimetypes
+import jsonschema
 
 from pilot.config import config
 from pilot.validation import validate_dataset, validate_user_provided_metadata
+from pilot.exc import RequiredUploadFields
 
 DEFAULT_HASH_ALGORITHMS = ['sha256', 'md5']
 DEFAULT_PUBLISHER = 'Argonne National Laboratory'
+MINIMUM_USER_REQUIRED_FIELDS = [
+    'dataframe_type',
+    'data_type'
+]
 
 GMETA_LIST = {
     "@version": "2016-11-09",
@@ -110,7 +116,11 @@ def update_metadata(new_metadata, prev_metadata, user_metadata, files_updated):
 
 
 def gen_gmeta(subject, visible_to, content):
-    validate_dataset(content)
+    try:
+        validate_dataset(content)
+    except jsonschema.exceptions.ValidationError as ve:
+        if any([m in ve.message for m in MINIMUM_USER_REQUIRED_FIELDS]):
+            raise RequiredUploadFields(MINIMUM_USER_REQUIRED_FIELDS) from None
     entry = GMETA_ENTRY.copy()
     entry['visible_to'] = [GROUP_URN_PREFIX.format(visible_to)]
     entry['subject'] = subject

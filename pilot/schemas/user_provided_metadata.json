@@ -10,6 +10,9 @@
         "description": {
             "$ref": "dc.json#/properties/dc/properties/descriptions/items/properties/description"
         },
+        "formats": {
+            "$ref": "dc.json#/properties/dc/properties/formats"
+        },
         "data_type": {
             "$ref": "ncipilot.json#/properties/ncipilot/properties/data_type"
         },
@@ -19,8 +22,5 @@
         "source": {
             "$ref": "ncipilot.json#/properties/ncipilot/properties/source"
         }
-
-
-
     }
 }
