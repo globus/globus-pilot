@@ -1,8 +1,9 @@
 import os
+import urllib
+import json
+import datetime
 import click
 import globus_sdk
-import urllib
-import datetime
 from pilot.client import PilotClient
 
 PORTAL_DETAIL_PAGE_PREFIX = 'https://petreldata.net/nci-pilot1/detail/'
@@ -54,8 +55,13 @@ def fetch_format(columns, search_entry, fmt_func, list_fmt_func):
 
 
 @click.command(name='list', help='List known records in Globus Search')
-@click.option('--test/--no-test', default=False)
-def list_command(test):
+@click.option('--test/--no-test', default=False,
+              help='Look for entry on test index/endpoint path.')
+@click.option('--json/--no-json', 'output_json', default=False,
+              help='Output as JSON.')
+@click.option('--limit', type=int, default=100,
+              help='Limit returned results to the number provided')
+def list_command(test, output_json, limit):
     # Should require login if there are publicly visible records
     pc = PilotClient()
     if not pc.is_logged_in():
@@ -65,7 +71,11 @@ def list_command(test):
     search_authorizer = pc.get_authorizers()['search.api.globus.org']
     sc = globus_sdk.SearchClient(authorizer=search_authorizer)
     # TO DO: iterate instead of upping limit
-    search_results = sc.search(index_id=pc.get_index(test), q='*', limit=100)
+    search_results = sc.search(index_id=pc.get_index(test), q='*', limit=limit)
+
+    if output_json:
+        click.echo(json.dumps(search_results.data, indent=4))
+        return
 
     fmt = '{:21.20}{:11.10}{:10.9}{:7.6}{:7.6}{:7.6}{}'
     columns = [
@@ -110,8 +120,11 @@ def get_dates(result):
 
 @click.command(help='Output info about a dataset')
 @click.argument('path', type=click.Path())
-@click.option('--test/--no-test', default=False)
-def describe(path, test):
+@click.option('--test/--no-test', default=False,
+              help='Look for entry on test index/endpoint path.')
+@click.option('--json/--no-json', 'output_json', default=False,
+              help='Output as JSON.')
+def describe(path, test, output_json):
     pc = PilotClient()
     if not pc.is_logged_in():
         click.echo('You are not logged in.')
@@ -128,8 +141,9 @@ def describe(path, test):
         click.echo('Unable to find entry')
         return
 
-    if entry.get('testing'):
-        entry = entry['testing']
+    if output_json:
+        click.echo(json.dumps(entry, indent=4))
+        return
 
     general_fmt = '{:21.20}{}'
     general_columns = [
