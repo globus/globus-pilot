@@ -130,7 +130,7 @@ class PilotClient(NativeClient):
         result = sc.ingest(self.get_index(test), gmeta_entry)
         pending_states = ['PENDING', 'PROGRESS']
         while sc.get_task(result['task_id'])['state'] in pending_states:
-            time.sleep(2)
+            time.sleep(.5)
         if sc.get_task(result['task_id'])['state'] != 'SUCCESS':
             # sc.delete_entry(self.SEARCH_INDEX_TEST, subject)
             raise Exception('Failed to ingest search subject')
