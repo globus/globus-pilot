@@ -37,7 +37,7 @@ GROUP_URN_PREFIX = 'urn:globus:groups:id:{}'
 
 # Used for user provided metadata. These fields will be stripped out and used
 # in the datacite fields.
-DATACITE_FIELDS = ['title', 'description']
+DATACITE_FIELDS = ['title', 'description', 'formats']
 
 
 def get_formatted_date():
@@ -133,7 +133,8 @@ def gen_gmeta(subject, visible_to, content):
 def set_dc_field(metadata, field_name, value):
     dc_fields = {
         'title': gen_dc_title,
-        'description': gen_dc_description
+        'description': gen_dc_description,
+        'formats': gen_dc_formats,
     }
     if field_name not in dc_fields.keys():
         raise NotImplementedError('Cannot resolve field {}'.format(field_name))
@@ -147,6 +148,10 @@ def gen_dc_title(metadata, title):
 def gen_dc_description(metadata, description):
     metadata['dc']['descriptions'] = [{'description': description,
                                        'descriptionType': 'Other'}]
+
+
+def gen_dc_formats(metadata, formats):
+    metadata['dc']['formats'] = formats
 
 
 def gen_remote_file_manifest(filepath, url, data_type, metadata={},
