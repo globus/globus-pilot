@@ -44,7 +44,7 @@ def status(number):
     if pending_tasks:
         click.secho('Updating tasks...', fg='green')
         update_tasks(pending_tasks)
-        tlogs = config.get_transfer_log()
+        tlogs = config.get_transfer_log()[:number]
 
     for tlog in tlogs:
         tlog['id'] = str(tlog['id'])

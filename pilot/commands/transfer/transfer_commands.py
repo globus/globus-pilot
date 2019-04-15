@@ -127,11 +127,12 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
             tc, local_ep, pc.ENDPOINT,
             label='{} Transfer'.format(pc.APP_NAME),
             sync_level='checksum')
-        path = pc.get_path(filename, destination, test)
+        path = os.path.join(filename, destination)
         tdata.add_item(dataframe, path)
         click.echo('Starting Transfer...')
         transfer_result = tc.submit_transfer(tdata)
-        pilot.config.config.add_transfer_log(transfer_result, path)
+        short_path = os.path.join(destination, filename)
+        pilot.config.config.add_transfer_log(transfer_result, short_path)
         click.echo('{}. You can check the status below: \n'
                    'https://app.globus.org/activity/{}/overview\n'
                    'URL will be: {}'.format(
