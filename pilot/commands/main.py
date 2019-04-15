@@ -3,7 +3,7 @@ import click
 from pilot.version import __version__
 from pilot.commands.auth import auth_commands
 from pilot.commands.search import search_commands
-from pilot.commands.transfer import transfer_commands
+from pilot.commands.transfer import transfer_commands, status_commands
 
 
 @click.group()
@@ -25,5 +25,6 @@ cli.add_command(search_commands.describe)
 
 cli.add_command(transfer_commands.upload)
 cli.add_command(transfer_commands.download)
+cli.add_command(status_commands.status)
 
 cli.add_command(version)

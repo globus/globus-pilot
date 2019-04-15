@@ -18,7 +18,9 @@ class Config(ConfigParserTokenStorage):
             log_dict['start_time'] = str(int(timestamp))
         field_list = [log_dict.get(f) for f in self.TRANSFER_LOG_FIELDS]
         log_data = ','.join(field_list)
-        cfg['transfer_log'][log_id] = log_data
+        if 'transfer_log' not in cfg:
+            cfg['transfer_log'] = {}
+        cfg['transfer_log'][str(log_id)] = log_data
         self.save(cfg)
 
     def add_transfer_log(self, transfer_result, datapath):
@@ -43,11 +45,11 @@ class Config(ConfigParserTokenStorage):
         logs = []
         for log_id, data in cfg['transfer_log'].items():
             tlog = dict(zip(self.TRANSFER_LOG_FIELDS, data.split(',')))
-            tlog['id'] = log_id
+            tlog['id'] = int(log_id)
             timestamp = int(tlog['start_time'])
             tlog['start_time'] = datetime.datetime.fromtimestamp(timestamp)
             logs.append(tlog)
-        logs.sort(key=lambda l: l['id'])
+        logs.sort(key=lambda l: l['id'], reverse=True)
         return logs
 
     def get_transfer_log_by_task(self, task_id):
