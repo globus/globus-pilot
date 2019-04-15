@@ -126,6 +126,7 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         tdata = globus_sdk.TransferData(
             tc, local_ep, pc.ENDPOINT,
             label='{} Transfer'.format(pc.APP_NAME),
+            notify_on_succeeded=False,
             sync_level='checksum')
         path = pc.get_path(filename, destination, test)
         tdata.add_item(dataframe, path)
