@@ -9,8 +9,15 @@ from pilot.client import PilotClient
 PORTAL_DETAIL_PAGE_PREFIX = 'https://petreldata.net/nci-pilot1/detail/'
 
 
+def get_single_file_rfm(result):
+    if result.get('remote_file_manifest'):
+        return result['remote_file_manifest']
+    elif result.get('files'):
+        return result['files'][0]
+
+
 def get_size(result):
-    size = result['remote_file_manifest']['length']
+    size = get_single_file_rfm(result)['length']
     # 2**10 = 1024
     power = 2**10
     n = 0
@@ -23,10 +30,7 @@ def get_size(result):
 
 
 def get_identifier(result):
-    if result.get('remote_file_manifest'):
-        rfm_url = result['remote_file_manifest']['url']
-    else:
-        rfm_url = result['files'][0]['url']
+    rfm_url = get_single_file_rfm(result)['url']
     url = urllib.parse.urlsplit(rfm_url)
     identifier = url.path.replace(PilotClient.TESTING_DIR + '/', '')
     identifier = identifier.replace(PilotClient.BASE_DIR + '/', '')
