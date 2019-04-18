@@ -2,8 +2,10 @@ import os
 import time
 import uuid
 
-TEST_FILE_BASE_DIR = os.path.join(os.path.dirname(__file__),
-                                  'files', 'commands')
+BASE_FILE_DIR = os.path.join(os.path.dirname(__file__), 'files')
+COMMANDS_FILE_BASE_DIR = os.path.join(BASE_FILE_DIR, 'commands')
+ANALYSIS_FILE_BASE_DIR = os.path.join(BASE_FILE_DIR, 'analysis')
+
 DEFAULT_EXPIRE = int(time.time()) + 60 * 60 * 48
 
 

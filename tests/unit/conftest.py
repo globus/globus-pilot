@@ -1,8 +1,10 @@
 import pytest
+import os
 import copy
 import globus_sdk
 from unittest.mock import Mock
-from .mocks import MemoryStorage, MOCK_TOKEN_SET, GlobusTransferTaskResponse
+from .mocks import (MemoryStorage, MOCK_TOKEN_SET, GlobusTransferTaskResponse,
+                    ANALYSIS_FILE_BASE_DIR)
 
 from pilot.client import PilotClient
 import pilot
@@ -33,6 +35,11 @@ def mock_config(monkeypatch):
     mc = MockConfig()
     monkeypatch.setattr(pilot.config, 'config', mc)
     return mc
+
+
+@pytest.fixture
+def simple_tsv():
+    return os.path.join(ANALYSIS_FILE_BASE_DIR, 'simple.tsv')
 
 
 @pytest.fixture
