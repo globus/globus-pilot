@@ -71,6 +71,15 @@ def get_pandas_field_metadata(pandas_col_metadata, field_name):
     # Remove all NAN values
     cleaned_metadata = {k: v for k, v in metadata.items()
                         if isinstance(v, str) or not numpy.isnan(v)}
+
+    # Pandas has special types for things. Coerce them to be regular
+    # ints and floats
+    for name in ['25', '50', '75', 'mean', 'std', 'min', 'max']:
+        if name in cleaned_metadata:
+            cleaned_metadata[name] = float(cleaned_metadata[name])
+    for name in ['count', 'unique', 'frequency']:
+        if name in cleaned_metadata:
+            cleaned_metadata[name] = int(cleaned_metadata[name])
     return cleaned_metadata
 
 
