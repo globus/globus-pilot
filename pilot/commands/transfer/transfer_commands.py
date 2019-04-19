@@ -28,12 +28,14 @@ from jsonschema.exceptions import ValidationError
 @click.option('--dry-run/--no-dry-run', default=False,
               help='Do checks and validation but do not upload/ingest. ')
 @click.option('--verbose/--no-verbose', default=False)
+@click.option('--analyze/--no-analyze', default=True,
+              help='Analyze the field to collect additional metadata.')
 # @click.option('--x-labels', type=click.Path(),
 #               help='Path to x label file')
 # @click.option('--y-labels', type=click.Path(),
 #               help='Path to y label file')
 def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
-           verbose):
+           verbose, analyze):
     """
     Create a search entry and upload this file to the GCS Endpoint.
 
@@ -78,7 +80,7 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
     prev_metadata = pc.get_search_entry(filename, destination, test)
 
     url = pc.get_globus_http_url(filename, destination, test)
-    new_metadata = scrape_metadata(dataframe, url, 'generic_datatype')
+    new_metadata = scrape_metadata(dataframe, url, 'generic_datatype', analyze)
     if prev_metadata and prev_metadata['files'] == new_metadata['files']:
         dataframe_changed = False
     else:

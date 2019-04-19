@@ -8,6 +8,7 @@ import jsonschema
 
 from pilot.config import config
 from pilot.validation import validate_dataset, validate_user_provided_metadata
+from pilot.analysis import analyze_dataframe
 from pilot.exc import RequiredUploadFields
 
 DEFAULT_HASH_ALGORITHMS = ['sha256', 'md5']
@@ -44,7 +45,7 @@ def get_formatted_date():
     return datetime.datetime.now(pytz.utc).isoformat().replace('+00:00', 'Z')
 
 
-def scrape_metadata(dataframe, url, dataframe_type):
+def scrape_metadata(dataframe, url, dataframe_type, analyze_file=False):
     mimetype = mimetypes.guess_type(dataframe)[0]
     if mimetype is None:
         raise ValueError('Unable to determine Mimetype for "{}" (try adding '
@@ -58,6 +59,7 @@ def scrape_metadata(dataframe, url, dataframe_type):
         formal_name = '{}, {}'.format(name[-1:][0], ' '.join(name[:-1]))
     else:
         formal_name = user_info['name']
+    metadata = analyze_dataframe(dataframe) if analyze_file else {}
     return {
         'dc': {
             'titles': [
@@ -87,6 +89,7 @@ def scrape_metadata(dataframe, url, dataframe_type):
             'version': '1'
         },
         'files': gen_remote_file_manifest(dataframe, url, dataframe_type),
+        'field_metadata': metadata,
         'ncipilot': {},
     }
 
