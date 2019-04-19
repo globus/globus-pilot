@@ -16,7 +16,8 @@ def test_upload(mock_command_pilot_cli):
     mock_command_pilot_cli.get_search_entry.return_value = None
     runner = CliRunner()
     result = runner.invoke(upload, [test_file, 'my_folder', '--no-gcp',
-                                    '-j', m_file])
+                                    '-j', m_file,
+                                    '--no-analyze'])
     assert result.exit_code == 0
 
 
@@ -28,5 +29,6 @@ def test_upload_gcp_log(mock_command_pilot_cli, mock_config):
     mock_command_pilot_cli.get_search_entry.return_value = None
     runner = CliRunner()
     result = runner.invoke(upload, [test_file, 'my_folder', '--gcp',
-                                    '-j', m_file])
+                                    '-j', m_file,
+                                    '--no-analyze'])
     assert result.exit_code == 0
