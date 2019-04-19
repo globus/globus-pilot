@@ -15,7 +15,8 @@ DEFAULT_HASH_ALGORITHMS = ['sha256', 'md5']
 DEFAULT_PUBLISHER = 'Argonne National Laboratory'
 MINIMUM_USER_REQUIRED_FIELDS = [
     'dataframe_type',
-    'data_type'
+    'data_type',
+    'mime_type',
 ]
 
 GMETA_LIST = {
@@ -38,18 +39,23 @@ GROUP_URN_PREFIX = 'urn:globus:groups:id:{}'
 
 # Used for user provided metadata. These fields will be stripped out and used
 # in the datacite fields.
-DATACITE_FIELDS = ['title', 'description', 'formats']
+DATACITE_FIELDS = ['title', 'description', 'creators', 'mime_type']
+# Used for user provided metadata. Fields here will be copied into the rfm,
+# even if also provided in other areas.
+REMOTE_FILE_MANIFEST_FIELDS = ['mime_type', 'data_type']
 
 
 def get_formatted_date():
     return datetime.datetime.now(pytz.utc).isoformat().replace('+00:00', 'Z')
 
 
-def scrape_metadata(dataframe, url, dataframe_type, analyze_file=False):
+def scrape_metadata(dataframe, url, analyze_file=False):
     mimetype = mimetypes.guess_type(dataframe)[0]
-    if mimetype is None:
-        raise ValueError('Unable to determine Mimetype for "{}" (try adding '
-                         'an extension)'.format(os.path.basename(dataframe)))
+    dc_formats = []
+    rfm_metadata = {}
+    if mimetype:
+        dc_formats.append(mimetype)
+        rfm_metadata['mime_type'] = mimetype
 
     user_info = config.get_user_info()
     name = user_info['name'].split(' ')
@@ -83,12 +89,11 @@ def scrape_metadata(dataframe, url, dataframe_type, analyze_file=False):
                     'date': get_formatted_date()
                 }
             ],
-            'formats': [
-                mimetypes.guess_type(dataframe)[0]
-            ],
+            'formats': dc_formats,
             'version': '1'
         },
-        'files': gen_remote_file_manifest(dataframe, url, dataframe_type),
+        'files': gen_remote_file_manifest(dataframe, url,
+                                          metadata=rfm_metadata),
         'field_metadata': metadata,
         'ncipilot': {},
     }
@@ -115,6 +120,8 @@ def update_metadata(new_metadata, prev_metadata, user_metadata, files_updated):
                 if not metadata.get('ncipilot'):
                     metadata['ncipilot'] = {}
                 metadata['ncipilot'][field_name] = value
+            if field_name in REMOTE_FILE_MANIFEST_FIELDS:
+                metadata['files'][0][field_name] = value
     return metadata
 
 
@@ -137,7 +144,8 @@ def set_dc_field(metadata, field_name, value):
     dc_fields = {
         'title': gen_dc_title,
         'description': gen_dc_description,
-        'formats': gen_dc_formats,
+        'creators': gen_dc_creators,
+        'mime_type': gen_dc_formats,
     }
     if field_name not in dc_fields.keys():
         raise NotImplementedError('Cannot resolve field {}'.format(field_name))
@@ -153,18 +161,21 @@ def gen_dc_description(metadata, description):
                                        'descriptionType': 'Other'}]
 
 
+def gen_dc_creators(metadata, creators):
+    metadata['dc']['creators'] = creators
+
+
 def gen_dc_formats(metadata, formats):
     metadata['dc']['formats'] = formats
 
 
-def gen_remote_file_manifest(filepath, url, data_type, metadata={},
+def gen_remote_file_manifest(filepath, url, metadata={},
                              algorithms=DEFAULT_HASH_ALGORITHMS):
     rfm = metadata.copy()
     rfm.update({alg: compute_checksum(filepath, getattr(hashlib, alg)())
                 for alg in algorithms})
     rfm.update({
         'filename': os.path.basename(filepath),
-        'data_type': data_type,
         'url': url,
         'length': os.stat(filepath).st_size
     })

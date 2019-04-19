@@ -80,7 +80,7 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
     prev_metadata = pc.get_search_entry(filename, destination, test)
 
     url = pc.get_globus_http_url(filename, destination, test)
-    new_metadata = scrape_metadata(dataframe, url, 'generic_datatype', analyze)
+    new_metadata = scrape_metadata(dataframe, url, analyze)
     if prev_metadata and prev_metadata['files'] == new_metadata['files']:
         dataframe_changed = False
     else:

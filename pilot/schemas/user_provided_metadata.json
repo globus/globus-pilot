@@ -7,6 +7,9 @@
         "title": {
             "$ref": "dc.json#/properties/dc/properties/titles/items/properties/title"
         },
+        "creators": {
+            "$ref": "dc.json#/properties/dc/properties/creators"
+        },
         "description": {
             "$ref": "dc.json#/properties/dc/properties/descriptions/items/properties/description"
         },
