@@ -10,6 +10,10 @@ PORTAL_DETAIL_PAGE_PREFIX = 'https://petreldata.net/nci-pilot1/detail/'
 
 
 def get_single_file_rfm(result):
+    """
+    The location has changed over time, it may be in a couple different
+    locations. This function guarantees to fetch from the correct one.
+    """
     if result.get('remote_file_manifest'):
         return result['remote_file_manifest']
     elif result.get('files'):
@@ -201,7 +205,7 @@ def describe(path, test, output_json):
     keys = [f for n, f in field_metadata]
     fm_output = []
     try:
-        for field in entry['field_metadata']['schema']['fields']:
+        for field in entry['field_metadata']['field_definitions']:
             f_metadata = [str(field.get(key, '')) for key in keys]
             fm_output.append(fmt.format(*f_metadata))
 
