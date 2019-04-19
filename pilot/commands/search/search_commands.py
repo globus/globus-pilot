@@ -114,7 +114,7 @@ def list_command(test, output_json, limit):
     formatted_rows = [fmt.format(*r) for r in rows]
     header = fmt.format(*[c[0] for c in columns])
     output = '{}\n{}'.format(header, '\n'.join(formatted_rows))
-    click.echo_via_pager(output)
+    click.echo(output)
 
 
 def get_dates(result):
@@ -162,8 +162,8 @@ def describe(path, test, output_json):
         ('Dates', get_dates),
         ('Data', lambda r: r['ncipilot']['data_type']),
         ('Dataframe', lambda r: r['ncipilot']['dataframe_type']),
-        ('Rows', lambda r: str(r['ncipilot']['numrows'])),
-        ('Columns', lambda r: str(r['ncipilot']['numcols'])),
+        ('Rows', lambda r: str(r['field_metadata']['numrows'])),
+        ('Columns', lambda r: str(r['field_metadata']['numcols'])),
         ('Formats', lambda r: r['dc']['formats']),
         ('Version', lambda r: r['dc']['version']),
         ('Size', get_size),
