@@ -58,11 +58,15 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
 
     try:
         pc.ls(dataframe, destination, test)
-    except globus_sdk.exc.TransferAPIError:
-        url = pc.get_globus_app_url('', test)
-        click.echo('Directory does not exist: "{}"\nPlease create it at: {}'
-                   ''.format(destination, url), err=True)
-        return 1
+    except globus_sdk.exc.TransferAPIError as tapie:
+        if tapie.code == 'ClientError.NotFound':
+            url = pc.get_globus_app_url('', test)
+            click.secho('Directory does not exist: "{}"\nPlease create it at: '
+                        '{}'.format(destination, url), err=True, bg='red')
+            return 1
+        else:
+            click.secho(tapie.message, err=True, bg='red')
+            return 1
 
     if metadata is not None:
         with open(metadata) as mf_fh:
