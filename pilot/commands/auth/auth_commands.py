@@ -8,7 +8,7 @@ from pilot.config import config
 log = logging.getLogger(__name__)
 
 
-@click.command()
+@click.command(help='Login with Globus')
 @click.option('--refresh-tokens/--no-refresh-tokens', default=True,
               help='Request a refresh token to login indefinitely')
 @click.option('--force/--no-force', default=False,
@@ -33,7 +33,7 @@ def login(refresh_tokens, force, local_server, browser):
     click.echo('You have been logged in.')
 
 
-@click.command()
+@click.command(help='Revoke tokens and clear login info')
 def logout():
     pc = PilotClient()
     if pc.is_logged_in():
@@ -43,7 +43,7 @@ def logout():
         click.echo('No user logged in, no logout necessary.')
 
 
-@click.command()
+@click.command(help='Output Globus Identity used to login')
 def whoami():
     info = config.get_user_info()
     if not info:

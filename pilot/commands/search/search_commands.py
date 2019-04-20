@@ -1,13 +1,27 @@
 import os
+import urllib
+import json
+import datetime
 import click
 import globus_sdk
-import urllib
-import datetime
 from pilot.client import PilotClient
+
+PORTAL_DETAIL_PAGE_PREFIX = 'https://petreldata.net/nci-pilot1/detail/'
+
+
+def get_single_file_rfm(result):
+    """
+    The location has changed over time, it may be in a couple different
+    locations. This function guarantees to fetch from the correct one.
+    """
+    if result.get('remote_file_manifest'):
+        return result['remote_file_manifest']
+    elif result.get('files'):
+        return result['files'][0]
 
 
 def get_size(result):
-    size = result['remote_file_manifest']['length']
+    size = get_single_file_rfm(result)['length']
     # 2**10 = 1024
     power = 2**10
     n = 0
@@ -20,19 +34,42 @@ def get_size(result):
 
 
 def get_identifier(result):
-    if result.get('remote_file_manifest'):
-        rfm_url = result['remote_file_manifest']['url']
-    else:
-        rfm_url = result['files'][0]['url']
+    rfm_url = get_single_file_rfm(result)['url']
     url = urllib.parse.urlsplit(rfm_url)
     identifier = url.path.replace(PilotClient.TESTING_DIR + '/', '')
     identifier = identifier.replace(PilotClient.BASE_DIR + '/', '')
     return identifier
 
 
-@click.command(name='list')
-@click.option('--test/--no-test', default=False)
-def list_command(test):
+def fetch_format(columns, search_entry, fmt_func, list_fmt_func):
+    """
+    Fetch data in your defined 'columns', for a given Globus Search entry.
+    fmt_func is a function that formats simple types, while
+    list_fmt_func is a function that formats lists
+    """
+    formatted_rows = []
+
+    for name, func in columns:
+        try:
+            content = func(search_entry)
+        except Exception:
+            content = ''
+            # raise
+        if content and isinstance(content, list):
+            formatted_rows += list_fmt_func(name, content)
+        else:
+            formatted_rows += fmt_func(name, content)
+    return '\n'.join(formatted_rows)
+
+
+@click.command(name='list', help='List known records in Globus Search')
+@click.option('--test/--no-test', default=False,
+              help='Look for entry on test index/endpoint path.')
+@click.option('--json/--no-json', 'output_json', default=False,
+              help='Output as JSON.')
+@click.option('--limit', type=int, default=100,
+              help='Limit returned results to the number provided')
+def list_command(test, output_json, limit):
     # Should require login if there are publicly visible records
     pc = PilotClient()
     if not pc.is_logged_in():
@@ -42,7 +79,11 @@ def list_command(test):
     search_authorizer = pc.get_authorizers()['search.api.globus.org']
     sc = globus_sdk.SearchClient(authorizer=search_authorizer)
     # TO DO: iterate instead of upping limit
-    search_results = sc.search(index_id=pc.get_index(test), q='*', limit=100)
+    search_results = sc.search(index_id=pc.get_index(test), q='*', limit=limit)
+
+    if output_json:
+        click.echo(json.dumps(search_results.data, indent=4))
+        return
 
     fmt = '{:21.20}{:11.10}{:10.9}{:7.6}{:7.6}{:7.6}{}'
     columns = [
@@ -66,14 +107,14 @@ def list_command(test):
             try:
                 row.append(function(content))
             except Exception:
-                row.append('Err')
+                row.append('')
                 # raise
         rows.append(row)
 
     formatted_rows = [fmt.format(*r) for r in rows]
     header = fmt.format(*[c[0] for c in columns])
     output = '{}\n{}'.format(header, '\n'.join(formatted_rows))
-    click.echo_via_pager(output)
+    click.echo(output)
 
 
 def get_dates(result):
@@ -85,29 +126,35 @@ def get_dates(result):
     return fdates
 
 
-@click.command()
+@click.command(help='Output info about a dataset')
 @click.argument('path', type=click.Path())
-@click.option('--test/--no-test', default=False)
-def describe(path, test):
+@click.option('--test/--no-test', default=False,
+              help='Look for entry on test index/endpoint path.')
+@click.option('--json/--no-json', 'output_json', default=False,
+              help='Output as JSON.')
+def describe(path, test, output_json):
     pc = PilotClient()
     if not pc.is_logged_in():
         click.echo('You are not logged in.')
         return
 
+    old_entry = False
     fname, dirname = os.path.basename(path), os.path.dirname(path)
     entry = pc.get_search_entry(fname, dirname, test)
     if not entry:
+        old_entry = True
         entry = pc.get_search_entry(fname, dirname, old=True)
 
     if not entry:
         click.echo('Unable to find entry')
         return
 
-    if entry.get('testing'):
-        entry = entry['testing']
+    if output_json:
+        click.echo(json.dumps(entry, indent=4))
+        return
 
-    fmt = '{:21.20}{}'
-    columns = [
+    general_fmt = '{:21.20}{}'
+    general_columns = [
         ('Title', lambda r: r['dc']['titles'][0]['title']),
         ('Authors', lambda r: [c['creatorName'] for c in r['dc']['creators']]),
         ('Publisher', lambda r: r['dc']['publisher']),
@@ -115,8 +162,8 @@ def describe(path, test):
         ('Dates', get_dates),
         ('Data', lambda r: r['ncipilot']['data_type']),
         ('Dataframe', lambda r: r['ncipilot']['dataframe_type']),
-        ('Rows', lambda r: str(r['ncipilot']['numrows'])),
-        ('Columns', lambda r: str(r['ncipilot']['numcols'])),
+        ('Rows', lambda r: str(r['field_metadata']['numrows'])),
+        ('Columns', lambda r: str(r['field_metadata']['numcols'])),
         ('Formats', lambda r: r['dc']['formats']),
         ('Version', lambda r: r['dc']['version']),
         ('Size', get_size),
@@ -124,29 +171,57 @@ def describe(path, test):
         ('Description', lambda r: r['dc']['descriptions'][0]['description']),
     ]
 
-    formatted_rows = []
-    for name, func in columns:
-        try:
-            content = func(entry)
-        except Exception:
-            content = ''
-            # raise
-        if content and isinstance(content, list):
-            formatted_rows.append(fmt.format(name, content[0]))
-            extended = [fmt.format('', item) for item in content[1:]]
-            formatted_rows += extended
-        else:
-            formatted_rows.append(fmt.format(name, content))
+    def format_list(name, content):
+        return [general_fmt.format(name, content[0])] + \
+               [general_fmt.format('', item) for item in content[1:]]
 
-    output = '\n'.join(formatted_rows)
+    def format_entry(name, content):
+        return [general_fmt.format(name, content)]
+
+    output = fetch_format(general_columns, entry, format_entry, format_list)
+
+    fmt = ('{:21.20}{:7.6}{:7.6}{:7.6}{:7.6}'
+           '{:12.11}{:7.6}{:8.7}{:7.6}{:7.6}'
+           '{:7.6}{:7.6}{:9.8}'
+           )
+    field_metadata = [
+        ('Column Name', 'name'),
+        ('25-PCTL', '25'),
+        ('50-PCTL', '50'),
+        ('75-PCTL', '75'),
+        ('Count', 'count'),
+
+        ('Top Repeat', 'top'),
+        ('Unique', 'unique'),
+        ('Format', 'format'),
+        ('Min', 'min'),
+        ('Max', 'max'),
+
+        ('Mean', 'mean'),
+        ('Std', 'std'),
+        ('Type', 'type'),
+    ]
+    names = [n for n, f in field_metadata]
+    keys = [f for n, f in field_metadata]
+    fm_output = []
+    try:
+        for field in entry['field_metadata']['field_definitions']:
+            f_metadata = [str(field.get(key, '')) for key in keys]
+            fm_output.append(fmt.format(*f_metadata))
+
+        field_metadata_names = fmt.format(*names)
+        output = '{}\n\nField Metadata\n{}\n{}'.format(output,
+                                                       field_metadata_names,
+                                                       '\n'.join(fm_output))
+    except KeyError:
+        output = '{}\n\nField Metadata\nNo Field Metadata'.format(output)
+
+    if not test:
+        sub = pc.get_subject_url(fname, dirname, test, old=old_entry)
+        qsub = urllib.parse.quote_plus(urllib.parse.quote_plus(sub))
+        portal_url = '{}{}'.format(PORTAL_DETAIL_PAGE_PREFIX, qsub)
+        other_data = [general_fmt.format('Subject', sub),
+                      general_fmt.format('Portal URL', portal_url)]
+        output = '{}\n\nOther Data\n{}'.format(output, '\n'.join(other_data))
+
     click.echo(output)
-
-
-@click.command()
-def validate():
-    click.echo('validate command')
-
-
-@click.command()
-def stage():
-    click.echo('list command')

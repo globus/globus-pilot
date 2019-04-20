@@ -88,6 +88,7 @@
   "files": [
     {
       "data_type": "generic_datatype",
+      "mime_type": "text/tab-separated-values",
       "filename": "mydata.png",
       "length": 91053,
       "md5": "11c3295304c0fcb303c3182f4fe22e02",

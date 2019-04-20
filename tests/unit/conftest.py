@@ -1,7 +1,10 @@
 import pytest
+import os
 import copy
+import globus_sdk
 from unittest.mock import Mock
-from .mocks import MemoryStorage, MOCK_TOKEN_SET
+from .mocks import (MemoryStorage, MOCK_TOKEN_SET, GlobusTransferTaskResponse,
+                    ANALYSIS_FILE_BASE_DIR)
 
 from pilot.client import PilotClient
 import pilot
@@ -18,7 +21,38 @@ def mock_tokens():
 
 
 @pytest.fixture
-def mock_auth_pilot_cli(monkeypatch):
+def mock_config(monkeypatch):
+
+    class MockConfig(pilot.config.Config):
+        data = {}
+
+        def save(self, data):
+            self.data = {str(k): v for k, v in data.items()}
+
+        def load(self):
+            return self.data
+
+    mc = MockConfig()
+    monkeypatch.setattr(pilot.config, 'config', mc)
+    return mc
+
+
+@pytest.fixture
+def simple_tsv():
+    return os.path.join(ANALYSIS_FILE_BASE_DIR, 'simple.tsv')
+
+
+@pytest.fixture
+def mock_transfer_client(monkeypatch):
+    st = Mock()
+    monkeypatch.setattr(globus_sdk.TransferClient, 'submit_transfer', st)
+    st.return_value = GlobusTransferTaskResponse()
+    monkeypatch.setattr(globus_sdk, 'TransferData', Mock())
+    return st
+
+
+@pytest.fixture
+def mock_auth_pilot_cli(mock_transfer_client):
     """
     Returns a mock logged in pilot client. Storage is mocked with a custom
     object, so this does behave slightly differently than the real client.

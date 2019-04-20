@@ -1,8 +1,11 @@
 import os
 import time
+import uuid
 
-TEST_FILE_BASE_DIR = os.path.join(os.path.dirname(__file__),
-                                  'files', 'commands')
+BASE_FILE_DIR = os.path.join(os.path.dirname(__file__), 'files')
+COMMANDS_FILE_BASE_DIR = os.path.join(BASE_FILE_DIR, 'commands')
+ANALYSIS_FILE_BASE_DIR = os.path.join(BASE_FILE_DIR, 'analysis')
+
 DEFAULT_EXPIRE = int(time.time()) + 60 * 60 * 48
 
 
@@ -33,7 +36,7 @@ MOCK_TOKEN_SET = {
     },
     'petrel.http.server': {
         'scope': 'https://auth.globus.org/scopes/'
-            '56ceac29-e98a-440a-a594-b41e7a084b62/all',
+                 '56ceac29-e98a-440a-a594-b41e7a084b62/all',
         'access_token': '<token>',
         'refresh_token': None,
         'token_type': 'Bearer',
@@ -43,10 +46,43 @@ MOCK_TOKEN_SET = {
 }
 
 
+class GlobusTransferTaskResponse(object):
+
+    def __init__(self, *args, **kwargs):
+        task_uuid = str(uuid.uuid4())
+        self.data = {
+            'DATA_TYPE': 'transfer_result',
+            'code': 'Accepted',
+            'message': 'The transfer has been accepted and a task has been '
+                       'created and queued for execution',
+            'request_id': 'foobarbaz',
+            'resource': '/transfer',
+            'submission_id': task_uuid,
+            'task_id': task_uuid,
+            'task_link': {
+                'DATA_TYPE': 'link',
+                'href': 'task/{}?format=json'.format(task_uuid),
+                'rel': 'related',
+                'resource': 'task',
+                'title': 'related task'
+            }
+        }
+
+    def __getitem__(self, item):
+        return self.data[item]
+
+
 class MemoryStorage(object):
     def __init__(self):
         super(MemoryStorage, self).__init__()
         self.tokens = {}
+        self.data = {}
+
+    def load(self):
+        return self.data
+
+    def save(self, data):
+        self.data = data
 
     def write_tokens(self, tokens):
         self.tokens = tokens

@@ -100,16 +100,16 @@ class PilotClient(NativeClient):
             urllib.parse.urlencode(params), ''
         ])
 
-    def get_subject_url(self, dataframe, directory, test=False):
-        return self.get_globus_url(dataframe, directory, test)
+    def get_subject_url(self, dataframe, directory, test=False, old=False):
+        if old:
+            path = self.get_path(dataframe, directory)
+            parts = ['globus', self.ENDPOINT + ':', path, '', '', '']
+            return urllib.parse.urlunparse(parts)
+        else:
+            return self.get_globus_url(dataframe, directory, test)
 
     def get_search_entry(self, basename, directory, test=False, old=False):
-        if old:
-            path = self.get_path(basename, directory)
-            parts = ['globus', self.ENDPOINT + ':', path, '', '', '']
-            subject = urllib.parse.urlunparse(parts)
-        else:
-            subject = self.get_subject_url(basename, directory, test)
+        subject = self.get_subject_url(basename, directory, test, old)
         try:
             entry = self.gsearch.get_subject(self.get_index(test), subject)
             return entry['content'][0]

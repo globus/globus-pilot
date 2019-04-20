@@ -56,7 +56,8 @@
                 "additionalProperties": false,
                 "required": [
                     "data_type",
-                    "filename"
+                    "filename",
+                    "mime_type"
                 ]
             },
             "minItems": 1

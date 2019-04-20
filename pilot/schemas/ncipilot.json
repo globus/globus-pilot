@@ -8,14 +8,6 @@
             "type": "object",
             "description": "Dataframe details.",
             "properties": {
-                "numrows": {
-                    "type": "integer",
-                    "description": "Number of data (non-header) rows."
-                },
-                "numcols": {
-                    "type": "integer",
-                    "description": "Number of columns."
-                },
                 "data_type": {
                     "type": "string",
                     "enum": ["Metadata", "Drug Response", "Microarray", "RNA-seq"],
@@ -38,7 +30,9 @@
                         "description": "One repository."
                     }
                 }
-            }
+            },
+            "required": ["data_type", "dataframe_type"]
+
         }
     }
 }
