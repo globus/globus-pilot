@@ -51,7 +51,7 @@ def get_pandas_field_metadata(pandas_col_metadata, field_name):
     pmeta = pandas_col_metadata.get(field_name)
     # Pandas may return numpy.nan for statistics below, or nothing at all.
     # ALL possibly missing values are treated as NAN values and stripped at
-    # the end. 
+    # the end.
     metadata = {
         'name': field_name,
         'type': 'string' if str(pmeta.dtype) == 'object' else str(pmeta.dtype),

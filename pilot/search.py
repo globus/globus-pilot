@@ -166,6 +166,8 @@ def gen_dc_creators(metadata, creators):
 
 
 def gen_dc_formats(metadata, formats):
+    if isinstance(formats, str):
+        formats = [formats]
     metadata['dc']['formats'] = formats
 
 
