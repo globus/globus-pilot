@@ -49,25 +49,29 @@ def get_pandas_field_metadata(pandas_col_metadata, field_name):
     even show up in output.
     """
     pmeta = pandas_col_metadata.get(field_name)
+    # Pandas may return numpy.nan for statistics below, or nothing at all.
+    # ALL possibly missing values are treated as NAN values and stripped at
+    # the end. 
     metadata = {
         'name': field_name,
         'type': 'string' if str(pmeta.dtype) == 'object' else str(pmeta.dtype),
+        'count': int(pmeta['count']),
+        'top': pmeta['top'],
+
+        # string statistics
+        'unique': pmeta.get('unique', numpy.nan),
+        'frequency': pmeta.get('freq', numpy.nan),
 
         # numerical statistics
-        '25': pmeta['25%'],
-        '50': pmeta['50%'],
-        '75': pmeta['75%'],
-        'mean': pmeta['mean'],
-        'std': pmeta['std'],
-        'min': pmeta['min'],
-        'max': pmeta['max'],
-
-        # string/object  statistics
-        'count': int(pmeta['count']),
-        'unique': pmeta['unique'],
-        'top': pmeta['top'],
-        'frequency': pmeta['freq'],
+        '25': pmeta.get('25%', numpy.nan),
+        '50': pmeta.get('50%', numpy.nan),
+        '75': pmeta.get('75%', numpy.nan),
+        'mean': pmeta.get('mean', numpy.nan),
+        'std': pmeta.get('std', numpy.nan),
+        'min': pmeta.get('min', numpy.nan),
+        'max': pmeta.get('max', numpy.nan),
     }
+
     # Remove all NAN values
     cleaned_metadata = {k: v for k, v in metadata.items()
                         if isinstance(v, str) or not numpy.isnan(v)}
