@@ -23,7 +23,7 @@ class PilotClient(NativeClient):
     APP_NAME = 'NCI Pilot 1 Dataframe Manager'
     ENDPOINT = 'ebf55996-33bf-11e9-9fa4-0a06afd4a22e'
     BASE_DIR = '/restricted/dataframes'
-    TESTING_DIR = '/restricted/dataframes/cli_testing'
+    TESTING_DIR = '/test'
     SEARCH_INDEX_TEST = 'e0849c9b-b709-46f3-be21-80893fc1db84'
     GROUP = 'd99b3400-33e7-11e9-8857-0af4690c7c7e'
 
