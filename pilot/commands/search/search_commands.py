@@ -90,8 +90,8 @@ def list_command(test, output_json, limit):
         ('Title', lambda r: r['dc']['titles'][0]['title']),
         ('Data', lambda r: r['ncipilot']['data_type']),
         ('Dataframe', lambda r: r['ncipilot']['dataframe_type']),
-        ('Rows', lambda r: str(r['ncipilot']['numrows'])),
-        ('Cols', lambda r: str(r['ncipilot']['numcols'])),
+        ('Rows', lambda r: str(r['field_metadata']['numrows'])),
+        ('Cols', lambda r: str(r['field_metadata']['numcols'])),
         ('Size', get_size),
         ('Filename', get_identifier),
     ]
