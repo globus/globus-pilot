@@ -144,6 +144,7 @@ def gen_gmeta(subject, visible_to, content):
     entry['visible_to'] = [GROUP_URN_PREFIX.format(visible_to)]
     entry['subject'] = subject
     entry['content'] = content
+    entry['id'] = 'metadata'
     gmeta = GMETA_LIST.copy()
     gmeta['ingest_data']['gmeta'].append(entry)
     return gmeta
