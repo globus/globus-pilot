@@ -78,9 +78,18 @@ def scrape_metadata(dataframe, url, analyze_file=False):
                     'creatorName': formal_name
                 }
             ],
+            'subjects': [
+                {
+                    "subject": "machine learning"
+                },
+                {
+                    "subject": "genomics"
+                }
+            ],
             'publicationYear': str(datetime.datetime.now().year),
             'publisher': DEFAULT_PUBLISHER,
             'resourceType': {
+                'resourceType': 'Dataset',
                 'resourceTypeGeneral': 'Dataset'
             },
             'dates': [
