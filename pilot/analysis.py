@@ -100,7 +100,7 @@ def analyze_dataframe(filename):
     ts_info = tableschema.Schema(tableschema.infer(filename)).descriptor
 
     column_metadata = []
-    for column in ts_info['fields']:
+    for column in ts_info['fields'][:10]:
         df_metadata = column.copy()
         col_name = column['name']
         df_metadata.update(get_pandas_field_metadata(pandas_info, col_name))
