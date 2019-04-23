@@ -8,7 +8,7 @@ FOREIGN_KEYS = {
         'fields': ['DRUG_ID'],
         'reference': {
             'filename': 'drugs',
-            'resource': 'globus://ebf55996-33bf-11e9-9fa4-0a06afd4a22e:'
+            'resource': 'globus://ebf55996-33bf-11e9-9fa4-0a06afd4a22e'
                         '/restricted/dataframes/metadata/drugs.tsv',
             'fields': 'ID'
             }
@@ -17,7 +17,7 @@ FOREIGN_KEYS = {
         'fields': ['CELLNAME'],
         'reference': {
             'filename': 'celllines',
-            'resource': 'globus://ebf55996-33bf-11e9-9fa4-0a06afd4a22e:'
+            'resource': 'globus://ebf55996-33bf-11e9-9fa4-0a06afd4a22e'
                         '/restricted/dataframes/metadata/celllines.tsv',
             'fields': 'sample_name'
             }
@@ -26,7 +26,7 @@ FOREIGN_KEYS = {
         'fields': ['Sample'],
         'reference': {
             'filename': 'celllines',
-            'resource': 'globus://ebf55996-33bf-11e9-9fa4-0a06afd4a22e:'
+            'resource': 'globus://ebf55996-33bf-11e9-9fa4-0a06afd4a22e'
                         '/restricted/dataframes/metadata/celllines.tsv',
             'fields': 'sample_name'
             }
