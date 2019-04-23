@@ -9,7 +9,7 @@ FOREIGN_KEYS = {
         'reference': {
             'filename': 'drugs',
             'resource': 'globus://ebf55996-33bf-11e9-9fa4-0a06afd4a22e:'
-                        '/restricted/dataframes/metadata/drugs',
+                        '/restricted/dataframes/metadata/drugs.tsv',
             'fields': 'ID'
             }
         },
@@ -18,7 +18,7 @@ FOREIGN_KEYS = {
         'reference': {
             'filename': 'celllines',
             'resource': 'globus://ebf55996-33bf-11e9-9fa4-0a06afd4a22e:'
-                        '/restricted/dataframes/metadata/celllines',
+                        '/restricted/dataframes/metadata/celllines.tsv',
             'fields': 'sample_name'
             }
         },
@@ -27,7 +27,7 @@ FOREIGN_KEYS = {
         'reference': {
             'filename': 'celllines',
             'resource': 'globus://ebf55996-33bf-11e9-9fa4-0a06afd4a22e:'
-                        '/restricted/dataframes/metadata/celllines',
+                        '/restricted/dataframes/metadata/celllines.tsv',
             'fields': 'sample_name'
             }
         }
