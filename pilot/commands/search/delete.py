@@ -7,13 +7,17 @@ from pilot.client import PilotClient
 
 @click.command(name='delete', help='Delete a search entry')
 @click.argument('path', type=click.Path())
+@click.option('--entry-id', default='metadata', help=('Delete a specific entry'
+              ' within the search subject, or "null" for a null entry id.'))
+@click.option('--subject', default=False, help=('Delete the entire subject '
+              'comprising all of its associated entry ids'))
 @click.option('--test', is_flag=True, default=False)
 @click.option('--dry-run', is_flag=True, default=False,
               help="Show report, but don't actually delete entry/file")
 @click.option('--delete-data', 'delete_data', default=False,
               help='Output as JSON.')
 @click.option('--yes', is_flag=True)
-def delete_command(path, test, dry_run, delete_data, yes):
+def delete_command(path, entry_id, subject, test, dry_run, delete_data, yes):
     pc = PilotClient()
     if not pc.is_logged_in():
         click.echo('You are not logged in.')
@@ -29,7 +33,8 @@ def delete_command(path, test, dry_run, delete_data, yes):
         return
 
     try:
-        pc.delete_entry(fname, dirname, test)
+        pc.delete_entry(fname, dirname, test, entry_id=entry_id,
+                        full_subject=subject)
         click.secho('Removed {} Successfully'.format(path), fg='green')
     except globus_sdk.exc.SearchAPIError as se:
         if se.code == 'NotFound.Generic':
