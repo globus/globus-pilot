@@ -133,7 +133,8 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
             tc, local_ep, pc.ENDPOINT,
             label='{} Transfer'.format(pc.APP_NAME),
             notify_on_succeeded=False,
-            sync_level='checksum')
+            sync_level='checksum',
+            encrypt_data=True)
         path = pc.get_path(filename, destination, test)
         tdata.add_item(dataframe, path)
         click.echo('Starting Transfer...')
