@@ -141,19 +141,32 @@ class PilotClient(NativeClient):
             raise Exception('Failed to ingest search subject')
         return True
 
-    def delete_entry(self, dataframe, directory, test, entry_id=None):
+    def delete_entry(self, dataframe, directory, test, entry_id=None,
+                     full_subject=False):
         """
-        Short path is the name of the file and subdirectory under
-        BASE_DIR
-        :param short_path:
-        :param test: Delete the subject on the test index
+        Delete search entries in Globus Search. dataframe and directory
+        reference the real path of the dataframe on a globus endpoint, and
+        generates the subject id used to delete the entry on globus search.
+        Test denotes whether to use the test or production search index.
+        entry_id will delete only a subset of the subject, where full_subject
+        will delete the entire subject. full_subject overrides entry_id.
+
+        Example: delete_entry('foo', 'bar', True, entry_id='foo/bar')
+                 delete_entry('baz', 'car', False)
+        :param dataframe: filename reference to fetch the subject
+        :param directory: directory reference to fetch the subject
+        :param test: Delete on the test index
+        :param entry_id: Single entry within the subject to delete.
+        :param full_subject: Delete the whole subject and all its entries
         :return:
         """
-        return self.gsearch.delete_entry(
-            self.get_index(test),
-            self.get_subject_url(dataframe, directory, test),
-            entry_id=entry_id
-        )
+        index = self.get_index(test)
+        subject = self.get_subject_url(dataframe, directory, test)
+
+        if full_subject:
+            return self.gsearch.delete_subject(index, subject)
+        else:
+            return self.gsearch.delete_entry(index, subject, entry_id=entry_id)
 
     def upload(self, dataframe, destination, test=False):
         filename = os.path.basename(dataframe)

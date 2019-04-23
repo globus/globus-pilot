@@ -180,26 +180,28 @@ def describe(path, test, output_json):
 
     output = fetch_format(general_columns, entry, format_entry, format_list)
 
-    fmt = ('{:21.20}{:7.6}{:7.6}{:7.6}{:7.6}'
-           '{:12.11}{:7.6}{:8.7}{:7.6}{:7.6}'
-           '{:7.6}{:7.6}{:9.8}'
+    fmt = ('{:21.20}'
+           '{:8.7}{:7.6}{:5.4}{:12.11}{:7.6}'
+           '{:7.6}{:7.6}{:7.6}{:7.6}'
+           '{:8.7}{:8.7}{:8.7}'
            )
     field_metadata = [
         ('Column Name', 'name'),
+
+        ('Type', 'type'),
+        ('Count', 'count'),
+        ('Freq', 'frequency'),
+        ('Top', 'top'),
+        ('Unique', 'unique'),
+
+        ('Min', 'min'),
+        ('Max', 'max'),
+        ('Mean', 'mean'),
+        ('Std', 'std'),
+
         ('25-PCTL', '25'),
         ('50-PCTL', '50'),
         ('75-PCTL', '75'),
-        ('Count', 'count'),
-
-        ('Top Repeat', 'top'),
-        ('Unique', 'unique'),
-        ('Format', 'format'),
-        ('Min', 'min'),
-        ('Max', 'max'),
-
-        ('Mean', 'mean'),
-        ('Std', 'std'),
-        ('Type', 'type'),
     ]
     names = [n for n, f in field_metadata]
     keys = [f for n, f in field_metadata]
@@ -221,7 +223,7 @@ def describe(path, test, output_json):
         qsub = urllib.parse.quote_plus(urllib.parse.quote_plus(sub))
         portal_url = '{}{}'.format(PORTAL_DETAIL_PAGE_PREFIX, qsub)
         other_data = [general_fmt.format('Subject', sub),
-                      general_fmt.format('Portal URL', portal_url)]
+                      general_fmt.format(path, portal_url)]
         output = '{}\n\nOther Data\n{}'.format(output, '\n'.join(other_data))
 
     click.echo(output)
