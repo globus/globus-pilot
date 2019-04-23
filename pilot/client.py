@@ -3,7 +3,7 @@ import time
 import requests
 import globus_sdk
 import urllib
-from globus_sdk import AuthClient, SearchClient
+from globus_sdk import AuthClient, SearchClient, TransferClient
 from fair_research_login import (NativeClient, LoadError)
 from pilot.config import config
 
@@ -56,6 +56,11 @@ class PilotClient(NativeClient):
     def gsearch(self):
         authorizer = self.get_authorizers()['search.api.globus.org']
         return SearchClient(authorizer=authorizer)
+
+    @property
+    def gtransfer(self):
+        authorizer = self.get_authorizers()['transfer.api.globus.org']
+        return TransferClient(authorizer=authorizer)
 
     @property
     def http_headers(self):
@@ -135,6 +140,20 @@ class PilotClient(NativeClient):
             # sc.delete_entry(self.SEARCH_INDEX_TEST, subject)
             raise Exception('Failed to ingest search subject')
         return True
+
+    def delete_entry(self, dataframe, directory, test, entry_id=None):
+        """
+        Short path is the name of the file and subdirectory under
+        BASE_DIR
+        :param short_path:
+        :param test: Delete the subject on the test index
+        :return:
+        """
+        return self.gsearch.delete_entry(
+            self.get_index(test),
+            self.get_subject_url(dataframe, directory, test),
+            entry_id=entry_id
+        )
 
     def upload(self, dataframe, destination, test=False):
         filename = os.path.basename(dataframe)
