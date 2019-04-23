@@ -49,7 +49,7 @@ def get_formatted_date():
     return datetime.datetime.now(pytz.utc).isoformat().replace('+00:00', 'Z')
 
 
-def scrape_metadata(dataframe, url, analyze_file=False):
+def scrape_metadata(dataframe, url, skip_analysis=True):
     mimetype = mimetypes.guess_type(dataframe)[0]
     dc_formats = []
     rfm_metadata = {}
@@ -65,7 +65,7 @@ def scrape_metadata(dataframe, url, analyze_file=False):
         formal_name = '{}, {}'.format(name[-1:][0], ' '.join(name[:-1]))
     else:
         formal_name = user_info['name']
-    metadata = analyze_dataframe(dataframe) if analyze_file else {}
+    metadata = analyze_dataframe(dataframe) if not skip_analysis else {}
     return {
         'dc': {
             'titles': [
@@ -144,6 +144,7 @@ def gen_gmeta(subject, visible_to, content):
     entry['visible_to'] = [GROUP_URN_PREFIX.format(visible_to)]
     entry['subject'] = subject
     entry['content'] = content
+    entry['id'] = 'metadata'
     gmeta = GMETA_LIST.copy()
     gmeta['ingest_data']['gmeta'].append(entry)
     return gmeta
