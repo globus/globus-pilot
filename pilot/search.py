@@ -109,17 +109,16 @@ def scrape_metadata(dataframe, url, skip_analysis=True):
 
 
 def update_metadata(new_metadata, prev_metadata, user_metadata, files_updated):
-    metadata = copy.deepcopy(new_metadata)
-    if prev_metadata:
-        metadata.update(prev_metadata)
-        if files_updated:
-            version = int(metadata['dc']['version'])
-            metadata['dc']['version'] = str(version + 1)
-            metadata['dc']['dates'].append({
-                'dateType': 'Updated',
-                'date': get_formatted_date()
-            })
-            metadata['files'] = new_metadata['files']
+    metadata = copy.deepcopy(prev_metadata or {})
+    metadata.update(new_metadata)
+    if files_updated:
+        version = int(metadata['dc']['version'])
+        metadata['dc']['version'] = str(version + 1)
+        metadata['dc']['dates'].append({
+            'dateType': 'Updated',
+            'date': get_formatted_date()
+        })
+        metadata['files'] = new_metadata['files']
     if user_metadata:
         validate_user_provided_metadata(user_metadata)
         for field_name, value in user_metadata.items():
