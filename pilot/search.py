@@ -4,14 +4,18 @@ import hashlib
 import pytz
 import datetime
 import mimetypes
+import json
 import jsonschema
 
 from pilot.config import config
 from pilot.validation import validate_dataset, validate_user_provided_metadata
 from pilot.analysis import analyze_dataframe
 from pilot.exc import RequiredUploadFields
+from pilot.client import PilotClient
 
 DEFAULT_HASH_ALGORITHMS = ['sha256', 'md5']
+FOREIGN_KEYS_FILE = os.path.join(os.path.dirname(__file__),
+                                 'foreign_keys.json')
 DEFAULT_PUBLISHER = 'Argonne National Laboratory'
 MINIMUM_USER_REQUIRED_FIELDS = [
     'dataframe_type',
@@ -49,7 +53,19 @@ def get_formatted_date():
     return datetime.datetime.now(pytz.utc).isoformat().replace('+00:00', 'Z')
 
 
-def scrape_metadata(dataframe, url, skip_analysis=True):
+def get_foreign_keys(filename=FOREIGN_KEYS_FILE, test=False):
+    with open(filename) as fh:
+        fkeys = json.load(fh)
+    pc = PilotClient()
+    for fkey_data in fkeys.values():
+        path = fkey_data['reference']['resource']
+        dirname, fname, = os.path.dirname(path), os.path.basename(path)
+        sub = pc.get_subject_url(fname, dirname, test)
+        fkey_data['reference']['resource'] = sub
+    return fkeys
+
+
+def scrape_metadata(dataframe, url, skip_analysis=True, test=False):
     mimetype = mimetypes.guess_type(dataframe)[0]
     dc_formats = []
     rfm_metadata = {}
@@ -65,7 +81,8 @@ def scrape_metadata(dataframe, url, skip_analysis=True):
         formal_name = '{}, {}'.format(name[-1:][0], ' '.join(name[:-1]))
     else:
         formal_name = user_info['name']
-    metadata = analyze_dataframe(dataframe) if not skip_analysis else {}
+    fkeys = get_foreign_keys(test=test)
+    metadata = analyze_dataframe(dataframe, fkeys) if not skip_analysis else {}
     return {
         'dc': {
             'titles': [

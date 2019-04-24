@@ -3,37 +3,6 @@ import numpy
 import tableschema
 
 
-FOREIGN_KEYS = {
-    'DRUG_ID': {
-        'fields': ['DRUG_ID'],
-        'reference': {
-            'filename': 'drugs',
-            'resource': 'globus://ebf55996-33bf-11e9-9fa4-0a06afd4a22e'
-                        '/restricted/dataframes/metadata/drugs.tsv',
-            'fields': 'ID'
-            }
-        },
-    'CELLNAME': {
-        'fields': ['CELLNAME'],
-        'reference': {
-            'filename': 'celllines',
-            'resource': 'globus://ebf55996-33bf-11e9-9fa4-0a06afd4a22e'
-                        '/restricted/dataframes/metadata/celllines.tsv',
-            'fields': 'sample_name'
-            }
-        },
-    'Sample': {
-        'fields': ['Sample'],
-        'reference': {
-            'filename': 'celllines',
-            'resource': 'globus://ebf55996-33bf-11e9-9fa4-0a06afd4a22e'
-                        '/restricted/dataframes/metadata/celllines.tsv',
-            'fields': 'sample_name'
-            }
-        }
-    }
-
-
 def get_preview_byte_count(filename, num_rows=11):
     """Count and return number of bytes for the first 11 rows in the given
     filename. Useful for preview."""
@@ -87,12 +56,14 @@ def get_pandas_field_metadata(pandas_col_metadata, field_name):
     return cleaned_metadata
 
 
-def get_foreign_key(column):
-    ref = FOREIGN_KEYS.get(column['name'], {}).get('reference') or None
+def get_foreign_key(foreign_keys, column):
+    if not foreign_keys:
+        return{'reference': None}
+    ref = foreign_keys.get(column['name'], {}).get('reference') or None
     return {'reference': ref}
 
 
-def analyze_dataframe(filename):
+def analyze_dataframe(filename, foreign_keys=None):
     # Pandas analysis
     df = pandas.read_csv(filename, sep='\t')
     pandas_info = df.describe(include='all')
@@ -104,7 +75,7 @@ def analyze_dataframe(filename):
         df_metadata = column.copy()
         col_name = column['name']
         df_metadata.update(get_pandas_field_metadata(pandas_info, col_name))
-        df_metadata.update(get_foreign_key(column))
+        df_metadata.update(get_foreign_key(foreign_keys, column))
         column_metadata.append(df_metadata)
 
     dataframe_metadata = {
