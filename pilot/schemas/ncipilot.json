@@ -8,20 +8,6 @@
             "type": "object",
             "description": "Dataframe details.",
             "properties": {
-                "data_type": {
-                    "type": "string",
-                    "enum": ["Metadata", "Drug Response", "Microarray", "RNA-seq", "Reference"],
-                    "description" : "Data category, may be: 'Drug Descriptor', 'Drug Response', 'Microarray', 'RNA-seq', 'Reference'"
-                                },
-                "dataframe_type": {
-                    "type": "string",
-                    "enum": ["List", "Matrix"],
-                    "description" : "Dataframe structure, matrix or list"
-                },
-                "units": {
-                    "type": "integer",
-                    "description": "Units or scale (e.g., log, log10) of the data."
-                },
                 "source": {
                     "type": "array",
                     "description": "The source data repositories.",
@@ -30,9 +16,7 @@
                         "description": "One repository."
                     }
                 }
-            },
-            "required": ["data_type", "dataframe_type"]
-
+            }
         }
     }
 }

@@ -17,10 +17,10 @@
             "$ref": "dc.json#/properties/dc/properties/formats"
         },
         "data_type": {
-            "$ref": "ncipilot.json#/properties/ncipilot/properties/data_type"
+            "$ref": "files.json#/properties/files/items/properties/data_type"
         },
         "dataframe_type": {
-            "$ref": "ncipilot.json#/properties/ncipilot/properties/dataframe_type"
+            "$ref": "files.json#/properties/files/items/properties/dataframe_type"
         },
         "source": {
             "$ref": "ncipilot.json#/properties/ncipilot/properties/source"

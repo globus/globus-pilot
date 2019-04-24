@@ -20,10 +20,6 @@
                         "format": "uri",
                         "description": "The URL to the data."
                     },
-                    "data_type": {
-                        "type": "string",
-                        "description": "The type of data in this file."
-                    },
                     "mime_type": {
                         "type": "string",
                         "description": "The MIME type of the file."
@@ -51,11 +47,34 @@
                     "sha512": {
                         "type": "string",
                         "description": "The SHA512 hash of the file."
+                    },
+                    "x-label": {
+                        "type": "string",
+                        "description": "X-label, if the dataframe_type is Matrix"
+                    },
+                    "y-label": {
+                        "type": "string",
+                        "description": "Y-label, if the dataframe_type is Matrix"
+                    },
+                    "data_type": {
+                        "type": "string",
+                        "enum": ["Metadata", "Drug Response", "Microarray", "RNA-seq", "Reference"],
+                        "description" : "Data category, may be: 'Drug Descriptor', 'Drug Response', 'Microarray', 'RNA-seq', 'Reference'"
+                    },
+                    "dataframe_type": {
+                        "type": "string",
+                        "enum": ["List", "Matrix"],
+                        "description" : "Dataframe structure, matrix or list"
+                    },
+                    "units": {
+                        "type": "integer",
+                        "description": "Units or scale (e.g., log, log10) of the data."
                     }
                 },
                 "additionalProperties": false,
                 "required": [
                     "data_type",
+                    "dataframe_type",
                     "filename",
                     "mime_type"
                 ]
