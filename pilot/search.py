@@ -11,7 +11,7 @@ from pilot.config import config
 from pilot.validation import validate_dataset, validate_user_provided_metadata
 from pilot.analysis import analyze_dataframe
 from pilot.exc import RequiredUploadFields
-from pilot.client import PilotClient
+import pilot
 
 DEFAULT_HASH_ALGORITHMS = ['sha256', 'md5']
 FOREIGN_KEYS_FILE = os.path.join(os.path.dirname(__file__),
@@ -56,7 +56,7 @@ def get_formatted_date():
 def get_foreign_keys(filename=FOREIGN_KEYS_FILE, test=False):
     with open(filename) as fh:
         fkeys = json.load(fh)
-    pc = PilotClient()
+    pc = pilot.client.PilotClient()
     for fkey_data in fkeys.values():
         path = fkey_data['reference']['resource']
         dirname, fname, = os.path.dirname(path), os.path.basename(path)
@@ -125,28 +125,98 @@ def scrape_metadata(dataframe, url, skip_analysis=True, test=False):
     }
 
 
-def update_metadata(new_metadata, prev_metadata, user_metadata, files_updated):
-    metadata = copy.deepcopy(prev_metadata or {})
-    metadata.update(new_metadata)
-    if files_updated:
-        version = int(metadata['dc']['version'])
-        metadata['dc']['version'] = str(version + 1)
-        metadata['dc']['dates'].append({
-            'dateType': 'Updated',
-            'date': get_formatted_date()
-        })
-        metadata['files'] = new_metadata['files']
+def carryover_old_file_metadata(new_scrape_rfm, old_rfm):
+    """Carries over old metadata into the new file manifest. This is
+    desired if the files haven't changed and the metadata wasn't explicitly
+    added to the new metadata, in which case we don't want to loose the old
+    descriptive metadata. If the Remote File Manifests have different files,
+    this should not be used."""
+    if not old_rfm or not new_scrape_rfm:
+        return new_scrape_rfm
+
+    new = {f['url']: f for f in new_scrape_rfm}
+    old = {f['url']: f for f in old_rfm}
+
+    if new.keys() != old.keys():
+        return new_scrape_rfm
+
+    for k, v in old.items():
+        for field in ['data_type', 'mime_type']:  # 'dataframe_type'
+            if old[k].get(field):
+                if new.get(k):
+                    new[k][field] = old[k][field]
+    return list(new.values())
+
+
+def files_modified(manifest1, manifest2):
+    """Compare two remote file manifests for equality, and return true if
+    the files are different. ONLY file specific properties are checked,
+    such as url, filename, length, and hash.
+    if one contains more metadata than another but everything else matches,
+    this will return False.
+    FIXME: This can only check two manifests that have the same kinds of hashes
+    If one has md5, and the other doesn't, this will fail."""
+    if manifest1 is None and manifest2 is None:
+        return False
+
+    if manifest1 is None or manifest2 is None:
+        return True
+
+    man1 = {f['url']: f for f in manifest1}
+    man2 = {f['url']: f for f in manifest2}
+
+    if man1.keys() != man2.keys():
+        return True
+
+    fields = ['url', 'filename', 'length'] + list(hashlib.algorithms_available)
+
+    for url_key in man1.keys():
+        man1dict, man2dict = man1.get(url_key), man2.get(url_key)
+        if any([man1dict.get(f) != man2dict.get(f) for f in fields]):
+            return True
+
+
+def update_dc_version(metadata):
+    version = int(metadata['dc']['version'])
+    metadata['dc']['version'] = str(version + 1)
+    metadata['dc']['dates'].append({
+        'dateType': 'Updated',
+        'date': get_formatted_date()
+    })
+
+
+def update_metadata(scraped_metadata, prev_metadata, user_metadata):
+    if prev_metadata:
+        metadata = copy.deepcopy(prev_metadata or {})
+
+        files_updated = files_modified(scraped_metadata.get('files'),
+                                       metadata.get('files'))
+        if files_updated:
+            # If files have been modified, don't carryover metadata fields
+            update_dc_version(metadata)
+            metadata['files'] = scraped_metadata['files']
+        carryover_old_file_metadata(scraped_metadata.get('files'),
+                                    prev_metadata.get('files'))
+    else:
+        metadata = scraped_metadata
     if user_metadata:
         validate_user_provided_metadata(user_metadata)
         for field_name, value in user_metadata.items():
             if field_name in DATACITE_FIELDS:
                 set_dc_field(metadata, field_name, value)
-            else:
+            if field_name in REMOTE_FILE_MANIFEST_FIELDS:
+                for manifest in metadata['files']:
+                    manifest[field_name] = value
+            if field_name not in DATACITE_FIELDS + REMOTE_FILE_MANIFEST_FIELDS:
                 if not metadata.get('ncipilot'):
                     metadata['ncipilot'] = {}
                 metadata['ncipilot'][field_name] = value
-            if field_name in REMOTE_FILE_MANIFEST_FIELDS:
-                metadata['files'][0][field_name] = value
+            # TODO Remove this once we swith to having these fields in rfms
+            if field_name in ['data_type']:
+                if not metadata.get('ncipilot'):
+                    metadata['ncipilot'] = {}
+                metadata['ncipilot'][field_name] = value
+    metadata['ncipilot'] = metadata.get('ncipilot', {})
     return metadata
 
 
@@ -155,7 +225,8 @@ def gen_gmeta(subject, visible_to, content):
         validate_dataset(content)
     except jsonschema.exceptions.ValidationError as ve:
         if any([m in ve.message for m in MINIMUM_USER_REQUIRED_FIELDS]):
-            raise RequiredUploadFields(MINIMUM_USER_REQUIRED_FIELDS) from None
+            raise RequiredUploadFields(ve.message,
+                                       MINIMUM_USER_REQUIRED_FIELDS) from None
     entry = GMETA_ENTRY.copy()
     entry['visible_to'] = [GROUP_URN_PREFIX.format(visible_to)]
     entry['subject'] = subject
