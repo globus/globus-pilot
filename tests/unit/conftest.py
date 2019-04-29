@@ -1,10 +1,12 @@
 import pytest
 import os
+import json
+import uuid
 import copy
 import globus_sdk
 from unittest.mock import Mock
 from .mocks import (MemoryStorage, MOCK_TOKEN_SET, GlobusTransferTaskResponse,
-                    ANALYSIS_FILE_BASE_DIR)
+                    ANALYSIS_FILE_BASE_DIR, CLIENT_FILE_BASE_DIR)
 
 from pilot.client import PilotClient
 import pilot
@@ -38,8 +40,13 @@ def mock_config(monkeypatch):
 
 
 @pytest.fixture
-def simple_tsv():
-    return os.path.join(ANALYSIS_FILE_BASE_DIR, 'simple.tsv')
+def mixed_tsv():
+    return os.path.join(ANALYSIS_FILE_BASE_DIR, 'mixed.tsv')
+
+
+@pytest.fixture
+def numbers_tsv():
+    return os.path.join(ANALYSIS_FILE_BASE_DIR, 'numbers.tsv')
 
 
 @pytest.fixture
@@ -66,17 +73,31 @@ def mock_auth_pilot_cli(monkeypatch, mock_transfer_client):
 
     monkeypatch.setattr(pc, 'load_tokens', load_tokens)
 
+    pc.BASE_DIR = 'prod'
+    pc.ENDPOINT = 'endpoint'
+    pc.SEARCH_INDEX = 'search_index'
+    pc.SEARCH_INDEX_TEST = 'search_index_test'
     pc.upload = Mock()
     pc.login = Mock()
     pc.logout = Mock()
     pc.ingest_entry = Mock()
-    pc.get_search_entry = Mock()
+    pc.get_search_entry = Mock(return_value=None)
     pc.ls = Mock()
     pc.delete_entry = Mock()
     # Sanity. This *should* always return True, but will fail if we update
     # tokens at a later time.
     assert pc.is_logged_in()
     return pc
+
+
+@pytest.fixture
+def mock_pc_existing_search_entry(mock_auth_pilot_cli):
+    fname = os.path.join(CLIENT_FILE_BASE_DIR, 'search_entry_v1.json')
+    with open(fname) as fh:
+        entry_json = json.load(fh)
+    print(entry_json)
+    mock_auth_pilot_cli.get_search_entry.return_value = entry_json
+    return mock_auth_pilot_cli
 
 
 @pytest.fixture

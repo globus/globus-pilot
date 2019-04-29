@@ -6,6 +6,7 @@ import datetime
 import mimetypes
 import json
 import jsonschema
+import logging
 
 from pilot.profile import profile
 from pilot.validation import validate_dataset, validate_user_provided_metadata
@@ -47,6 +48,8 @@ DATACITE_FIELDS = ['title', 'description', 'creators', 'mime_type']
 # Used for user provided metadata. Fields here will be copied into the rfm,
 # even if also provided in other areas.
 REMOTE_FILE_MANIFEST_FIELDS = ['mime_type', 'data_type']
+
+log = logging.getLogger(__name__)
 
 
 def get_formatted_date():
@@ -137,6 +140,8 @@ def carryover_old_file_metadata(new_scrape_rfm, old_rfm):
     old = {f['url']: f for f in old_rfm}
 
     if new.keys() != old.keys():
+        log.debug('Files Updated! Old: {}, New: {}'
+                  ''.format(list(old_rfm), list(new_scrape_rfm)))
         return new_scrape_rfm
 
     for k, v in old.items():
@@ -186,16 +191,17 @@ def update_dc_version(metadata):
 
 def update_metadata(scraped_metadata, prev_metadata, user_metadata):
     if prev_metadata:
-        metadata = copy.deepcopy(prev_metadata or {})
+        metadata = copy.deepcopy(scraped_metadata or {})
 
         files_updated = files_modified(scraped_metadata.get('files'),
                                        metadata.get('files'))
         if files_updated:
             # If files have been modified, don't carryover metadata fields
             update_dc_version(metadata)
-            metadata['files'] = scraped_metadata['files']
-        carryover_old_file_metadata(scraped_metadata.get('files'),
-                                    prev_metadata.get('files'))
+        metadata['files'] = carryover_old_file_metadata(
+            scraped_metadata.get('files'),
+            prev_metadata.get('files')
+        )
     else:
         metadata = scraped_metadata
     if user_metadata:
