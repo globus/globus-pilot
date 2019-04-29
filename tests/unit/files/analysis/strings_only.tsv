@@ -1,0 +1,101 @@
+human	elf	dwarf	kobold	wyvern	dragon
+hit	critical miss	miss	critical hit	critical miss	critical miss
+miss	miss	miss	critical hit	miss	critical miss
+critical miss	miss	hit	critical hit	critical miss	critical miss
+miss	critical miss	critical miss	critical hit	miss	critical hit
+critical miss	critical hit	critical miss	miss	miss	critical hit
+critical miss	critical miss	hit	critical hit	critical hit	critical miss
+critical miss	miss	critical miss	critical miss	miss	critical hit
+miss	hit	miss	critical miss	miss	hit
+hit	critical miss	hit	critical hit	hit	hit
+miss	critical hit	critical miss	critical miss	critical miss	miss
+critical hit	critical miss	critical hit	critical miss	miss	critical miss
+critical hit	miss	critical miss	miss	critical hit	critical miss
+hit	critical miss	miss	hit	critical miss	critical hit
+critical miss	miss	hit	miss	hit	critical miss
+critical miss	miss	hit	hit	miss	hit
+critical miss	critical hit	critical hit	hit	critical miss	miss
+miss	critical hit	critical miss	miss	miss	critical miss
+miss	miss	critical hit	critical miss	miss	miss
+critical miss	critical hit	miss	critical hit	miss	critical hit
+miss	critical miss	hit	critical miss	critical miss	critical miss
+miss	miss	miss	miss	critical hit	critical hit
+miss	miss	critical hit	hit	miss	critical miss
+miss	critical hit	critical hit	hit	critical miss	critical miss
+hit	critical miss	miss	miss	critical miss	critical hit
+hit	hit	critical hit	miss	hit	miss
+hit	miss	miss	critical miss	miss	hit
+critical miss	hit	hit	miss	miss	critical miss
+hit	miss	critical hit	miss	hit	miss
+hit	critical miss	hit	critical miss	critical miss	miss
+miss	miss	critical miss	miss	critical miss	hit
+hit	hit	critical miss	critical hit	critical hit	miss
+miss	critical miss	miss	critical miss	miss	hit
+critical miss	miss	critical hit	critical miss	critical hit	critical miss
+miss	hit	critical hit	miss	hit	critical miss
+critical miss	critical miss	critical miss	hit	critical hit	hit
+miss	miss	hit	critical miss	critical hit	miss
+critical miss	hit	critical miss	miss	miss	critical miss
+critical miss	hit	hit	critical miss	hit	critical miss
+critical miss	miss	miss	miss	miss	miss
+critical hit	critical miss	hit	critical miss	critical miss	hit
+miss	hit	miss	critical miss	miss	hit
+hit	critical miss	hit	hit	critical miss	critical miss
+critical miss	hit	hit	miss	hit	critical miss
+critical hit	critical hit	miss	critical hit	miss	critical miss
+hit	miss	hit	miss	critical miss	miss
+critical hit	miss	critical miss	critical hit	critical miss	critical hit
+hit	hit	critical hit	miss	miss	critical hit
+critical miss	critical hit	critical miss	critical miss	hit	hit
+critical miss	critical hit	critical miss	miss	miss	critical hit
+critical hit	miss	critical hit	miss	critical hit	miss
+hit	critical miss	critical hit	critical miss	miss	critical miss
+critical miss	miss	critical hit	critical miss	critical hit	critical hit
+miss	miss	critical miss	critical hit	critical miss	critical miss
+miss	miss	hit	miss	miss	miss
+critical miss	critical miss	critical hit	critical miss	hit	hit
+critical hit	critical miss	critical hit	critical hit	miss	critical miss
+hit	hit	critical miss	critical hit	critical miss	critical miss
+critical hit	miss	miss	hit	hit	critical hit
+hit	critical hit	hit	miss	critical hit	hit
+critical hit	miss	hit	critical miss	miss	critical miss
+critical miss	critical miss	miss	miss	critical hit	hit
+critical miss	critical hit	miss	hit	miss	critical miss
+critical miss	critical hit	hit	miss	critical miss	critical miss
+miss	critical hit	critical miss	hit	critical miss	hit
+miss	critical miss	miss	critical miss	critical hit	miss
+critical hit	hit	hit	critical hit	critical hit	critical miss
+miss	miss	critical hit	miss	miss	critical hit
+critical miss	critical miss	miss	critical hit	critical miss	hit
+hit	miss	critical miss	critical hit	critical miss	miss
+miss	miss	hit	critical miss	miss	critical miss
+miss	miss	critical miss	hit	critical hit	critical hit
+miss	miss	critical hit	critical hit	miss	miss
+critical miss	critical miss	critical miss	critical miss	critical miss	miss
+critical miss	hit	miss	critical hit	critical miss	miss
+miss	hit	critical hit	critical miss	critical hit	hit
+critical miss	critical miss	miss	critical miss	critical miss	critical miss
+critical hit	miss	critical miss	critical miss	critical miss	hit
+critical hit	miss	miss	miss	critical miss	miss
+critical miss	miss	hit	miss	critical miss	miss
+critical miss	hit	critical miss	critical miss	critical miss	critical hit
+miss	hit	critical hit	hit	hit	critical miss
+hit	critical miss	hit	critical miss	miss	critical miss
+hit	miss	critical hit	critical hit	hit	critical hit
+hit	critical hit	critical miss	miss	miss	critical hit
+critical hit	critical miss	miss	critical miss	critical miss	critical hit
+critical miss	critical miss	miss	critical miss	miss	critical hit
+miss	miss	critical hit	critical miss	critical miss	critical miss
+critical miss	miss	critical miss	critical miss	miss	critical miss
+death	critical miss	hit	critical hit	miss	hit
+critical averted by death	hit	critical hit	critical miss	miss	critical hit
+	miss	critical hit	critical miss	miss	critical miss
+	miss	critical miss	critical miss	miss	hit
+	miss	critical miss	hit	hit	miss
+	critical miss	hit	miss	hit	critical miss
+	critical miss	critical hit	critical miss	critical miss	critical miss
+	critical miss	miss	miss	critical miss	critical miss
+	critical miss	miss	miss	critical miss	critical miss
+	critical hit	critical miss	miss	miss	critical miss
+	critical hit	hit	hit	critical hit	hit
+	hit	critical miss	critical hit	hit	hit
