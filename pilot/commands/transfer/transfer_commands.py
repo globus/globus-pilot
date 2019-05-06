@@ -5,7 +5,8 @@ import globus_sdk
 import datetime
 import requests
 import pilot
-from pilot.search import scrape_metadata, update_metadata, gen_gmeta
+from pilot.search import (scrape_metadata, update_metadata, gen_gmeta,
+                          files_modified)
 from pilot.exc import RequiredUploadFields
 from jsonschema.exceptions import ValidationError
 
@@ -81,19 +82,19 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
 
     url = pc.get_globus_http_url(filename, destination, test)
     new_metadata = scrape_metadata(dataframe, url, no_analyze, test)
-    if prev_metadata and prev_metadata['files'] == new_metadata['files']:
-        dataframe_changed = False
-    else:
-        dataframe_changed = True
 
     try:
         new_metadata = update_metadata(new_metadata, prev_metadata,
-                                       user_metadata,
-                                       files_updated=dataframe_changed)
+                                       user_metadata)
         subject = pc.get_subject_url(filename, destination, test)
         gmeta = gen_gmeta(subject, pc.GROUP, new_metadata)
     except (RequiredUploadFields, ValidationError) as e:
         click.secho('Error Validating Metadata: {}'.format(e), fg='red')
+        return 1
+
+    if json.dumps(new_metadata) == json.dumps(prev_metadata):
+        click.secho('Files and search entry are an exact match. No update '
+                    'necessary.', fg='green')
         return 1
 
     if prev_metadata and not update:
@@ -120,7 +121,9 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
     click.echo('Ingesting record into search...')
     pc.ingest_entry(gmeta, test)
     click.echo('Success!')
-    if not dataframe_changed:
+
+    if prev_metadata and not files_modified(new_metadata['files'],
+                                            prev_metadata['files']):
         click.echo('Metadata updated, dataframe is already up to date.')
         return
     if gcp:

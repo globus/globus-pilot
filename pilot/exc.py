@@ -7,10 +7,11 @@ class PilotClientException(Exception):
 
 class RequiredUploadFields(PilotClientException):
 
-    def __init__(self, fields, *args, **kwargs):
+    def __init__(self, message, fields, *args, **kwargs):
+        self.message = message
         self.fields = fields
 
     def __str__(self):
         example = {f: '<VALUE>' for f in self.fields}
-        return ('Please provide the following fields in a JSON file with the '
-                '-j flag:\n {}'.format(json.dumps(example, indent=4)))
+        return ('{}. Please provide minimum fields with the -j flag. Example:'
+                '\n {}'.format(self.message, json.dumps(example, indent=4)))
