@@ -10,8 +10,8 @@
             "properties": {
                 "data_type": {
                     "type": "string",
-                    "enum": ["Metadata", "Drug Response", "Microarray", "RNA-seq", "Reference"],
-                    "description" : "Data category, may be: 'Drug Descriptor', 'Drug Response', 'Microarray', 'RNA-seq', 'Reference'"
+                    "enum": ["Metadata", "Drug Response", "Microarray", "RNA-seq", "Reference", "Drug Descriptor"],
+                    "description" : "Data category, may be: 'Drug Descriptor', 'Drug Response', 'Microarray', 'RNA-seq', 'Reference', 'Drug Descriptor'"
                                 },
                 "dataframe_type": {
                     "type": "string",
