@@ -1,7 +1,6 @@
 import pytest
 import os
 import json
-import uuid
 import copy
 import globus_sdk
 from unittest.mock import Mock
