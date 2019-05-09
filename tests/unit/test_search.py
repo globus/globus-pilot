@@ -7,7 +7,7 @@ NUMBERS_FILE = os.path.join(ANALYSIS_FILE_BASE_DIR, 'numbers.tsv')
 
 
 def test_scrape_metadata(mock_config):
-    mock_config.data['profile'] =  {'name': 'Marie Skłodowska Curie'}
+    mock_config.data['profile'] = {'name': 'Marie Skłodowska Curie'}
     meta = scrape_metadata(MIXED_FILE, 'https://foo.com')
     dc_content = ['titles', 'creators', 'subjects', 'publicationYear',
                   'publisher', 'resourceType', 'dates', 'formats', 'version']

@@ -1,7 +1,6 @@
 import pytest
 import os
 import json
-import uuid
 import copy
 import globus_sdk
 from unittest.mock import Mock
@@ -93,25 +92,26 @@ def mock_pc_existing_search_entry(mock_auth_pilot_cli):
     return mock_auth_pilot_cli
 
 
-@pytest.fixture
-def mock_new_file_metadata(mock_auth_pilot_cli):
-    meta = {
-        'dc': {'version': '1',
-               'dates':
-                   [
-                       {'date': '2019-03-05T17:04:10.315060Z',
-                        'dateType': 'Created'}
-                   ]
-               },
-        'files': {[
-
-        ]}
-    }
-
-
-@pytest.fixture
-def mock_command_pilot_cli(mock_auth_pilot_cli, monkeypatch):
-    mock_func = Mock()
-    mock_func.return_value = mock_auth_pilot_cli
-    monkeypatch.setattr(pilot.commands, 'get_pilot_client', mock_func)
-    return mock_auth_pilot_cli
+# FIXME This wasn't finished, but needs some work
+# @pytest.fixture
+# def mock_new_file_metadata(mock_auth_pilot_cli):
+#     meta = {
+#         'dc': {'version': '1',
+#                'dates':
+#                    [
+#                        {'date': '2019-03-05T17:04:10.315060Z',
+#                         'dateType': 'Created'}
+#                    ]
+#                },
+#         'files': {[
+#
+#         ]}
+#     }
+#
+#
+# @pytest.fixture
+# def mock_command_pilot_cli(mock_auth_pilot_cli, monkeypatch):
+#     mock_func = Mock()
+#     mock_func.return_value = mock_auth_pilot_cli
+#     monkeypatch.setattr(pilot.commands, 'get_pilot_client', mock_func)
+#     return mock_auth_pilot_cli
