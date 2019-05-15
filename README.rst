@@ -22,6 +22,23 @@ You will also need Globus Connect Personal installed on your machine. You can do
 a copy here: https://www.globus.org/globus-connect-personal
 
 
+Mac OSX
+~~~~~~~
+
+For Mac OSX, you may need to install headers. Ensure XCode is installed
+
+.. code-block:: bash
+
+    xcode-select --install
+
+Headers for Mac have moved recently, causing some components not to install. You can reinstall
+the old headers here:
+
+.. code-block:: bash
+
+    open /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg
+
+
 Usage
 -----
 
