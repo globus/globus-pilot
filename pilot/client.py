@@ -64,7 +64,7 @@ class PilotClient(NativeClient):
 
     @property
     def http_headers(self):
-        petrel = self.load_tokens()['petrel.https.server']['access_token']
+        petrel = self.load_tokens()['petrel_https_server']['access_token']
         return {'Authorization': 'Bearer {}'.format(petrel)}
 
     def ls(self, dataframe, directory, test):
