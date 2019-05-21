@@ -1,0 +1,46 @@
+{% set name = "pilot1-tools" %}
+{% set version = "0.1.0.dev" %}
+
+package:
+  name: "{{ name }}"
+  version: "{{ version }}"
+
+source:
+  git_url: https://github.com/globusonline/{{ name }}
+
+build:
+  number: 0
+  script: "{{ PYTHON }} -m pip install . --no-deps --ignore-installed -vv "
+
+requirements:
+  host:
+    - pip
+    - python
+    - tableschema
+  run:
+    - globus-sdk
+    - fair-research-login
+    - python
+    - pytz
+    - jsonschema
+    - pandas
+    - click
+    - tableschema
+
+test:
+  imports:
+    - pilot
+    - tests
+
+about:
+  home: https://github.com/globusonline/{{ name }}
+  license: Apache Software
+  license_family: APACHE
+  license_file: 
+  summary: A generalized library for storing native auth tokens
+  doc_url: 
+  dev_url: 
+
+extra:
+  recipe-maintainers:
+    - NickolausDS

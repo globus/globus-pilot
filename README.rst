@@ -39,6 +39,18 @@ the old headers here:
     open /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg
 
 
+Conda
+~~~~~
+
+These tools are available on Conda for Python 3.6, you can install them with the following:
+
+.. code-block:: bash
+
+    conda create -n pilot1-env --python 3.6
+    conda activate pilot1-env
+    conda install -c conda-forge -c nickolaussaint pilot1-tools
+
+
 Usage
 -----
 
@@ -94,4 +106,32 @@ is for providing any extra metadata the pilot tool can't automatically determine
     }
 
 
+Running Tests
+-------------
+
+Ensure packages in test-requirements.txt are installed, then run:
+
+.. code-block:: bash
+
+    pytest
+
+And for coverage:
+
+.. code-block:: bash
+
+    pytest --cov pilot
+
+
+Building for Conda
+------------------
+
+Currently, the tableschema package has not been built for python 3.7, so this only
+lists instructions for python 3.6. Two channels must be used, nickolaussaint and
+conda-forge. The nickolaussaint channel contains fair-research-login, and conda-forge
+contains various other packages we need including the globus-sdk.
+
+
+.. code-block:: bash
+
+    conda build -c nickolaussaint -c conda-forge --python 3.6 .
 
