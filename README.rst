@@ -46,9 +46,7 @@ These tools are available on Conda for Python 3.6, you can install them with the
 
 .. code-block:: bash
 
-    conda create -n pilot1-env --python 3.6
-    conda activate pilot1-env
-    conda install -c conda-forge -c nickolaussaint pilot1-tools
+    conda create -n pilot1-env -c conda-forge -c nickolaussaint pilot1-tools
 
 
 Usage
