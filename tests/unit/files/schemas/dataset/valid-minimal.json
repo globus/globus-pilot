@@ -25,7 +25,7 @@
       "mime_type": "text/tab-separated-values"
     }
   ],
-  "ncipilot": {
+  "project_metadata": {
     "numrows": 2401,
     "numcols": 14017,
     "data_type": "Microarray",

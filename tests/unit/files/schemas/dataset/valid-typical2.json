@@ -95,7 +95,7 @@
       "url": "https://ebf55996-33bf-11e9-9fa4-0a06afd4a22e.e.globus.org/restricted/dataframes/cli_testing/drugs_test/mydata.png"
     }
   ],
-  "ncipilot": {
+  "project_metadata": {
     "dataframe_type": "List",
     "data_type": "Metadata",
     "source": [
