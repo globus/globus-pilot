@@ -2,6 +2,7 @@ import pandas
 from pilot.analysis import analyze_dataframe
 from io import StringIO
 
+
 def test_analyze_dataframe(simple_tsv):
     ana = analyze_dataframe(simple_tsv)
     assert ana['numcols'] == 2

@@ -1,6 +1,7 @@
 from urllib.parse import urlparse
 from pilot.client import PilotClient
 
+
 def test_get_index():
     pc = PilotClient()
     assert pc.get_index() == pc.SEARCH_INDEX
@@ -24,8 +25,7 @@ def test_get_path():
 
 def test_get_test_path():
     pc = PilotClient()
-    path = pc.get_path('dataframe.dat', 'my_folder',
-                                        test=True)
+    path = pc.get_path('dataframe.dat', 'my_folder', test=True)
     pieces = path.split('/')
     assert 'my_folder' in pieces
     assert 'dataframe.dat' in pieces
@@ -44,8 +44,7 @@ def test_get_globus_http_url():
 
 def test_get_test_globus_http_url():
     pc = PilotClient()
-    url = pc.get_globus_http_url('dataframe.dat', 'my_folder',
-                                             test=True)
+    url = pc.get_globus_http_url('dataframe.dat', 'my_folder', test=True)
     purl = urlparse(url)
     assert pc.TESTING_DIR in purl.path
 
@@ -62,8 +61,7 @@ def test_get_globus_url():
 
 def test_get_test_globus_url():
     pc = PilotClient()
-    url = pc.get_globus_url('dataframe.dat', 'my_folder',
-                                        test=True)
+    url = pc.get_globus_url('dataframe.dat', 'my_folder', test=True)
     purl = urlparse(url)
     assert pc.TESTING_DIR in purl.path
 
@@ -72,7 +70,5 @@ def test_get_subject_url():
     pc = PilotClient()
     args = ('dataframe.dat', 'my_folder', False)
     test_args = ('dataframe.dat', 'my_folder', True)
-    assert pc.get_globus_url(*args) == \
-           pc.get_subject_url(*args)
-    assert pc.get_globus_url(*test_args) == \
-           pc.get_subject_url(*test_args)
+    assert pc.get_globus_url(*args) == pc.get_subject_url(*args)
+    assert pc.get_globus_url(*test_args) == pc.get_subject_url(*test_args)
