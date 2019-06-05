@@ -90,18 +90,18 @@ def mock_auth_pilot_cli(monkeypatch, mock_transfer_client):
 
 
 @pytest.fixture
+def mock_command_pilot_cli(mock_auth_pilot_cli, monkeypatch):
+    mock_func = Mock()
+    mock_func.return_value = mock_auth_pilot_cli
+    monkeypatch.setattr(pilot.commands, 'get_pilot_client', mock_func)
+    return mock_auth_pilot_cli
+
+
+@pytest.fixture
 def mock_pc_existing_search_entry(mock_auth_pilot_cli):
     fname = os.path.join(CLIENT_FILE_BASE_DIR, 'search_entry_v1.json')
     with open(fname) as fh:
         entry_json = json.load(fh)
     print(entry_json)
     mock_auth_pilot_cli.get_search_entry.return_value = entry_json
-    return mock_auth_pilot_cli
-
-
-@pytest.fixture
-def mock_command_pilot_cli(mock_auth_pilot_cli, monkeypatch):
-    mock_func = Mock()
-    mock_func.return_value = mock_auth_pilot_cli
-    monkeypatch.setattr(pilot.commands, 'get_pilot_client', mock_func)
     return mock_auth_pilot_cli
