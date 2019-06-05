@@ -63,6 +63,8 @@ def mock_auth_pilot_cli(mock_transfer_client):
     pc.token_storage = MemoryStorage()
     pc.token_storage.tokens = MOCK_TOKEN_SET
     pc.upload = Mock()
+    pc.login = Mock()
+    pc.logout = Mock()
     pc.ingest_entry = Mock()
     pc.get_search_entry = Mock()
     pc.ls = Mock()
