@@ -7,7 +7,7 @@ import mimetypes
 import json
 import jsonschema
 
-from pilot.config import config
+from pilot.profile import profile
 from pilot.validation import validate_dataset, validate_user_provided_metadata
 from pilot.analysis import analyze_dataframe
 from pilot.exc import RequiredUploadFields
@@ -73,14 +73,13 @@ def scrape_metadata(dataframe, url, skip_analysis=True, test=False):
         dc_formats.append(mimetype)
         rfm_metadata['mime_type'] = mimetype
 
-    user_info = config.get_user_info()
-    name = user_info['name'].split(' ')
-    if len(name) > 1 and ',' not in user_info['name']:
+    name = profile.name.split(' ')
+    if len(name) > 1 and ',' not in profile.name:
         # If the persons name is ['Samuel', 'L.', 'Jackson'], produces:
         # "Jackson, Samuel L."
         formal_name = '{}, {}'.format(name[-1:][0], ' '.join(name[:-1]))
     else:
-        formal_name = user_info['name']
+        formal_name = profile.name
     fkeys = get_foreign_keys(test=test)
     metadata = analyze_dataframe(dataframe, fkeys) if not skip_analysis else {}
     return {
@@ -104,7 +103,7 @@ def scrape_metadata(dataframe, url, skip_analysis=True, test=False):
                 }
             ],
             'publicationYear': str(datetime.datetime.now().year),
-            'publisher': DEFAULT_PUBLISHER,
+            'publisher': profile.organization or DEFAULT_PUBLISHER,
             'resourceType': {
                 'resourceType': 'Dataset',
                 'resourceTypeGeneral': 'Dataset'
