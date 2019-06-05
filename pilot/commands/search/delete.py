@@ -1,8 +1,7 @@
 import click
 import os
 import globus_sdk
-
-from pilot.client import PilotClient
+import pilot
 
 
 @click.command(name='delete', help='Delete a search entry')
@@ -18,7 +17,7 @@ from pilot.client import PilotClient
               help='Output as JSON.')
 @click.option('--yes', is_flag=True)
 def delete_command(path, entry_id, subject, test, dry_run, delete_data, yes):
-    pc = PilotClient()
+    pc = pilot.commands.get_pilot_client()
     if not pc.is_logged_in():
         click.echo('You are not logged in.')
         return

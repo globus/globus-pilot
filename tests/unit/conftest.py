@@ -52,7 +52,7 @@ def mock_transfer_client(monkeypatch):
 
 
 @pytest.fixture
-def mock_auth_pilot_cli(mock_transfer_client):
+def mock_auth_pilot_cli(monkeypatch, mock_transfer_client):
     """
     Returns a mock logged in pilot client. Storage is mocked with a custom
     object, so this does behave slightly differently than the real client.
@@ -60,12 +60,17 @@ def mock_auth_pilot_cli(mock_transfer_client):
     re-mock them to return the test data you want.
     """
     pc = PilotClient()
-    pc.token_storage = MemoryStorage()
-    pc.token_storage.tokens = MOCK_TOKEN_SET
+
+    def load_tokens(*args, **kwargs):
+        return MOCK_TOKEN_SET
+
+    monkeypatch.setattr(pc, 'load_tokens', load_tokens)
+
     pc.upload = Mock()
     pc.ingest_entry = Mock()
     pc.get_search_entry = Mock()
     pc.ls = Mock()
+    pc.delete_entry = Mock()
     # Sanity. This *should* always return True, but will fail if we update
     # tokens at a later time.
     assert pc.is_logged_in()
