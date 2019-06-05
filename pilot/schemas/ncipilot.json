@@ -18,6 +18,14 @@
                     "enum": ["List", "Matrix"],
                     "description" : "Dataframe structure, matrix or list"
                 },
+                "x-label": {
+                    "type": "string",
+                    "description": "X-label, if the dataframe_type is Matrix"
+                },
+                "y-label": {
+                    "type": "string",
+                    "description": "Y-label, if the dataframe_type is Matrix"
+                },
                 "units": {
                     "type": "integer",
                     "description": "Units or scale (e.g., log, log10) of the data."

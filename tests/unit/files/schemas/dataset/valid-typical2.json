@@ -87,7 +87,6 @@
   },
   "files": [
     {
-      "data_type": "generic_datatype",
       "mime_type": "text/tab-separated-values",
       "filename": "mydata.png",
       "length": 91053,
@@ -97,8 +96,8 @@
     }
   ],
   "ncipilot": {
-    "data_type": "Drug Response",
     "dataframe_type": "List",
+    "data_type": "Metadata",
     "source": [
       "InChIKey",
       "SMILES",

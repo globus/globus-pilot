@@ -20,10 +20,6 @@
                         "format": "uri",
                         "description": "The URL to the data."
                     },
-                    "data_type": {
-                        "type": "string",
-                        "description": "The type of data in this file."
-                    },
                     "mime_type": {
                         "type": "string",
                         "description": "The MIME type of the file."
@@ -55,7 +51,6 @@
                 },
                 "additionalProperties": false,
                 "required": [
-                    "data_type",
                     "filename",
                     "mime_type"
                 ]
