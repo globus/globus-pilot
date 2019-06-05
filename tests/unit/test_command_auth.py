@@ -1,8 +1,9 @@
 import os
 from unittest.mock import Mock
 from click.testing import CliRunner
-from pilot.commands.auth.auth_commands import login, logout, whoami
-from tests.unit.mocks import COMMANDS_FILE_BASE_DIR
+from pilot.commands.auth.auth_commands import (
+    login, logout, whoami, profile_command)
+
 
 
 def test_auth_login(mock_command_pilot_cli):
@@ -29,4 +30,7 @@ def test_auth_logout_purge(monkeypatch, mock_command_pilot_cli):
     assert os.unlink.called
 
 
-
+def test_auth_profile(mock_command_pilot_cli, mock_config):
+    runner = CliRunner()
+    result = runner.invoke(profile_command, [])
+    assert result.exit_code == 0

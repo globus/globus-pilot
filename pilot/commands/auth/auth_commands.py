@@ -35,11 +35,13 @@ def login(refresh_tokens, force, local_server, browser):
              force=force)
     click.secho('You have been logged in.', fg='green')
     if prev_info != profile.load_user_info():
-        m = ('Your personal info has been saved as: '
-             f'\nName: \t{profile.name}'
-             f'\nOrganization: \t{profile.organization}'
-             '\n\nYou can update these with "pilot profile -i"')
-        click.secho(m, fg='blue')
+        report = (
+            'Your personal info has been saved as:\n{:15}{}\n{:15}{}\n'
+            '\n\nYou can update these with "pilot profile -i"'.format(
+            'Name:', profile.name, 'Organization:', profile.organization
+            )
+        )
+        click.secho(report, fg='blue')
 
 
 @click.command(help='Revoke local tokens')
@@ -65,3 +67,21 @@ def whoami():
         click.echo('You are not logged in.')
         return
     click.echo(info['preferred_username'])
+
+
+@click.command(name='profile', help='Output Globus Identity used to login')
+@click.option('-i', '--interactive', default=False, is_flag=True,
+              help='Interactively set all profile options')
+def profile_command(interactive):
+    if interactive:
+        profile.name = input(f'Name ({profile.name})> ') or profile.name
+        profile.organization = (
+            input(f'Organization ({profile.organization})> ') or
+            profile.organization
+        )
+        click.secho('Your information has been updated', fg='green')
+        return
+    report = 'Your profile:\n{:15}{}\n{:15}{}\n'.format(
+        'Name:', profile.name, 'Organization:', profile.organization
+    )
+    click.echo(report)

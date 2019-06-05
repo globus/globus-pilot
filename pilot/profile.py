@@ -31,7 +31,7 @@ class Profile:
 
     @property
     def name(self):
-        return self.load_user_info()['name']
+        return self.load_option('name')
 
     @name.setter
     def name(self, value):
