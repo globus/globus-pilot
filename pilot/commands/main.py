@@ -19,6 +19,7 @@ def version():
 cli.add_command(auth_commands.login)
 cli.add_command(auth_commands.logout)
 cli.add_command(auth_commands.whoami)
+cli.add_command(auth_commands.profile_command)
 
 cli.add_command(search_commands.list_command)
 cli.add_command(search_commands.describe)

@@ -6,6 +6,7 @@ import urllib
 from globus_sdk import AuthClient, SearchClient, TransferClient
 from fair_research_login import (NativeClient, LoadError)
 from pilot.config import config
+from pilot.profile import profile
 
 
 class PilotClient(NativeClient):
@@ -35,11 +36,11 @@ class PilotClient(NativeClient):
 
     def login(self, *args, **kwargs):
         super().login(*args, **kwargs)
-        if not config.get_user_info():
-            ac_authorizer = self.get_authorizers()['auth.globus.org']
-            auth_cli = AuthClient(authorizer=ac_authorizer)
-            user_info = auth_cli.oauth2_userinfo()
-            config.save_user_info(user_info.data)
+
+        ac_authorizer = self.get_authorizers()['auth.globus.org']
+        auth_cli = AuthClient(authorizer=ac_authorizer)
+        user_info = auth_cli.oauth2_userinfo()
+        profile.save_user_info(user_info.data)
 
     def logout(self):
         super().logout()

@@ -67,6 +67,8 @@ def mock_auth_pilot_cli(monkeypatch, mock_transfer_client):
     monkeypatch.setattr(pc, 'load_tokens', load_tokens)
 
     pc.upload = Mock()
+    pc.login = Mock()
+    pc.logout = Mock()
     pc.ingest_entry = Mock()
     pc.get_search_entry = Mock()
     pc.ls = Mock()

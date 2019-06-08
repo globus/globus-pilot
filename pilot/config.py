@@ -62,20 +62,9 @@ class Config(ConfigParserTokenStorage):
         tlog['status'] = new_status
         self._save_log(tlog['id'], tlog)
 
-    def get_user_info(self):
-        cfg = self.load()
-        if 'profile' in cfg:
-            return dict(self.load()['profile'])
-        return {}
-
-    def save_user_info(self, user_info):
-        cfg = self.load()
-        cfg['profile'] = user_info
-        self.save(cfg)
-
     def clear(self):
         cfg = self.load()
-        cfg.clear()
+        cfg['tokens'] = {}
         self.save(cfg)
 
 
