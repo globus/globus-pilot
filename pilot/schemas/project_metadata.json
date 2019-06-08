@@ -4,7 +4,7 @@
     "type": "object",
     "description": "Administrative metadata.",
     "properties": {
-        "ncipilot": {
+        "project_metadata": {
             "type": "object",
             "description": "Dataframe details.",
             "properties": {
@@ -17,6 +17,14 @@
                     "type": "string",
                     "enum": ["List", "Matrix"],
                     "description" : "Dataframe structure, matrix or list"
+                },
+                "x-label": {
+                    "type": "string",
+                    "description": "X-label, if the dataframe_type is Matrix"
+                },
+                "y-label": {
+                    "type": "string",
+                    "description": "Y-label, if the dataframe_type is Matrix"
                 },
                 "units": {
                     "type": "integer",

@@ -17,13 +17,13 @@
             "$ref": "dc.json#/properties/dc/properties/formats"
         },
         "data_type": {
-            "$ref": "ncipilot.json#/properties/ncipilot/properties/data_type"
+            "$ref": "project_metadata.json#/properties/project_metadata/properties/data_type"
         },
         "dataframe_type": {
-            "$ref": "ncipilot.json#/properties/ncipilot/properties/dataframe_type"
+            "$ref": "project_metadata.json#/properties/project_metadata/properties/dataframe_type"
         },
         "source": {
-            "$ref": "ncipilot.json#/properties/ncipilot/properties/source"
+            "$ref": "project_metadata.json#/properties/project_metadata/properties/source"
         }
     }
 }

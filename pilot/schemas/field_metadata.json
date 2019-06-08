@@ -1,0 +1,115 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Field Metadata for a file",
+    "type": "object",
+    "description": "Schema for files block in a record.",
+    "properties": {
+        "field_metadata": {
+            "type": "object",
+            "description": "Metadata about a file.",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "The name of the file?"
+                },
+                "numcols": {
+                    "type": "integer",
+                    "description": "Number of Columns in the file."
+                },
+                "numrows": {
+                    "type": "integer",
+                    "description": "Number of Rows in the file."
+                },
+                "previewbytes": {
+                    "type": "integer",
+                    "description": "Number of bytes to display for a preview"
+                },
+                "field_definitions": {
+                    "type": "array",
+                    "description": "A list of statistics about the file",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Name of the field"
+                        },
+                        "type": {
+                            "type": "string",
+                            "description": "The data type of the filed (string, float64, etc)"
+                        },
+                        "format": {
+                            "type": "string",
+                            "description": "??"
+                        },
+                        "count": {
+                            "type": "integer",
+                            "description": "Number of items in this column"
+                        },
+                        "top": {
+                            "type": "integer",
+                            "description": "Highest occurrence item in this column"
+                        },
+                        "unique": {
+                            "type": "integer",
+                            "description": "Number of unique items in this column"
+                        },
+                        "frequency": {
+                            "type": "integer",
+                            "description": "Frequency of top occurring item"
+                        },
+                        "25": {
+                            "type": "number",
+                            "description": "25 Percentile in this column"
+                        },
+                        "50": {
+                            "type": "number",
+                            "description": "50 Percentile in this column"
+                        },
+                        "75": {
+                            "type": "number",
+                            "description": "75 Percentile in this column"
+                        },
+                        "mean": {
+                            "type": "number",
+                            "description": "Mean in this column"
+                        },
+                        "std": {
+                            "type": "number",
+                            "description": "Standard Deviation in this column"
+                        },
+                        "min": {
+                            "type": "number",
+                            "description": "Minimum value in this column"
+                        },
+                        "max": {
+                            "type": "number",
+                            "description": "Maximum value in this column"
+                        },
+                        "reference": {
+                            "type": "object",
+                            "description": "Name of the field",
+                            "properties": {
+                                "filename": {
+                                    "type": "string",
+                                    "description": "Name of the field"
+                                },
+                                "resource": {
+                                    "type": "string",
+                                    "description": "Globus Search subject to the foreign file"
+                                },
+                                "fields": {
+                                    "type": "string",
+                                    "description": "Name of the field in the foreign file"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "filename",
+                "mime_type"
+            ]
+        }
+    }
+}
