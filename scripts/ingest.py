@@ -6,6 +6,7 @@ You must have access to a search index for this to work.
 
 """
 import sys
+import pprint
 import json
 import globus_sdk
 from fair_research_login import NativeClient
@@ -58,25 +59,43 @@ def listind():
         tokens['search.api.globus.org']['access_token'])
     sc = globus_sdk.SearchClient(authorizer=auther)
 
-    search_results = sc.search(index_id=INDEX, q='*')
+    search_results = sc.search(index_id=INDEX, q='*', limit=10000)
 
     header = 'Title                Data       Dataframe Rows   Cols   Size   Filename'
     print(header)
     for i in search_results['gmeta']:
         j = i['content'][0]
-        s, h = get_size(j['remote_file_manifest']['length'])
+        pprint.pprint(j)
+        s, h = get_size(j['files'][0]['length'])
         size = str(int(s)) + ' ' + h
         print(
             '{:21.20}'.format(j['dc']['titles'][0]['title']) +
             '{:11.10}'.format(j['ncipilot']['data_type']) +
             '{:10.9}'.format(j['ncipilot']['dataframe_type']) +
-             '{:7.6}'.format(str(j['ncipilot']['numrows'])) +
-             '{:7.6}'.format(str(j['ncipilot']['numcols'])) +
+             '{:7.6}'.format(str(j['field_metadata']['numrows'])) +
+             '{:7.6}'.format(str(j['field_metadata']['numcols'])) +
             '{:7.6}'.format(size) +
-            '{:.16}'.format(j['remote_file_manifest']['filename'])
+            '{:.16}'.format(j['files'][0]['filename'])
             )
 
+def dump():
+    client = NativeClient(client_id=CLIENT_ID, app_name=APP_NAME)
+    client.login(requested_scopes=SCOPES)
 
+    tokens = client.load_tokens(requested_scopes=SCOPES)
+    auther = globus_sdk.AccessTokenAuthorizer(
+        tokens['search.api.globus.org']['access_token'])
+    sc = globus_sdk.SearchClient(authorizer=auther)
+
+    search_results = sc.search(index_id=INDEX, q='*', limit=10000)
+
+    for i in search_results['gmeta']:
+        # print(i['subject'])
+        # print(i['subject'].lstrip('globus://ebf55996-33bf-11e9-9fa4-0a06afd4a22e/').replace('/','-'))
+        fname  = i['subject'].lstrip('globus://ebf55996-33bf-11e9-9fa4-0a06afd4a22e/').replace('/','-') + '.gmeta'
+        with open(fname, 'w') as f:
+            f.write(json.dumps(i))      
+            
 def delete(filename):
 
     with open(filename) as f:
@@ -120,6 +139,8 @@ if __name__ == '__main__':
     elif sys.argv[1] == 'd':
         filename = sys.argv[2]
         delete(filename)
+    elif sys.argv[1] == 'dump':
+        dump()
     elif sys.argv[1] == 't':
         tasks()
     elif sys.argv[1] == 'l':

@@ -6,12 +6,8 @@
     "properties": {
         "field_metadata": {
             "type": "object",
-            "description": "Metadata about a file.",
+            "description": "Metadata about a tabular file.",
             "properties": {
-                "name": {
-                    "type": "string",
-                    "description": "The name of the file?"
-                },
                 "numcols": {
                     "type": "integer",
                     "description": "Number of Columns in the file."
@@ -19,10 +15,6 @@
                 "numrows": {
                     "type": "integer",
                     "description": "Number of Rows in the file."
-                },
-                "previewbytes": {
-                    "type": "integer",
-                    "description": "Number of bytes to display for a preview"
                 },
                 "field_definitions": {
                     "type": "array",
@@ -104,12 +96,7 @@
                         }
                     }
                 }
-            },
-            "additionalProperties": false,
-            "required": [
-                "filename",
-                "mime_type"
-            ]
+            }
         }
     }
 }

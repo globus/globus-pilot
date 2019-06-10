@@ -47,6 +47,13 @@
                     "sha512": {
                         "type": "string",
                         "description": "The SHA512 hash of the file."
+                    },
+                    "previewbytes": {
+                        "type": "integer",
+                        "description": "Number of bytes to display for a preview"
+                    },
+                    "field_metadata": {
+                        "$ref": "field_metadata.json#/properties/field_metadata"
                     }
                 },
                 "additionalProperties": false,
