@@ -62,7 +62,7 @@ def logout(purge):
 
 @click.command(help='Output Globus Identity used to login')
 def whoami():
-    info = config.get_user_info()
+    info = profile.load_user_info()
     if not info:
         click.echo('You are not logged in.')
         return

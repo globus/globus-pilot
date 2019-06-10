@@ -1,11 +1,13 @@
 import pytest
+from configparser import ConfigParser
 import os
 import json
 import copy
 import globus_sdk
 from unittest.mock import Mock
 from .mocks import (MemoryStorage, MOCK_TOKEN_SET, GlobusTransferTaskResponse,
-                    ANALYSIS_FILE_BASE_DIR, CLIENT_FILE_BASE_DIR)
+                    ANALYSIS_FILE_BASE_DIR, CLIENT_FILE_BASE_DIR,
+                    MOCK_PROFILE)
 
 from pilot.client import PilotClient
 import pilot
@@ -31,11 +33,20 @@ def mock_config(monkeypatch):
             self.data = {str(k): v for k, v in data.items()}
 
         def load(self):
-            return self.data
+            cfg = ConfigParser()
+            for key in self.data:
+                cfg[key] = self.data[key]
+            return cfg
 
     mc = MockConfig()
     monkeypatch.setattr(pilot.config, 'config', mc)
+    monkeypatch.setattr(pilot.profile, 'profile', pilot.profile.Profile())
     return mc
+
+
+@pytest.fixture
+def mock_profile(monkeypatch, mock_config):
+    pilot.profile.profile.save_user_info(MOCK_PROFILE)
 
 
 @pytest.fixture

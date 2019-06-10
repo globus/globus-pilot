@@ -46,6 +46,15 @@ MOCK_TOKEN_SET = {
     }
 }
 
+MOCK_PROFILE = {
+    'name': 'Rosalind Franklin',
+    'preferred_username': 'franklinr@globusid.org',
+    'organization': 'The French Government Central Laboratory',
+    'identity_provider': '41143743-f3c8-4d60-bbdb-eeecaba85bd9',
+    'identity_provider_display_name': 'Globus ID',
+    'sub': '102e192b-5acb-47ee-80c7-e613d86e7d6a',
+}
+
 
 class GlobusTransferTaskResponse(object):
 
