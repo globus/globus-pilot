@@ -4,6 +4,7 @@ import uuid
 
 BASE_FILE_DIR = os.path.join(os.path.dirname(__file__), 'files')
 COMMANDS_FILE_BASE_DIR = os.path.join(BASE_FILE_DIR, 'commands')
+CLIENT_FILE_BASE_DIR = os.path.join(BASE_FILE_DIR, 'client')
 ANALYSIS_FILE_BASE_DIR = os.path.join(BASE_FILE_DIR, 'analysis')
 
 DEFAULT_EXPIRE = int(time.time()) + 60 * 60 * 48
@@ -43,6 +44,15 @@ MOCK_TOKEN_SET = {
         'expires_at_seconds': DEFAULT_EXPIRE,
         'resource_server': 'petrel.http.server'
     }
+}
+
+MOCK_PROFILE = {
+    'name': 'Rosalind Franklin',
+    'preferred_username': 'franklinr@globusid.org',
+    'organization': 'The French Government Central Laboratory',
+    'identity_provider': '41143743-f3c8-4d60-bbdb-eeecaba85bd9',
+    'identity_provider_display_name': 'Globus ID',
+    'sub': '102e192b-5acb-47ee-80c7-e613d86e7d6a',
 }
 
 

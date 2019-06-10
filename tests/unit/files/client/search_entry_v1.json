@@ -1,0 +1,93 @@
+{
+  "dc": {
+    "creators": [
+      {
+        "affiliations": [
+          "Argonne National Laboratory"
+        ],
+        "creatorName": "Shukla, Maulik",
+        "familyName": "Shukla",
+        "givenName": "Maulik"
+      },
+      {
+        "affiliations": [
+          "Argonne National Laboratory"
+        ],
+        "creatorName": "Brettin, Thomas",
+        "familyName": "Brettin",
+        "givenName": "Thomas"
+      },
+      {
+        "affiliations": [
+          "Argonne National Laboratory"
+        ],
+        "creatorName": "Yoo, Hyunseung",
+        "familyName": "Yoo",
+        "givenName": "Hyunseung"
+      }
+    ],
+    "dates": [
+      {
+        "date": "2019-03-05T17:04:10.315060Z",
+        "dateType": "Created"
+      },
+      {
+        "date": "2019-03-05T17:04:10.315060Z",
+        "dateType": "Updated"
+      }
+    ],
+    "descriptions": [
+      {
+        "description": "Rescaled combined drug response data frame, which combines single drug response data from multiple sources, such as NCI60, SCL, SCLC, CCLE, GDSC, CTRP, and gCSI. The dose response values are linearly rescaled and/or clamped to be >= -100 and <= 300.",
+        "descriptionType": "Other"
+      }
+    ],
+    "formats": [
+      "text/tab-separated-values"
+    ],
+    "publicationYear": "2019",
+    "publisher": "Argonne National Laboratory",
+    "resourceType": {
+      "resourceType": "Dataset",
+      "resourceTypeGeneral": "Dataset"
+    },
+    "subjects": [
+      {
+        "subject": "machine learning"
+      },
+      {
+        "subject": "genomics"
+      }
+    ],
+    "titles": [
+      {
+        "title": "Combined Dose Response - Rescaled"
+      }
+    ],
+    "version": "1"
+  },
+  "ncipilot": {
+    "data_type": "Drug Response",
+    "dataframe_type": "List",
+    "numcols": 7,
+    "numrows": 27769717,
+    "source": [
+      "NCI60",
+      "SCL",
+      "SCLC",
+      "CCLE",
+      "GDSC",
+      "CTRP",
+      "gCSI"
+    ]
+  },
+  "files": [{
+    "filename": "rescaled_combined_single_drug_growth",
+    "length": 1456184548,
+    "md5": "dc9795de1fdffd41f35a2fa02ef1b675",
+    "mime_type": "text/tab-separated-values",
+    "data_type": "List",
+    "sha256": "b7d9b5daa40b1f0c61c135ec427960ac43b6075092e4f245124e16d6bbdd51c3",
+    "url": "https://endpoint.e.globus.org/prod/foo/bar"
+  }]
+}

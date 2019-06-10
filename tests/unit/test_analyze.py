@@ -3,8 +3,8 @@ from pilot.analysis import analyze_dataframe
 from io import StringIO
 
 
-def test_analyze_dataframe(simple_tsv):
-    ana = analyze_dataframe(simple_tsv)
+def test_analyze_dataframe(mixed_tsv):
+    ana = analyze_dataframe(mixed_tsv)
     assert ana['numcols'] == 2
     assert ana['numrows'] == 99
     row1_keys = set(ana['field_definitions'][0].keys())
@@ -17,12 +17,12 @@ def test_analyze_dataframe(simple_tsv):
     assert not rows_union.isdisjoint(label_set)
 
 
-def test_preview_bytes(simple_tsv):
-    ana = analyze_dataframe(simple_tsv)
-    with open(simple_tsv) as fp:
+def test_preview_bytes(mixed_tsv):
+    ana = analyze_dataframe(mixed_tsv)
+    with open(mixed_tsv) as fp:
         preview_data = StringIO(fp.read(ana['previewbytes']))
     preview_df = pandas.read_csv(preview_data, sep='\t', encoding='utf8')
-    normal_df = pandas.read_csv(simple_tsv, sep='\t')
+    normal_df = pandas.read_csv(mixed_tsv, sep='\t')
 
     assert list(preview_df.columns) == list(normal_df.columns)
     assert preview_df.head(10).to_dict() == normal_df.head(10).to_dict()

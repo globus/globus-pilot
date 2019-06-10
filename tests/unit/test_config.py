@@ -2,7 +2,7 @@ from tests.unit.mocks import GlobusTransferTaskResponse
 
 
 def test_add_transfer_log(mock_config):
-    assert mock_config.data == {}
+    assert mock_config.get_transfer_log() == []
     gccr = GlobusTransferTaskResponse()
     mock_config.add_transfer_log(gccr, 'foo/bar')
     assert mock_config.data['transfer_log'] != {}
