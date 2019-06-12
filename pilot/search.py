@@ -8,7 +8,6 @@ import json
 import jsonschema
 import logging
 
-from pilot.profile import profile
 from pilot.validation import validate_dataset, validate_user_provided_metadata
 from pilot.analysis import analyze_dataframe
 from pilot.exc import RequiredUploadFields
@@ -61,14 +60,12 @@ def get_foreign_keys(filename=FOREIGN_KEYS_FILE, test=False):
         fkeys = json.load(fh)
     pc = pilot.client.PilotClient()
     for fkey_data in fkeys.values():
-        path = fkey_data['reference']['resource']
-        dirname, fname, = os.path.dirname(path), os.path.basename(path)
-        sub = pc.get_subject_url(fname, dirname, test)
+        sub = pc.get_subject_url(fkey_data['reference']['resource'])
         fkey_data['reference']['resource'] = sub
     return fkeys
 
 
-def scrape_metadata(dataframe, url, skip_analysis=True, test=False):
+def scrape_metadata(dataframe, url, profile, skip_analysis=True, test=False):
     mimetype = mimetypes.guess_type(dataframe)[0]
     dc_formats = []
     rfm_metadata = {}

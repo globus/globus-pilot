@@ -1,4 +1,3 @@
-import os
 import urllib
 import json
 import datetime
@@ -63,13 +62,11 @@ def fetch_format(columns, search_entry, fmt_func, list_fmt_func):
 
 
 @click.command(name='list', help='List known records in Globus Search')
-@click.option('--test/--no-test', default=False,
-              help='Look for entry on test index/endpoint path.')
 @click.option('--json/--no-json', 'output_json', default=False,
               help='Output as JSON.')
 @click.option('--limit', type=int, default=100,
               help='Limit returned results to the number provided')
-def list_command(test, output_json, limit):
+def list_command(output_json, limit):
     # Should require login if there are publicly visible records
     pc = PilotClient()
     if not pc.is_logged_in():
@@ -79,7 +76,7 @@ def list_command(test, output_json, limit):
     search_authorizer = pc.get_authorizers()['search.api.globus.org']
     sc = globus_sdk.SearchClient(authorizer=search_authorizer)
     # TO DO: iterate instead of upping limit
-    search_results = sc.search(index_id=pc.get_index(test), q='*', limit=limit)
+    search_results = sc.search(index_id=pc.get_index(), q='*', limit=limit)
 
     if output_json:
         click.echo(json.dumps(search_results.data, indent=4))
@@ -128,22 +125,15 @@ def get_dates(result):
 
 @click.command(help='Output info about a dataset')
 @click.argument('path', type=click.Path())
-@click.option('--test/--no-test', default=False,
-              help='Look for entry on test index/endpoint path.')
 @click.option('--json/--no-json', 'output_json', default=False,
               help='Output as JSON.')
-def describe(path, test, output_json):
+def describe(path, output_json):
     pc = PilotClient()
     if not pc.is_logged_in():
         click.echo('You are not logged in.')
         return
 
-    old_entry = False
-    fname, dirname = os.path.basename(path), os.path.dirname(path)
-    entry = pc.get_search_entry(fname, dirname, test)
-    if not entry:
-        old_entry = True
-        entry = pc.get_search_entry(fname, dirname, old=True)
+    entry = pc.get_search_entry(path)
 
     if not entry:
         click.echo('Unable to find entry')
@@ -218,12 +208,11 @@ def describe(path, test, output_json):
     except KeyError:
         output = '{}\n\nField Metadata\nNo Field Metadata'.format(output)
 
-    if not test:
-        sub = pc.get_subject_url(fname, dirname, test, old=old_entry)
-        qsub = urllib.parse.quote_plus(urllib.parse.quote_plus(sub))
-        portal_url = '{}{}'.format(PORTAL_DETAIL_PAGE_PREFIX, qsub)
-        other_data = [general_fmt.format('Subject', sub),
-                      general_fmt.format(path, portal_url)]
-        output = '{}\n\nOther Data\n{}'.format(output, '\n'.join(other_data))
+    sub = pc.get_subject_url(path)
+    qsub = urllib.parse.quote_plus(urllib.parse.quote_plus(sub))
+    portal_url = '{}{}'.format(PORTAL_DETAIL_PAGE_PREFIX, qsub)
+    other_data = [general_fmt.format('Subject', sub),
+                  general_fmt.format(path, portal_url)]
+    output = '{}\n\nOther Data\n{}'.format(output, '\n'.join(other_data))
 
     click.echo(output)

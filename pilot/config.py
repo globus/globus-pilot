@@ -1,71 +1,80 @@
 import os
-import time
-import datetime
+from configobj import ConfigObj
 from fair_research_login import ConfigParserTokenStorage
 
-TRANSFER_LOG_MAX_SIZE = 2
+from pilot.version import __version__
 
 
-class Config(ConfigParserTokenStorage):
+class Config():
     CFG_FILENAME = os.path.expanduser('~/.pilot1.cfg')
-    TRANSFER_LOG_FIELDS = ['dataframe', 'status', 'task_id',
-                           'start_time']
 
-    def _save_log(self, log_id, log_dict):
+    def __init__(self, filename=None):
+        self.filename = filename or self.CFG_FILENAME
         cfg = self.load()
-        if isinstance(log_dict['start_time'], datetime.datetime):
-            timestamp = log_dict['start_time'].timestamp()
-            log_dict['start_time'] = str(int(timestamp))
-        field_list = [log_dict.get(f) for f in self.TRANSFER_LOG_FIELDS]
-        log_data = ','.join(field_list)
-        if 'transfer_log' not in cfg:
-            cfg['transfer_log'] = {}
-        cfg['transfer_log'][str(log_id)] = log_data
-        self.save(cfg)
 
-    def add_transfer_log(self, transfer_result, datapath):
+        if not cfg:
+            cfg['pilot'] = {'version': __version__}
+
+    def migrate_to_configobj(self):
         cfg = self.load()
-        if 'transfer_log' not in cfg:
-            cfg['transfer_log'] = {}
-        last_id = max([int(i) for i in cfg['transfer_log'].keys()] or [-1])
-        log_id = str(last_id + 1)
-        log_data = [
-            datapath,
-            transfer_result.data['code'],
-            transfer_result.data['task_id'],
-            str(int(time.time()))
-        ]
-        self._save_log(log_id, dict(zip(self.TRANSFER_LOG_FIELDS, log_data)))
+        old_cfg = ConfigParserTokenStorage(filename=self.CFG_FILENAME)
+        cfg['tokens'] = old_cfg.read_tokens()
+        cfg['pilot'] = {'version': __version__}
+        cfg.write()
 
-    def get_transfer_log(self):
+    def get_migrator(self):
+        """Read the config and fetch the next migration based on the current
+        config version."""
         cfg = self.load()
-        if 'transfer_log' not in cfg:
-            return []
+        if cfg and not cfg.get('pilot'):
+            return self.migrate_to_configobj
 
-        logs = []
-        for log_id, data in cfg['transfer_log'].items():
-            tlog = dict(zip(self.TRANSFER_LOG_FIELDS, data.split(',')))
-            tlog['id'] = int(log_id)
-            timestamp = int(tlog['start_time'])
-            tlog['start_time'] = datetime.datetime.fromtimestamp(timestamp)
-            logs.append(tlog)
-        logs.sort(key=lambda l: l['id'], reverse=True)
-        return logs
+    def migrate(self):
+        """Migrate to the newest config version"""
+        while not self.is_migrated():
+            migrator = self.get_migrator()
+            migrator()
 
-    def get_transfer_log_by_task(self, task_id):
-        for tlog in self.get_transfer_log():
-            if tlog['task_id'] == task_id:
-                return tlog
+    def is_migrated(self):
+        return False if self.get_migrator() else True
 
-    def update_transfer_log(self, task_id, new_status):
-        tlog = self.get_transfer_log_by_task(task_id)
-        tlog['status'] = new_status
-        self._save_log(tlog['id'], tlog)
+    def load(self):
+        return ConfigObj(self.filename)
+
+    def read_tokens(self):
+        tokens = self.load().get('tokens')
+        for tset in tokens:
+            tokens[tset]['expires_at_seconds'] = \
+                int(tokens[tset]['expires_at_seconds'])
+        return tokens
+
+    def write_tokens(self, tokens):
+        cfg = self.load()
+        cfg['tokens'] = tokens
+        cfg.write()
+
+    def clear_tokens(self):
+        self.write_tokens({})
 
     def clear(self):
         cfg = self.load()
         cfg['tokens'] = {}
-        self.save(cfg)
+        cfg.write()
 
 
-config = Config(filename=Config.CFG_FILENAME, section='tokens')
+class ConfigSection:
+
+    SECTION = ''
+
+    def __init__(self):
+        self.config = Config()
+        if self.SECTION:
+            self.save_option(self.SECTION, {})
+
+    def save_option(self, option, value, section=None):
+        cfg = self.config.load()
+        cfg[section or self.SECTION][option] = value
+        cfg.write()
+
+    def load_option(self, option, section=None):
+        return self.config.load().get(section or self.SECTION, {}).get(option)

@@ -1,4 +1,5 @@
 import json
+from globus_sdk.exc import GlobusAPIError
 
 
 class PilotClientException(Exception):
@@ -15,3 +16,7 @@ class RequiredUploadFields(PilotClientException):
         example = {f: '<VALUE>' for f in self.fields}
         return ('{}. Please provide minimum fields with the -j flag. Example:'
                 '\n {}'.format(self.message, json.dumps(example, indent=4)))
+
+
+class HTTPSClientException(PilotClientException, GlobusAPIError):
+    pass
