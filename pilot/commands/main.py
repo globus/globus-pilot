@@ -22,11 +22,13 @@ def cli(ctx):
             click.secho(f'Failed! Try removing '
                         f'{pc.config.CFG_FILENAME} and logging in '
                         f'again.', fg='red')
-    if pc.project.is_cache_stale() and pc.project.update(dry_run=True):
-        click.secho('Projects have changed. Use "pilot project update" to '
-                    'get the newest changes.', fg='yellow')
+    if pc.project.is_cache_stale() and pc.is_logged_in():
+        if pc.project.update(dry_run=True):
+            click.secho('Projects have changed. Use "pilot project update" to '
+                        'get the newest changes.', fg='yellow')
         pc.project.reset_cache_timer()
-    if not pc.project.current and ctx.invoked_subcommand != 'project':
+    if (not pc.project.current and ctx.invoked_subcommand != 'project'
+            and pc.is_logged_in()):
         click.secho('No project set, use "pilot project set <myproject>" '
                     'to set your project', fg='yellow')
     if ctx.invoked_subcommand is None:

@@ -64,16 +64,21 @@ class Config():
 
 class ConfigSection:
 
-    SECTION = ''
+    SECTION = None
 
     def __init__(self):
         self.config = Config()
-        if self.SECTION:
+        if not self.SECTION:
+            raise NotImplemented('SECTION must be set on Config Section obj')
+        if self.SECTION not in self.config.load():
             self.save_option(self.SECTION, {})
 
     def save_option(self, option, value, section=None):
         cfg = self.config.load()
-        cfg[section or self.SECTION][option] = value
+        section = section or self.SECTION
+        if cfg.get(section) is None:
+            cfg[section] = {}
+        cfg[section][option] = value
         cfg.write()
 
     def load_option(self, option, section=None):

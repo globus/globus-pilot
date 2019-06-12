@@ -36,11 +36,11 @@ class PilotClient(NativeClient):
         ac_authorizer = self.get_authorizers()['auth.globus.org']
         auth_cli = AuthClient(authorizer=ac_authorizer)
         user_info = auth_cli.oauth2_userinfo()
-        profile.profile.save_user_info(user_info.data)
+        self.profile.save_user_info(user_info.data)
 
     def logout(self):
         super().logout()
-        config.clear()
+        self.config.clear()
 
     def is_logged_in(self):
         try:

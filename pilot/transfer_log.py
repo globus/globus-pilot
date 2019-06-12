@@ -6,7 +6,7 @@ from pilot import config
 
 class TransferLog(config.ConfigSection):
 
-    CONFIG_SECTIONS = ['transfer_log']
+    SECTION = 'transfer_log'
     TRANSFER_LOG_FIELDS = ['dataframe', 'status', 'task_id', 'start_time']
 
     def _save_log(self, log_id, log_dict):
@@ -37,7 +37,8 @@ class TransferLog(config.ConfigSection):
             return []
 
         logs = []
-        for log_id, data in cfg['transfer_log'].items():
+        print(cfg['transfer_log'].items())
+        for log_id, data in dict(cfg['transfer_log']).items():
             tlog = dict(zip(self.TRANSFER_LOG_FIELDS, data.split(',')))
             tlog['id'] = int(log_id)
             timestamp = int(tlog['start_time'])
