@@ -5,9 +5,7 @@ from pilot.commands.auth.auth_commands import (
     login, logout, whoami, profile_command)
 
 
-
-def test_auth_login(monkeypatch, mock_command_pilot_cli, mock_profile):
-    mock_command_pilot_cli.token_storage.tokens = {}
+def test_auth_login(monkeypatch, mock_command_pilot_cli, mock_config):
     is_logged_in = Mock(return_value=False)
     monkeypatch.setattr(mock_command_pilot_cli, 'is_logged_in', is_logged_in)
     runner = CliRunner()

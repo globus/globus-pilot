@@ -62,11 +62,10 @@ def logout(purge):
 @click.command(help='Output Globus Identity used to login')
 def whoami():
     pc = pilot.commands.get_pilot_client()
-    info = pc.profile.load_user_info()
-    if not info:
+    if not pc.is_logged_in():
         click.echo('You are not logged in.')
-        return
-    click.echo(info['preferred_username'])
+    else:
+        click.echo(pc.profile.load_user_info())
 
 
 @click.command(name='profile', help='Output Globus Identity used to login')

@@ -5,7 +5,7 @@ from pilot.commands.transfer.transfer_commands import upload
 from tests.unit.mocks import COMMANDS_FILE_BASE_DIR
 
 
-def test_upload(mock_command_pilot_cli, mock_config):
+def test_upload(mock_command_pilot_cli):
     test_file = os.path.join(COMMANDS_FILE_BASE_DIR,
                              'test_file_zero_length.txt')
     m_file = os.path.join(COMMANDS_FILE_BASE_DIR,
@@ -21,7 +21,7 @@ def test_upload(mock_command_pilot_cli, mock_config):
     assert result.exit_code == 0
 
 
-def test_upload_gcp_log(mock_command_pilot_cli, mock_config):
+def test_upload_gcp_log(mock_command_pilot_cli):
     test_file = os.path.join(COMMANDS_FILE_BASE_DIR,
                              'test_file_zero_length.txt')
     m_file = os.path.join(COMMANDS_FILE_BASE_DIR,

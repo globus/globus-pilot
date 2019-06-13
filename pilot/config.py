@@ -38,6 +38,9 @@ class Config():
     def is_migrated(self):
         return False if self.get_migrator() else True
 
+    def save(self, cfg):
+        cfg.write()
+
     def load(self):
         return ConfigObj(self.filename)
 
@@ -69,9 +72,12 @@ class ConfigSection:
     def __init__(self):
         self.config = Config()
         if not self.SECTION:
-            raise NotImplemented('SECTION must be set on Config Section obj')
+            raise NotImplementedError('SECTION must be set on Config Section '
+                                      'obj')
         if self.SECTION not in self.config.load():
-            self.save_option(self.SECTION, {})
+            cfg = self.config.load()
+            cfg[self.SECTION] = {}
+            self.config.save(cfg)
 
     def save_option(self, option, value, section=None):
         cfg = self.config.load()
@@ -79,7 +85,7 @@ class ConfigSection:
         if cfg.get(section) is None:
             cfg[section] = {}
         cfg[section][option] = value
-        cfg.write()
+        self.config.save(cfg)
 
     def load_option(self, option, section=None):
         return self.config.load().get(section or self.SECTION, {}).get(option)

@@ -6,6 +6,10 @@ class PilotClientException(Exception):
     pass
 
 
+class PilotInvalidProject(PilotClientException):
+    pass
+
+
 class RequiredUploadFields(PilotClientException):
 
     def __init__(self, message, fields, *args, **kwargs):

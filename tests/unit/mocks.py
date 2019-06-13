@@ -10,6 +10,37 @@ ANALYSIS_FILE_BASE_DIR = os.path.join(BASE_FILE_DIR, 'analysis')
 DEFAULT_EXPIRE = int(time.time()) + 60 * 60 * 48
 
 
+MOCK_PROJECTS = {
+    'foo-project': {
+        'title': 'Foo',
+        'description': 'This is the foo project',
+        'endpoint': 'foo-project-endpoint',
+        'resource_server': 'foo_https_server',
+        'search_index': 'foo-search-index',
+        'base_path': '/foo_folder',
+        'group': 'foo-group'
+    },
+    'foo-project-test': {
+        'title': 'Foo Test',
+        'description': 'This is the foo project',
+        'endpoint': 'foo-project-test-endpoint',
+        'resource_server': 'foo_https_server',
+        'search_index': 'foo-test-search-index',
+        'base_path': '/foo_test_folder',
+        'group': 'foo-group'
+    },
+    'bar-project': {
+        'description': 'This is the NCI Pilot Project testing project',
+        'title': 'NCI Pilot 1 TEST',
+        'endpoint': 'bar-project-endpoint',
+        'resource_server': 'petrel_https_server',
+        'search_index': 'bar-search-index',
+        'base_path': '/bar_test_folder',
+        'group': 'bar-group'
+    },
+}
+
+
 MOCK_TOKEN_SET = {
     'auth.globus.org': {
         'scope': 'openid profile',
@@ -43,7 +74,17 @@ MOCK_TOKEN_SET = {
         'token_type': 'Bearer',
         'expires_at_seconds': DEFAULT_EXPIRE,
         'resource_server': 'petrel.http.server'
-    }
+    },
+    'foo_https_server': {
+        'scope': 'https://auth.globus.org/scopes/'
+                 '56ceac29-e98a-440a-a594-b41e7a084b62/all',
+        'access_token': '<token>',
+        'refresh_token': None,
+        'token_type': 'Bearer',
+        'expires_at_seconds': DEFAULT_EXPIRE,
+        'resource_server': 'foo_https_server'
+    },
+
 }
 
 MOCK_PROFILE = {

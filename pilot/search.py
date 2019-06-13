@@ -11,7 +11,6 @@ import logging
 from pilot.validation import validate_dataset, validate_user_provided_metadata
 from pilot.analysis import analyze_dataframe
 from pilot.exc import RequiredUploadFields
-import pilot
 
 DEFAULT_HASH_ALGORITHMS = ['sha256', 'md5']
 FOREIGN_KEYS_FILE = os.path.join(os.path.dirname(__file__),
@@ -55,17 +54,19 @@ def get_formatted_date():
     return datetime.datetime.now(pytz.utc).isoformat().replace('+00:00', 'Z')
 
 
-def get_foreign_keys(filename=FOREIGN_KEYS_FILE, test=False):
+def get_foreign_keys(filename=FOREIGN_KEYS_FILE, pilot_client=None):
+    if not pilot_client:
+        return {}
     with open(filename) as fh:
         fkeys = json.load(fh)
-    pc = pilot.client.PilotClient()
     for fkey_data in fkeys.values():
-        sub = pc.get_subject_url(fkey_data['reference']['resource'])
+        sub = pilot_client.get_subject_url(fkey_data['reference']['resource'],
+                                           project=pilot_client.project)
         fkey_data['reference']['resource'] = sub
     return fkeys
 
 
-def scrape_metadata(dataframe, url, profile, skip_analysis=True, test=False):
+def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True):
     mimetype = mimetypes.guess_type(dataframe)[0]
     dc_formats = []
     rfm_metadata = {}
@@ -73,14 +74,14 @@ def scrape_metadata(dataframe, url, profile, skip_analysis=True, test=False):
         dc_formats.append(mimetype)
         rfm_metadata['mime_type'] = mimetype
 
-    name = profile.name.split(' ')
-    if len(name) > 1 and ',' not in profile.name:
+    name = pilot_client.profile.name.split(' ')
+    if len(name) > 1 and ',' not in pilot_client.profile.name:
         # If the persons name is ['Samuel', 'L.', 'Jackson'], produces:
         # "Jackson, Samuel L."
         formal_name = '{}, {}'.format(name[-1:][0], ' '.join(name[:-1]))
     else:
-        formal_name = profile.name
-    fkeys = get_foreign_keys(test=test)
+        formal_name = pilot_client.profile.name
+    fkeys = get_foreign_keys(pilot_client)
     metadata = analyze_dataframe(dataframe, fkeys) if not skip_analysis else {}
     return {
         'dc': {
@@ -103,7 +104,8 @@ def scrape_metadata(dataframe, url, profile, skip_analysis=True, test=False):
                 }
             ],
             'publicationYear': str(datetime.datetime.now().year),
-            'publisher': profile.organization or DEFAULT_PUBLISHER,
+            'publisher': (pilot_client.profile.organization or
+                          DEFAULT_PUBLISHER),
             'resourceType': {
                 'resourceType': 'Dataset',
                 'resourceTypeGeneral': 'Dataset'

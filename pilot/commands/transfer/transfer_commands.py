@@ -81,7 +81,7 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
     prev_metadata = pc.get_search_entry(short_path)
 
     url = pc.get_globus_http_url(short_path)
-    new_metadata = scrape_metadata(dataframe, no_analyze, pc.profile)
+    new_metadata = scrape_metadata(dataframe, no_analyze, pc)
 
     try:
         new_metadata = update_metadata(new_metadata, prev_metadata,

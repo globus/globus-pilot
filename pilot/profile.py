@@ -14,7 +14,7 @@ class Profile(config.ConfigSection):
             cfg = self.config.load()
             cfg['profile'] = user_info
             # Also clear transfer logs
-            cfg.write()
+            self.config.save(cfg)
 
     @property
     def name(self):

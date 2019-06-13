@@ -10,14 +10,12 @@ class TransferLog(config.ConfigSection):
     TRANSFER_LOG_FIELDS = ['dataframe', 'status', 'task_id', 'start_time']
 
     def _save_log(self, log_id, log_dict):
-        cfg = self.config.load()
         if isinstance(log_dict['start_time'], datetime.datetime):
             timestamp = log_dict['start_time'].timestamp()
             log_dict['start_time'] = str(int(timestamp))
         field_list = [log_dict.get(f) for f in self.TRANSFER_LOG_FIELDS]
         log_data = ','.join(field_list)
-        cfg['transfer_log'][str(log_id)] = log_data
-        cfg.write()
+        self.save_option(str(log_id), log_data)
 
     def add_log(self, transfer_result, datapath):
         cfg = self.config.load()

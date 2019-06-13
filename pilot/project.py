@@ -1,6 +1,7 @@
 import logging
 import time
 from pilot import config
+from pilot.exc import PilotInvalidProject
 
 DEFAULT_PROJECTS = {
     'ncipilot1': {
@@ -40,10 +41,6 @@ class Project(config.ConfigSection):
         cfg = self.config.load()
         if not self.load_all():
             cfg['projects'] = DEFAULT_PROJECTS
-
-        log.critical('DEBUG: reloading projects')
-        cfg['projects'] = DEFAULT_PROJECTS
-        cfg.write()
 
     def update(self, project=None, path=None, dry_run=False):
         http_cli = self.client.get_http_client(project or self.DEFAULT_PROJECT)
@@ -89,7 +86,7 @@ class Project(config.ConfigSection):
             'file': ('report.csv', 'some,data,to,send\nanother,row,to,send\n')
         }
         files.keys()
-        raise NotImplemented()
+        raise NotImplementedError()
 
         http_cli.put(path or self.DEFAULT_PATH)
 
@@ -97,13 +94,19 @@ class Project(config.ConfigSection):
         return self.config.load().get('projects')
 
     def get_info(self, project=None):
-        if not project:
+        if project is None:
             project = self.current
-        return self.load_all()[project]
+        pinfo = self.load_all().get(project)
+        if pinfo is None:
+            raise PilotInvalidProject(f'No project exists {project}')
+        return pinfo
 
     @property
     def current(self):
-        return self.load_option('current')
+        curr = self.load_option('current')
+        if curr is None:
+            raise PilotInvalidProject('No current project configured')
+        return curr
 
     @current.setter
     def current(self, value):
