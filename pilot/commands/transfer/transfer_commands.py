@@ -119,7 +119,7 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         return
 
     click.echo('Ingesting record into search...')
-    pc.ingest_entry(gmeta, test)
+    pc.ingest_entry(gmeta)
     click.echo('Success!')
 
     if prev_metadata and not files_modified(new_metadata['files'],

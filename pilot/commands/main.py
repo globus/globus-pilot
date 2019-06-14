@@ -1,6 +1,6 @@
 import click
 
-from pilot.commands import get_pilot_client
+from pilot import commands
 from pilot.version import __version__
 from pilot.commands.auth import auth_commands
 from pilot.commands.search import search_commands, delete
@@ -11,7 +11,8 @@ from pilot.commands.project import project
 @click.group(invoke_without_command=True)
 @click.pass_context
 def cli(ctx):
-    pc = get_pilot_client()
+    pc = commands.get_pilot_client()
+
     if not pc.config.is_migrated():
         click.secho('Old config detected, upgrading... ', fg='yellow',
                     nl=False)
@@ -22,15 +23,15 @@ def cli(ctx):
             click.secho(f'Failed! Try removing '
                         f'{pc.config.CFG_FILENAME} and logging in '
                         f'again.', fg='red')
-    if pc.project.is_cache_stale() and pc.is_logged_in():
-        if pc.project.update(dry_run=True):
-            click.secho('Projects have changed. Use "pilot project update" to '
-                        'get the newest changes.', fg='yellow')
-        pc.project.reset_cache_timer()
-    if (not pc.project.current and ctx.invoked_subcommand != 'project'
-            and pc.is_logged_in()):
-        click.secho('No project set, use "pilot project set <myproject>" '
-                    'to set your project', fg='yellow')
+    if pc.is_logged_in():
+        if pc.project.is_cache_stale():
+            if pc.project.update_with_diff(dry_run=True):
+                click.secho('Projects have updated. Use "pilot project update"'
+                            ' to get the newest changes.', fg='yellow')
+        if not pc.project.is_set() and ctx.invoked_subcommand != 'project':
+            click.secho('No project set, use "pilot project set <myproject>" '
+                        'to set your project', fg='yellow')
+
     if ctx.invoked_subcommand is None:
         click.echo(ctx.get_help())
 

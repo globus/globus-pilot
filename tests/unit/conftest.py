@@ -75,8 +75,7 @@ def mock_transfer_client(monkeypatch):
 
 
 @pytest.fixture
-def mock_auth_pilot_cli(monkeypatch, mock_transfer_client, mock_profile,
-                        mock_config, mock_projects):
+def mock_cli(monkeypatch, mock_transfer_client, mock_config):
     """
     Returns a mock logged in pilot client. Storage is mocked with a custom
     object, so this does behave slightly differently than the real client.
@@ -88,7 +87,14 @@ def mock_auth_pilot_cli(monkeypatch, mock_transfer_client, mock_profile,
     def load_tokens(*args, **kwargs):
         return MOCK_TOKEN_SET
 
+    cfg = mock_config.load()
+    cfg['projects'] = MOCK_PROJECTS
+    cfg['profile'] = MOCK_PROFILE
+    mock_config.save(cfg)
+
     monkeypatch.setattr(pc, 'load_tokens', load_tokens)
+    monkeypatch.setattr(commands, 'get_pilot_client', Mock(return_value=pc))
+    monkeypatch.setattr(pc, 'config', mock_config)
 
     pc.config = mock_config
     pc.profile.config = mock_config
@@ -101,6 +107,7 @@ def mock_auth_pilot_cli(monkeypatch, mock_transfer_client, mock_profile,
     pc.get_search_entry = Mock(return_value=None)
     pc.ls = Mock()
     pc.delete_entry = Mock()
+
     # Sanity. This *should* always return True, but will fail if we update
     # tokens at a later time.
     assert pc.is_logged_in()
@@ -108,18 +115,9 @@ def mock_auth_pilot_cli(monkeypatch, mock_transfer_client, mock_profile,
 
 
 @pytest.fixture
-def mock_command_pilot_cli(mock_auth_pilot_cli, monkeypatch):
-    mock_func = Mock()
-    mock_func.return_value = mock_auth_pilot_cli
-    monkeypatch.setattr(commands, 'get_pilot_client', mock_func)
-    return mock_auth_pilot_cli
-
-
-@pytest.fixture
-def mock_pc_existing_search_entry(mock_auth_pilot_cli):
+def mock_pc_existing_search_entry(mock_cli):
     fname = os.path.join(CLIENT_FILE_BASE_DIR, 'search_entry_v1.json')
     with open(fname) as fh:
         entry_json = json.load(fh)
-    print(entry_json)
-    mock_auth_pilot_cli.get_search_entry.return_value = entry_json
-    return mock_auth_pilot_cli
+    mock_cli.get_search_entry.return_value = entry_json
+    return mock_cli

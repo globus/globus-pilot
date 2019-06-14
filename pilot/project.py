@@ -41,15 +41,17 @@ class Project(config.ConfigSection):
         cfg = self.config.load()
         if not self.load_all():
             cfg['projects'] = DEFAULT_PROJECTS
+            self.config.save(cfg)
 
     def update(self, project=None, path=None, dry_run=False):
+        self.reset_cache_timer()
         http_cli = self.client.get_http_client(project or self.DEFAULT_PROJECT)
-        projects = http_cli.get(path or self.DEFAULT_PATH)
+        projects = http_cli.get(path or self.DEFAULT_PATH).data
         if dry_run is False:
             cfg = self.config.load()
             cfg['projects'] = projects
             cfg.write()
-        return projects.data
+        return projects
 
     def update_with_diff(self, project=None, path=None, dry_run=False):
         old = self.load_all()
@@ -91,7 +93,7 @@ class Project(config.ConfigSection):
         http_cli.put(path or self.DEFAULT_PATH)
 
     def load_all(self):
-        return self.config.load().get('projects')
+        return self.config.load().get('projects', {})
 
     def get_info(self, project=None):
         if project is None:
@@ -100,6 +102,13 @@ class Project(config.ConfigSection):
         if pinfo is None:
             raise PilotInvalidProject(f'No project exists {project}')
         return pinfo
+
+    def is_set(self):
+        """Returns true if a project has been set, false otherwise"""
+        try:
+            return bool(self.current)
+        except PilotInvalidProject:
+            return False
 
     @property
     def current(self):

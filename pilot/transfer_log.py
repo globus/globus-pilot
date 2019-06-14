@@ -35,7 +35,6 @@ class TransferLog(config.ConfigSection):
             return []
 
         logs = []
-        print(cfg['transfer_log'].items())
         for log_id, data in dict(cfg['transfer_log']).items():
             tlog = dict(zip(self.TRANSFER_LOG_FIELDS, data.split(',')))
             tlog['id'] = int(log_id)

@@ -14,6 +14,7 @@ class Config():
 
         if not cfg:
             cfg['pilot'] = {'version': __version__}
+            self.save(cfg)
 
     def migrate_to_configobj(self):
         cfg = self.load()
@@ -45,7 +46,7 @@ class Config():
         return ConfigObj(self.filename)
 
     def read_tokens(self):
-        tokens = self.load().get('tokens')
+        tokens = self.load().get('tokens', {})
         for tset in tokens:
             tokens[tset]['expires_at_seconds'] = \
                 int(tokens[tset]['expires_at_seconds'])

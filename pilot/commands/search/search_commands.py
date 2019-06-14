@@ -3,7 +3,7 @@ import json
 import datetime
 import click
 import globus_sdk
-from pilot.client import PilotClient
+from pilot.commands import get_pilot_client
 
 PORTAL_DETAIL_PAGE_PREFIX = 'https://petreldata.net/nci-pilot1/detail/'
 
@@ -33,10 +33,10 @@ def get_size(result):
 
 
 def get_identifier(result):
+    pc = get_pilot_client()
     rfm_url = get_single_file_rfm(result)['url']
     url = urllib.parse.urlsplit(rfm_url)
-    identifier = url.path.replace(PilotClient.TESTING_DIR + '/', '')
-    identifier = identifier.replace(PilotClient.BASE_DIR + '/', '')
+    identifier = url.path.replace(pc.project.get_info()['base_path'] + '/', '')
     return identifier
 
 
@@ -68,7 +68,7 @@ def fetch_format(columns, search_entry, fmt_func, list_fmt_func):
               help='Limit returned results to the number provided')
 def list_command(output_json, limit):
     # Should require login if there are publicly visible records
-    pc = PilotClient()
+    pc = get_pilot_client()
     if not pc.is_logged_in():
         click.echo('You are not logged in.')
         return
@@ -128,7 +128,7 @@ def get_dates(result):
 @click.option('--json/--no-json', 'output_json', default=False,
               help='Output as JSON.')
 def describe(path, output_json):
-    pc = PilotClient()
+    pc = get_pilot_client()
     if not pc.is_logged_in():
         click.echo('You are not logged in.')
         return

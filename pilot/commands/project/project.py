@@ -12,12 +12,16 @@ log = logging.getLogger(__name__)
 @click.pass_context
 def project(ctx):
     pc = pilot.commands.get_pilot_client()
+    if not pc.is_logged_in():
+        click.echo('You are not logged in.')
+        return
     if ctx.invoked_subcommand is None:
         click.echo('Set project with "pilot project set myproject"')
         projects = pc.project.load_all()
+        current = pc.project.current if pc.project.is_set() else None
         fmt = '{} {}'
         for project in projects:
-            if project == pc.project.current:
+            if project == current:
                 click.secho(fmt.format('*', project), fg='green')
             else:
                 click.echo(fmt.format(' ', project))
