@@ -75,43 +75,41 @@ def mock_transfer_client(monkeypatch):
 
 
 @pytest.fixture
-def mock_cli(monkeypatch, mock_transfer_client, mock_config):
+def mock_cli_basic(monkeypatch, mock_config, mock_projects):
+    pc = client.PilotClient()
+
+    def load_tokens(*args, **kwargs):
+        return MOCK_TOKEN_SET
+
+    monkeypatch.setattr(pc, 'load_tokens', load_tokens)
+    monkeypatch.setattr(commands, 'get_pilot_client', Mock(return_value=pc))
+    monkeypatch.setattr(pc, 'config', mock_config)
+    pc.config = mock_config
+    pc.profile.config = mock_config
+    pc.project.config = mock_config
+    pc.project.current = 'foo-project'
+    # Sanity. This *should* always return True, but will fail if we update
+    # tokens at a later time.
+    assert pc.is_logged_in()
+    return pc
+
+
+@pytest.fixture
+def mock_cli(mock_cli_basic, mock_transfer_client):
     """
     Returns a mock logged in pilot client. Storage is mocked with a custom
     object, so this does behave slightly differently than the real client.
     All methods that reach out to remote resources are mocked, you need to
     re-mock them to return the test data you want.
     """
-    pc = client.PilotClient()
-
-    def load_tokens(*args, **kwargs):
-        return MOCK_TOKEN_SET
-
-    cfg = mock_config.load()
-    cfg['projects'] = MOCK_PROJECTS
-    cfg['profile'] = MOCK_PROFILE
-    mock_config.save(cfg)
-
-    monkeypatch.setattr(pc, 'load_tokens', load_tokens)
-    monkeypatch.setattr(commands, 'get_pilot_client', Mock(return_value=pc))
-    monkeypatch.setattr(pc, 'config', mock_config)
-
-    pc.config = mock_config
-    pc.profile.config = mock_config
-    pc.project.config = mock_config
-    pc.project.current = 'foo-project'
-    pc.upload = Mock()
-    pc.login = Mock()
-    pc.logout = Mock()
-    pc.ingest_entry = Mock()
-    pc.get_search_entry = Mock(return_value=None)
-    pc.ls = Mock()
-    pc.delete_entry = Mock()
-
-    # Sanity. This *should* always return True, but will fail if we update
-    # tokens at a later time.
-    assert pc.is_logged_in()
-    return pc
+    mock_cli_basic.upload = Mock()
+    mock_cli_basic.login = Mock()
+    mock_cli_basic.logout = Mock()
+    mock_cli_basic.ingest_entry = Mock()
+    mock_cli_basic.get_search_entry = Mock(return_value=None)
+    mock_cli_basic.ls = Mock()
+    mock_cli_basic.delete_entry = Mock()
+    return mock_cli_basic
 
 
 @pytest.fixture

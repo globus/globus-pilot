@@ -1,11 +1,10 @@
 import os
 import time
-import requests
 import globus_sdk
 import urllib
 from globus_sdk import AuthClient, SearchClient, TransferClient
 from fair_research_login import NativeClient, LoadError
-from pilot import project, profile, config, globus_clients
+from pilot import project, profile, config, globus_clients, exc
 
 
 class PilotClient(NativeClient):
@@ -32,9 +31,7 @@ class PilotClient(NativeClient):
 
     def login(self, *args, **kwargs):
         super().login(*args, **kwargs)
-
-        ac_authorizer = self.get_authorizers()['auth.globus.org']
-        auth_cli = AuthClient(authorizer=ac_authorizer)
+        auth_cli = self.get_auth_client()
         user_info = auth_cli.oauth2_userinfo()
         self.profile.save_user_info(user_info.data)
 
@@ -49,28 +46,26 @@ class PilotClient(NativeClient):
         except LoadError:
             return False
 
-    @property
-    def gsearch(self):
+    def get_auth_client(self):
+        authorizer = self.get_authorizers()['auth.globus.org']
+        return AuthClient(authorizer=authorizer)
+
+    def get_search_client(self):
         authorizer = self.get_authorizers()['search.api.globus.org']
         return SearchClient(authorizer=authorizer)
 
-    @property
-    def gtransfer(self):
+    def get_transfer_client(self):
         authorizer = self.get_authorizers()['transfer.api.globus.org']
         return TransferClient(authorizer=authorizer)
 
     def get_http_client(self, project=None):
-        base_url = self.get_globus_http_url(
-            '', project=project, relative=False)
+        url = urllib.parse.urlparse(self.get_globus_http_url(
+                                    '', project=project, relative=False))
+        base_url = urllib.parse.urlunparse((url.scheme, url.netloc, '', '',
+                                            '', ''))
         rs = self.project.get_info(project)['resource_server']
         auth = self.get_authorizers()[rs]
         return globus_clients.HTTPSClient(authorizer=auth, base_url=base_url)
-
-    def ls(self, path, project=None, relative=True):
-        path = self.get_path(path, project, relative)
-        endpoint = self.get_endpoint(project)
-        r = self.gtransfer.operation_ls(endpoint, path=path)
-        return [f['name'] for f in r['DATA'] if f['type'] == 'dir']
 
     def get_group(self, project=None):
         return self.project.get_info(project)['group']
@@ -107,10 +102,18 @@ class PilotClient(NativeClient):
     def get_subject_url(self, path, project=None, relative=True):
         return self.get_globus_url(path, project, relative)
 
+    def ls(self, path, project=None, relative=True):
+        path = self.get_path(path, project, relative)
+        endpoint = self.get_endpoint(project)
+        print(self.get_transfer_client())
+        r = self.get_transfer_client().operation_ls(endpoint, path=path)
+        return [f['name'] for f in r['DATA'] if f['type'] == 'dir']
+
     def get_search_entry(self, path, project=None, relative=True):
+        sc = self.get_search_client()
         subject = self.get_subject_url(path, project, relative)
         try:
-            entry = self.gsearch.get_subject(self.get_index(project), subject)
+            entry = sc.get_subject(self.get_index(project), subject)
             return entry['content'][0]
         except globus_sdk.exc.SearchAPIError:
             return None
@@ -125,13 +128,13 @@ class PilotClient(NativeClient):
         :param test: Use the test index instead?
         :return: True on success Raises exception on fail
         """
-        sc = self.gsearch
+        sc = self.get_search_client()
         result = sc.ingest(self.get_index(), gmeta_entry)
         pending_states = ['PENDING', 'PROGRESS']
         while sc.get_task(result['task_id'])['state'] in pending_states:
             time.sleep(.2)
         if sc.get_task(result['task_id'])['state'] != 'SUCCESS':
-            raise Exception('Failed to ingest search subject')
+            raise exc.PilotClientException('Failed to ingest search subject')
         return True
 
     def delete_entry(self, path, entry_id=None, full_subject=False):
@@ -153,17 +156,13 @@ class PilotClient(NativeClient):
         :return:
         """
         index, subject = self.get_index(), self.get_subject_url(path)
+        search_cli = self.get_search_client()
         if full_subject:
-            return self.gsearch.delete_subject(index, subject)
+            return search_cli.delete_subject(index, subject)
         else:
-            return self.gsearch.delete_entry(index, subject, entry_id=entry_id)
+            return search_cli.delete_entry(index, subject, entry_id=entry_id)
 
-    def upload(self, dataframe, destination, test=False):
-        filename = os.path.basename(dataframe)
-        url = self.get_globus_http_url(filename, destination, test)
-
-        with open(dataframe, 'rb') as fh:
-            # Get the user info as JSON
-            resp = requests.put(
-                url, headers=self.http_headers, data=fh, allow_redirects=False)
-            return resp
+    def upload(self, dataframe, destination, project=None):
+        http_client = self.get_http_client(project)
+        path = self.get_path(destination, project=project)
+        return http_client.put(path, filename=dataframe)

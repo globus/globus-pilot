@@ -55,6 +55,18 @@ def test_get_globus_url(mock_projects):
     assert purl.path == '/foo_folder/metadata/foo.txt'
 
 
+def test_get_globus_app_url(mock_projects):
+    pc = PilotClient()
+    pc.project.current = 'foo-project'
+    url = pc.get_globus_app_url('metadata/foo.txt')
+    purl = urlparse(url)
+    assert purl.netloc == 'app.globus.org'
+    assert purl.scheme == 'https'
+    assert purl.path == '/file-manager'
+    assert purl.query == 'origin_id=foo-project-endpoint&' \
+                         'origin_path=%2Ffoo_folder%2Fmetadata%2Ffoo.txt'
+
+
 def test_get_subject_url(mock_projects):
     pc = PilotClient()
     pc.project.current = 'foo-project'
