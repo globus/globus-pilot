@@ -45,7 +45,7 @@ GROUP_URN_PREFIX = 'urn:globus:groups:id:{}'
 DATACITE_FIELDS = ['title', 'description', 'creators', 'mime_type']
 # Used for user provided metadata. Fields here will be copied into the rfm,
 # even if also provided in other areas.
-REMOTE_FILE_MANIFEST_FIELDS = ['mime_type', 'data_type']
+REMOTE_FILE_MANIFEST_FIELDS = ['mime_type']
 
 log = logging.getLogger(__name__)
 
@@ -81,8 +81,6 @@ def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True):
         formal_name = '{}, {}'.format(name[-1:][0], ' '.join(name[:-1]))
     else:
         formal_name = pilot_client.profile.name
-    fkeys = get_foreign_keys(pilot_client)
-    metadata = analyze_dataframe(dataframe, fkeys) if not skip_analysis else {}
     return {
         'dc': {
             'titles': [
@@ -119,10 +117,10 @@ def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True):
             'formats': dc_formats,
             'version': '1'
         },
-        'files': gen_remote_file_manifest(dataframe, url,
-                                          metadata=rfm_metadata),
-        'field_metadata': metadata,
-        'ncipilot': {},
+        'files': gen_remote_file_manifest(dataframe, url, pilot_client,
+                                          metadata=rfm_metadata,
+                                          skip_analysis=skip_analysis),
+        'project_metadata': {},
     }
 
 
@@ -212,15 +210,15 @@ def update_metadata(scraped_metadata, prev_metadata, user_metadata):
                 for manifest in metadata['files']:
                     manifest[field_name] = value
             if field_name not in DATACITE_FIELDS + REMOTE_FILE_MANIFEST_FIELDS:
-                if not metadata.get('ncipilot'):
-                    metadata['ncipilot'] = {}
-                metadata['ncipilot'][field_name] = value
+                if not metadata.get('project_metadata'):
+                    metadata['project_metadata'] = {}
+                metadata['project_metadata'][field_name] = value
             # TODO Remove this once we swith to having these fields in rfms
             if field_name in ['data_type']:
-                if not metadata.get('ncipilot'):
-                    metadata['ncipilot'] = {}
-                metadata['ncipilot'][field_name] = value
-    metadata['ncipilot'] = metadata.get('ncipilot', {})
+                if not metadata.get('project_metadata'):
+                    metadata['project_metadata'] = {}
+                metadata['project_metadata'][field_name] = value
+    metadata['project_metadata'] = metadata.get('project_metadata', {})
     return metadata
 
 
@@ -272,16 +270,21 @@ def gen_dc_formats(metadata, formats):
     metadata['dc']['formats'] = formats
 
 
-def gen_remote_file_manifest(filepath, url, metadata={},
-                             algorithms=DEFAULT_HASH_ALGORITHMS):
+def gen_remote_file_manifest(filepath, url, pilot_client, metadata={},
+                             algorithms=DEFAULT_HASH_ALGORITHMS,
+                             skip_analysis=True):
     rfm = metadata.copy()
     rfm.update({alg: compute_checksum(filepath, getattr(hashlib, alg)())
                 for alg in algorithms})
+    fkeys = get_foreign_keys(pilot_client)
+    metadata = analyze_dataframe(filepath, fkeys) if not skip_analysis else {}
     rfm.update({
         'filename': os.path.basename(filepath),
         'url': url,
-        'length': os.stat(filepath).st_size
+        'length': os.stat(filepath).st_size,
+        'field_metadata': metadata,
     })
+
     return [rfm]
 
 

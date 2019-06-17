@@ -19,7 +19,8 @@ def test_scrape_metadata(mock_config, mock_projects):
     assert meta['dc']['formats'] == ['text/tab-separated-values']
     assert meta['dc']['version'] == '1'
     assert meta['dc']['creators'][0]['creatorName'] == 'Curie, Marie'
-    assert set(meta.keys()) == {'dc', 'files', 'ncipilot', 'field_metadata'}
+    assert set(meta.keys()) == {'dc', 'files', 'project_metadata'}
+    assert 'field_metadata' in meta['files'][0].keys()
 
 
 def test_update_metadata_new_record_w_meta(mock_config):

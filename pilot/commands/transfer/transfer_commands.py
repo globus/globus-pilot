@@ -48,13 +48,8 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         click.echo('You are not logged in.')
         return
 
-    if test:
-        click.secho('Using test location: {}'.format(pc.TESTING_DIR),
-                    fg='yellow')
-        click.secho('Using test index for Globus Search', fg='yellow')
-
     if not destination:
-        dirs = pc.ls('', test)
+        dirs = pc.ls('')
         click.echo('No Destination Provided. Please select one from the '
                    'directory:\n{}'.format('\t '.join(dirs)))
         return
@@ -81,7 +76,8 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
     prev_metadata = pc.get_search_entry(short_path)
 
     url = pc.get_globus_http_url(short_path)
-    new_metadata = scrape_metadata(dataframe, no_analyze, pc)
+    new_metadata = scrape_metadata(dataframe, url, pc,
+                                   skip_analysis=no_analyze)
 
     try:
         new_metadata = update_metadata(new_metadata, prev_metadata,

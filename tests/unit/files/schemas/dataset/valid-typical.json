@@ -1,56 +1,15 @@
 {
   "dc": {
+    "titles": [
+      {
+        "title": "simple.tsv"
+      }
+    ],
     "creators": [
       {
-        "affiliations": [
-          "Argonne National Laboratory"
-        ],
-        "creatorName": "Shukla, Maulik",
-        "familyName": "Shukla",
-        "givenName": "Maulik"
-      },
-      {
-        "affiliations": [
-          "Argonne National Laboratory"
-        ],
-        "creatorName": "Brettin, Thomas",
-        "familyName": "Brettin",
-        "givenName": "Thomas"
-      },
-      {
-        "affiliations": [
-          "Argonne National Laboratory"
-        ],
-        "creatorName": "Yoo, Hyunseung",
-        "familyName": "Yoo",
-        "givenName": "Hyunseung"
+        "creatorName": "Curie, Marie"
       }
     ],
-    "dates": [
-      {
-        "date": "2019-03-05T17:04:10.315060Z",
-        "dateType": "Created"
-      },
-      {
-        "date": "2019-03-05T17:04:10.315060Z",
-        "dateType": "Updated"
-      }
-    ],
-    "descriptions": [
-      {
-        "description": "Rescaled combined drug response data frame, which combines single drug response data from multiple sources, such as NCI60, SCL, SCLC, CCLE, GDSC, CTRP, and gCSI. The dose response values are linearly rescaled and/or clamped to be >= -100 and <= 300.",
-        "descriptionType": "Other"
-      }
-    ],
-    "formats": [
-      "text/tab-separated-values"
-    ],
-    "publicationYear": "2019",
-    "publisher": "Argonne National Laboratory",
-    "resourceType": {
-      "resourceType": "Dataset",
-      "resourceTypeGeneral": "Dataset"
-    },
     "subjects": [
       {
         "subject": "machine learning"
@@ -59,34 +18,91 @@
         "subject": "genomics"
       }
     ],
-    "titles": [
+    "publicationYear": "2019",
+    "publisher": "Globus",
+    "resourceType": {
+      "resourceType": "Dataset",
+      "resourceTypeGeneral": "Dataset"
+    },
+    "dates": [
       {
-        "title": "Combined Dose Response - Rescaled"
+        "dateType": "Created",
+        "date": "2019-06-17T22:57:00.304875Z"
       }
+    ],
+    "descriptions": [
+      {
+        "description": "This is a description of a test file!",
+        "descriptionType": "Other"
+      }
+    ],
+    "formats": [
+      "text/tab-separated-values"
     ],
     "version": "1"
   },
+  "files": [
+    {
+      "mime_type": "text/tab-separated-values",
+      "sha256": "04f42a99365293c61eaa2a9ce3b9e15c830f46c5416504175a450f610c0735fc",
+      "md5": "e59d98d3b3cb87cc2750dd878eda1528",
+      "filename": "simple.tsv",
+      "url": "https://ebf55996-33bf-11e9-9fa4-0a06afd4a22e.e.globus.org/test/metadata/simple.tsv",
+      "length": 674,
+      "field_metadata": {
+        "name": "Data Dictionary",
+        "numrows": 95,
+        "numcols": 2,
+        "previewbytes": 79,
+        "field_definitions": [
+          {
+            "name": "Numbers",
+            "type": "float64",
+            "format": "default",
+            "count": 95,
+            "25": 28.5,
+            "50": 52.0,
+            "75": 75.5,
+            "mean": 52.0,
+            "std": 27.568097504180443,
+            "min": 5.0,
+            "max": 99.0,
+            "reference": null
+          },
+          {
+            "name": "Title",
+            "type": "string",
+            "format": "default",
+            "count": 95,
+            "top": "baz",
+            "unique": 3,
+            "frequency": 50,
+            "reference": null
+          }
+        ],
+        "labels": {
+          "name": "Column Name",
+          "type": "Data Type",
+          "format": "Format",
+          "count": "Number of non-null entries",
+          "25": "25th Percentile",
+          "50": "50th Percentile",
+          "75": "75th Percentile",
+          "std": "Standard Deviation",
+          "mean": "Mean Value",
+          "min": "Minimum Value",
+          "max": "Maximum Value",
+          "unique": "Unique Values",
+          "top": "Top Common",
+          "frequency": "Frequency of Top Common Value",
+          "reference": "Link to resource definition"
+        }
+      }
+    }
+  ],
   "project_metadata": {
-    "data_type": "Drug Response",
-    "dataframe_type": "List",
-    "numcols": 7,
-    "numrows": 27769717,
-    "source": [
-      "NCI60",
-      "SCL",
-      "SCLC",
-      "CCLE",
-      "GDSC",
-      "CTRP",
-      "gCSI"
-    ]
-  },
-  "files": [{
-    "filename": "rescaled_combined_single_drug_growth",
-    "length": 1456184548,
-    "md5": "dc9795de1fdffd41f35a2fa02ef1b675",
-    "mime_type": "text/tab-separated-values",
-    "sha256": "b7d9b5daa40b1f0c61c135ec427960ac43b6075092e4f245124e16d6bbdd51c3",
-    "url": "globus://ebf55996-33bf-11e9-9fa4-0a06afd4a22e:/restricted/dataframes/dose_response/rescaled_combined_single_drug_growth"
-  }]
+    "dataframe_type": "Matrix",
+    "data_type": "Drug Descriptor",
+    "project_slug": "my-project"
+  }
 }
