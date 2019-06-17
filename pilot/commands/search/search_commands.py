@@ -1,64 +1,23 @@
 import urllib
 import json
-import datetime
+import logging
 import click
 import globus_sdk
-from pilot.commands import get_pilot_client
+from pilot import commands
+from pilot.search_parse import (
+    parse_result, get_titles, get_field_metadata, get_field_metadata_titles
+)
 
 PORTAL_DETAIL_PAGE_PREFIX = 'https://petreldata.net/nci-pilot1/detail/'
 
-
-def get_single_file_rfm(result):
-    """
-    The location has changed over time, it may be in a couple different
-    locations. This function guarantees to fetch from the correct one.
-    """
-    if result.get('remote_file_manifest'):
-        return result['remote_file_manifest']
-    elif result.get('files'):
-        return result['files'][0]
+log = logging.getLogger(__name__)
 
 
-def get_size(result):
-    size = get_single_file_rfm(result)['length']
-    # 2**10 = 1024
-    power = 2**10
-    n = 0
-    Dic_powerN = {0: '', 1: 'k', 2: 'M', 3: 'G', 4: 'T'}
-    while size > power:
-        size /= power
-        n += 1
-
-    return '{} {}'.format(int(size), Dic_powerN[n])
-
-
-def get_identifier(result):
-    pc = get_pilot_client()
-    rfm_url = get_single_file_rfm(result)['url']
-    url = urllib.parse.urlsplit(rfm_url)
-    identifier = url.path.replace(pc.project.get_info()['base_path'] + '/', '')
-    return identifier
-
-
-def fetch_format(columns, search_entry, fmt_func, list_fmt_func):
-    """
-    Fetch data in your defined 'columns', for a given Globus Search entry.
-    fmt_func is a function that formats simple types, while
-    list_fmt_func is a function that formats lists
-    """
-    formatted_rows = []
-
-    for name, func in columns:
-        try:
-            content = func(search_entry)
-        except Exception:
-            content = ''
-            # raise
-        if content and isinstance(content, list):
-            formatted_rows += list_fmt_func(name, content)
-        else:
-            formatted_rows += fmt_func(name, content)
-    return '\n'.join(formatted_rows)
+def get_short_path(result):
+    pc = commands.get_pilot_client()
+    base_path = pc.get_path('')
+    sub = urllib.parse.urlparse(result['subject'])
+    return sub.path.replace(base_path, '')
 
 
 @click.command(name='list', help='List known records in Globus Search')
@@ -68,7 +27,7 @@ def fetch_format(columns, search_entry, fmt_func, list_fmt_func):
               help='Limit returned results to the number provided')
 def list_command(output_json, limit):
     # Should require login if there are publicly visible records
-    pc = get_pilot_client()
+    pc = commands.get_pilot_client()
     if not pc.is_logged_in():
         click.echo('You are not logged in.')
         return
@@ -82,45 +41,21 @@ def list_command(output_json, limit):
         click.echo(json.dumps(search_results.data, indent=4))
         return
 
+    items = ['title', 'data', 'dataframe', 'rows', 'columns', 'size']
+    titles = get_titles(items) + ['Path']
     fmt = '{:21.20}{:11.10}{:10.9}{:7.6}{:7.6}{:7.6}{}'
-    columns = [
-        ('Title', lambda r: r['dc']['titles'][0]['title']),
-        ('Data', lambda r: r['ncipilot']['data_type']),
-        ('Dataframe', lambda r: r['ncipilot']['dataframe_type']),
-        ('Rows', lambda r: str(r['field_metadata']['numrows'])),
-        ('Cols', lambda r: str(r['field_metadata']['numcols'])),
-        ('Size', get_size),
-        ('Filename', get_identifier),
-    ]
-
-    # Build row data
-    rows = []
+    output = [fmt.format(*titles)]
     for result in search_results['gmeta']:
-        content = result['content'][0]
-        if content.get('testing'):
-            content = content['testing']
-        row = []
-        for _, function in columns:
-            try:
-                row.append(function(content))
-            except Exception:
-                row.append('')
-                # raise
-        rows.append(row)
+        # If this path refers to a result in a different base location, skip
+        # it, it isn't part of this project
+        if pc.get_path('') not in result['subject']:
+            continue
 
-    formatted_rows = [fmt.format(*r) for r in rows]
-    header = fmt.format(*[c[0] for c in columns])
-    output = '{}\n{}'.format(header, '\n'.join(formatted_rows))
-    click.echo(output)
+        data = dict(parse_result(result['content'][0]))
+        parsed = [data.get(name) for name in items] + [get_short_path(result)]
 
-
-def get_dates(result):
-    dates = result['dc']['dates']
-    fdates = []
-    for date in dates:
-        dt = datetime.datetime.strptime(date['date'], '%Y-%m-%dT%H:%M:%S.%fZ')
-        fdates.append('{}: {: %A, %b %d, %Y}'.format(date['dateType'], dt))
-    return fdates
+        output.append(fmt.format(*parsed))
+    click.echo('\n'.join(output))
 
 
 @click.command(help='Output info about a dataset')
@@ -128,7 +63,7 @@ def get_dates(result):
 @click.option('--json/--no-json', 'output_json', default=False,
               help='Output as JSON.')
 def describe(path, output_json):
-    pc = get_pilot_client()
+    pc = commands.get_pilot_client()
     if not pc.is_logged_in():
         click.echo('You are not logged in.')
         return
@@ -143,76 +78,43 @@ def describe(path, output_json):
         click.echo(json.dumps(entry, indent=4))
         return
 
+    # lines of output which will be printed to console
+    output = []
+
+    # print general data
     general_fmt = '{:21.20}{}'
-    general_columns = [
-        ('Title', lambda r: r['dc']['titles'][0]['title']),
-        ('Authors', lambda r: [c['creatorName'] for c in r['dc']['creators']]),
-        ('Publisher', lambda r: r['dc']['publisher']),
-        ('Subjects', lambda r: [s['subject'] for s in r['dc']['subjects']]),
-        ('Dates', get_dates),
-        ('Data', lambda r: r['ncipilot']['data_type']),
-        ('Dataframe', lambda r: r['ncipilot']['dataframe_type']),
-        ('Rows', lambda r: str(r['field_metadata']['numrows'])),
-        ('Columns', lambda r: str(r['field_metadata']['numcols'])),
-        ('Formats', lambda r: r['dc']['formats']),
-        ('Version', lambda r: r['dc']['version']),
-        ('Size', get_size),
-        ('Filename', get_identifier),
-        ('Description', lambda r: r['dc']['descriptions'][0]['description']),
-    ]
+    general_columns = ['title', 'authors', 'publisher', 'subjects', 'dates',
+                       'data', 'dataframe', 'rows', 'columns', 'formats',
+                       'version', 'size', 'description']
+    raw_data = dict(parse_result(entry))
 
-    def format_list(name, content):
-        return [general_fmt.format(name, content[0])] + \
-               [general_fmt.format('', item) for item in content[1:]]
+    tdata = zip(get_titles(general_columns),
+                [raw_data[name] for name in general_columns])
+    for title, data in tdata:
+        if isinstance(data, list):
+            output += [general_fmt.format(title, line) for line in data[:1]]
+            output += [general_fmt.format('', line) for line in data[1:]]
+        else:
+            output.append(general_fmt.format(title, data))
+    output += ['', '']
 
-    def format_entry(name, content):
-        return [general_fmt.format(name, content)]
-
-    output = fetch_format(general_columns, entry, format_entry, format_list)
-
+    # print field metadata
     fmt = ('{:21.20}'
            '{:8.7}{:7.6}{:5.4}{:12.11}{:7.6}'
            '{:7.6}{:7.6}{:7.6}{:7.6}'
            '{:8.7}{:8.7}{:8.7}'
            )
-    field_metadata = [
-        ('Column Name', 'name'),
+    output.append(fmt.format(*get_field_metadata_titles()))
+    for entry in get_field_metadata(entry):
+        fm_names, fm_data = zip(*entry)
+        output.append(fmt.format(*[str(i) for i in fm_data]))
 
-        ('Type', 'type'),
-        ('Count', 'count'),
-        ('Freq', 'frequency'),
-        ('Top', 'top'),
-        ('Unique', 'unique'),
-
-        ('Min', 'min'),
-        ('Max', 'max'),
-        ('Mean', 'mean'),
-        ('Std', 'std'),
-
-        ('25-PCTL', '25'),
-        ('50-PCTL', '50'),
-        ('75-PCTL', '75'),
-    ]
-    names = [n for n, f in field_metadata]
-    keys = [f for n, f in field_metadata]
-    fm_output = []
-    try:
-        for field in entry['field_metadata']['field_definitions']:
-            f_metadata = [str(field.get(key, '')) for key in keys]
-            fm_output.append(fmt.format(*f_metadata))
-
-        field_metadata_names = fmt.format(*names)
-        output = '{}\n\nField Metadata\n{}\n{}'.format(output,
-                                                       field_metadata_names,
-                                                       '\n'.join(fm_output))
-    except KeyError:
-        output = '{}\n\nField Metadata\nNo Field Metadata'.format(output)
-
+    # print other useful data
     sub = pc.get_subject_url(path)
     qsub = urllib.parse.quote_plus(urllib.parse.quote_plus(sub))
     portal_url = '{}{}'.format(PORTAL_DETAIL_PAGE_PREFIX, qsub)
     other_data = [general_fmt.format('Subject', sub),
-                  general_fmt.format(path, portal_url)]
+                  general_fmt.format('Portal', portal_url)]
+    output = '\n'.join(output)
     output = '{}\n\nOther Data\n{}'.format(output, '\n'.join(other_data))
-
     click.echo(output)

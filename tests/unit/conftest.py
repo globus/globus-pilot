@@ -6,7 +6,7 @@ import copy
 import globus_sdk
 from unittest.mock import Mock
 from .mocks import (MemoryStorage, MOCK_TOKEN_SET, GlobusTransferTaskResponse,
-                    ANALYSIS_FILE_BASE_DIR, CLIENT_FILE_BASE_DIR,
+                    ANALYSIS_FILE_BASE_DIR, SCHEMA_FILE_BASE_DIR,
                     MOCK_PROFILE, MOCK_PROJECTS)
 
 from pilot import client, config, commands
@@ -66,6 +66,27 @@ def numbers_tsv():
 
 
 @pytest.fixture
+def mock_search_data():
+    fname = os.path.join(SCHEMA_FILE_BASE_DIR, 'dataset', 'valid-typical.json')
+    with open(fname) as fh:
+        return json.load(fh)
+
+
+@pytest.fixture
+def mock_search_results(mock_search_data):
+    return {'@datatype': 'GSearchResult', '@version': '2017-09-01', 'count': 1,
+            'gmeta': [{'@datatype': 'GMetaResult', '@version': '2017-09-01',
+                       'content': [mock_search_data],
+                       'subject': 'foo_folder'}],
+            'offset': 0, 'total': 1}
+
+
+@pytest.fixture
+def mock_search_result(mock_search_results):
+    return mock_search_results['gmeta'][0]
+
+
+@pytest.fixture
 def mock_transfer_client(monkeypatch):
     st = Mock()
     monkeypatch.setattr(globus_sdk.TransferClient, 'submit_transfer', st)
@@ -110,12 +131,3 @@ def mock_cli(mock_cli_basic, mock_transfer_client):
     mock_cli_basic.ls = Mock()
     mock_cli_basic.delete_entry = Mock()
     return mock_cli_basic
-
-
-@pytest.fixture
-def mock_pc_existing_search_entry(mock_cli):
-    fname = os.path.join(CLIENT_FILE_BASE_DIR, 'search_entry_v1.json')
-    with open(fname) as fh:
-        entry_json = json.load(fh)
-    mock_cli.get_search_entry.return_value = entry_json
-    return mock_cli

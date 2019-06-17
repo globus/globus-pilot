@@ -6,6 +6,7 @@ BASE_FILE_DIR = os.path.join(os.path.dirname(__file__), 'files')
 COMMANDS_FILE_BASE_DIR = os.path.join(BASE_FILE_DIR, 'commands')
 CLIENT_FILE_BASE_DIR = os.path.join(BASE_FILE_DIR, 'client')
 ANALYSIS_FILE_BASE_DIR = os.path.join(BASE_FILE_DIR, 'analysis')
+SCHEMA_FILE_BASE_DIR = os.path.join(BASE_FILE_DIR, 'schemas')
 
 DEFAULT_EXPIRE = int(time.time()) + 60 * 60 * 48
 
