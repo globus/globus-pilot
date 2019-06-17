@@ -2,9 +2,13 @@ import os
 import time
 import globus_sdk
 import urllib
+import logging
 from globus_sdk import AuthClient, SearchClient, TransferClient
 from fair_research_login import NativeClient, LoadError
-from pilot import project, profile, config, globus_clients, exc
+from pilot import project, profile, config, globus_clients, exc, logging_cfg
+
+logging_cfg.setup_logging()
+log = logging.getLogger(__name__)
 
 
 class PilotClient(NativeClient):

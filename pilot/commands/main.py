@@ -1,11 +1,14 @@
 import click
+import logging
 
-from pilot import commands
+from pilot import commands, exc
 from pilot.version import __version__
 from pilot.commands.auth import auth_commands
 from pilot.commands.search import search_commands, delete
 from pilot.commands.transfer import transfer_commands, status_commands
 from pilot.commands.project import project
+
+log = logging.getLogger(__name__)
 
 
 @click.group(invoke_without_command=True)
@@ -25,9 +28,18 @@ def cli(ctx):
                         f'again.', fg='red')
     if pc.is_logged_in():
         if pc.project.is_cache_stale():
-            if pc.project.update_with_diff(dry_run=True):
-                click.secho('Projects have updated. Use "pilot project update"'
-                            ' to get the newest changes.', fg='yellow')
+            try:
+                if pc.project.update_with_diff(dry_run=True):
+                    click.secho('Projects have updated. Use '
+                                '"pilot project update"'
+                                ' to get the newest changes.', fg='yellow')
+            except exc.HTTPSClientException as hce:
+                log.exception(hce)
+                click.secho(
+                    'Unable to fetch the master project manifest. '
+                    'It may have moved, or the HTTP server hosting it is down.'
+                    ' Uploads and downloads may not work. Please check with '
+                    'your admin for further details.', fg='red')
         if not pc.project.is_set() and ctx.invoked_subcommand != 'project':
             click.secho('No project set, use "pilot project set <myproject>" '
                         'to set your project', fg='yellow')

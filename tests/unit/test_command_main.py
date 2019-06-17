@@ -2,7 +2,7 @@ from unittest.mock import Mock
 from click.testing import CliRunner
 
 from pilot.commands.main import cli
-from pilot import version
+from pilot import version, exc
 
 
 def test_main_no_config(monkeypatch, mock_cli, mock_config):
@@ -41,6 +41,19 @@ def test_main_warns_no_project_set(monkeypatch, mock_cli):
     result = runner.invoke(cli, [])
     assert is_set.called
     assert 'No project set' in result.output
+
+
+def test_main_error_fetching_projects(monkeypatch, mock_cli):
+    is_cache_stale = Mock(return_value=True)
+    monkeypatch.setattr(mock_cli.project, 'is_cache_stale', is_cache_stale)
+    update_with_diff = Mock(return_value={'added': 'stuff'})
+    monkeypatch.setattr(exc, 'HTTPSClientException', Exception)
+    update_with_diff.side_effect = exc.HTTPSClientException
+    monkeypatch.setattr(mock_cli.project, 'update_with_diff', update_with_diff)
+
+    runner = CliRunner()
+    result = runner.invoke(cli, [])
+    assert 'Unable to fetch the master project manifest.' in result.output
 
 
 def test_main_migrate(monkeypatch, mock_cli):
