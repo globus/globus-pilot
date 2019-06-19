@@ -119,6 +119,15 @@ class Project(config.ConfigSection):
         cfg['projects'][slug] = project_data
         cfg.write()
 
+    def lookup_endpoint(self, endpoint):
+        reverse_lookup = {v: k for k, v in self.ENDPOINTS.items()}
+        log.debug(reverse_lookup)
+        return reverse_lookup.get(endpoint)
+
+    def lookup_group(self, group):
+        reverse_lookup = {v: k for k, v in self.GROUPS.items()}
+        return reverse_lookup.get(group)
+
     @property
     def current(self):
         curr = self.load_option('current')

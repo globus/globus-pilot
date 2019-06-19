@@ -59,7 +59,8 @@ def set_command(project):
 @project.command()
 def add():
     pc = commands.get_pilot_client()
-    order = ['title', 'short_name', 'endpoint', 'base_path', 'group']
+    order = ['title', 'short_name', 'endpoint', 'description',
+             'base_path', 'group']
     queries = {
         'title': {
             'prompt': 'Pick a title for your new project',
@@ -74,6 +75,13 @@ def add():
                     'users select this new project',
             'validation': [input_validation.validate_no_spaces,
                            input_validation.validate_project_slug_unique],
+        },
+        'description': {
+            'prompt': 'Describe your new project',
+            'default': 'This project is intended to do X for scientists',
+            'help': 'A nice description can help people understand what your '
+                    'project does, at a glance',
+            'validation': [],
         },
         'endpoint': {
             'prompt': 'Pick a Globus Endpoint to use',
@@ -122,3 +130,30 @@ def add():
     pc.project.add_project(short_name, project)
     click.secho(f'Your new project "{project["title"]}" has been added! Use '
                 f'"pilot project set \'{short_name}\'" to switch.', fg='green')
+
+
+@project.command()
+@click.argument('project', required=False)
+def info(project=None):
+    pc = commands.get_pilot_client()
+    project = project or pc.project.current if pc.project.is_set() else None
+    if project is None:
+        click.echo('Use "pilot project info <project>" to list info about a '
+                   'project.')
+        return
+    info = pc.project.get_info(project)
+    dinfo = [
+        (info['title'], ''),
+        ('Endpoint', pc.project.lookup_endpoint(info['endpoint'])),
+        ('Group', pc.project.lookup_endpoint(info['group'])),
+        # ('Search Index', info['search_index']),
+        # ('Resource Server', info['resource_server']),
+        ('Base Path', info['base_path']),
+    ]
+
+    fmt = '{:25.24}{}'
+    log.debug(info)
+    output = '\n'.join([fmt.format(*i) for i in dinfo])
+    click.echo(output)
+    click.echo()
+    click.echo(info['description'])
