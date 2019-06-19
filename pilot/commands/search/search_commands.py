@@ -53,6 +53,7 @@ def list_command(output_json, limit):
 
         data = dict(parse_result(result['content'][0]))
         parsed = [data.get(name) for name in items] + [get_short_path(result)]
+        parsed = [str(p) for p in parsed]
 
         output.append(fmt.format(*parsed))
     click.echo('\n'.join(output))
