@@ -1,5 +1,6 @@
 import os
 import json
+import logging
 import click
 import globus_sdk
 import datetime
@@ -10,6 +11,8 @@ from pilot.search import (scrape_metadata, update_metadata, gen_gmeta,
 from pilot.exc import RequiredUploadFields
 from pilot import transfer_log
 from jsonschema.exceptions import ValidationError
+
+log = logging.getLogger(__name__)
 
 
 @click.command(help='Upload dataframe to location on Globus and categorize it '
@@ -115,6 +118,7 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         return
 
     click.echo('Ingesting record into search...')
+    log.debug(f'Ingesting {subject}')
     pc.ingest_entry(gmeta)
     click.echo('Success!')
 

@@ -34,6 +34,10 @@ class Project(config.ConfigSection):
     DEFAULT_PATH = '/test/pilot1-tools-manifest.json'
     # Cache will go stale in a day
     CACHE_TIMEOUT_SECONDS = 60 * 60 * 24
+    ENDPOINTS = {'petrel#ncipilot': 'ebf55996-33bf-11e9-9fa4-0a06afd4a22e'}
+    GROUPS = {'NCI Pilot 1 Users': 'd99b3400-33e7-11e9-8857-0af4690c7c7e'}
+    DEFAULT_SEARCH_INDEX = 'e0849c9b-b709-46f3-be21-80893fc1db84'
+    DEFAULT_RESOURCE_SERVER = 'petrel_https_server'
 
     def __init__(self, client):
         super().__init__()
@@ -63,7 +67,7 @@ class Project(config.ConfigSection):
         diff['changed'] = {}
         for k in oldk.intersection(newk):
             if old[k] != new[k]:
-                changed = [pk for pk in set(old[k]) + set(new[k])
+                changed = [pk for pk in set(old[k]) - set(new[k])
                            if old[k][pk] != new[k][pk]]
                 changed_str = [f'{old[k][c]} --> {new[k][c]}'
                                for c in changed]
@@ -106,9 +110,14 @@ class Project(config.ConfigSection):
     def is_set(self):
         """Returns true if a project has been set, false otherwise"""
         try:
-            return bool(self.current)
+            return self.current and self.current in self.load_all().keys()
         except PilotInvalidProject:
             return False
+
+    def add_project(self, slug, project_data):
+        cfg = self.config.load()
+        cfg['projects'][slug] = project_data
+        cfg.write()
 
     @property
     def current(self):

@@ -1,8 +1,9 @@
 import logging
 import click
+from slugify import slugify
 
-import pilot
-
+from pilot import commands, exc
+from pilot.commands import input_validation
 
 log = logging.getLogger(__name__)
 
@@ -11,7 +12,7 @@ log = logging.getLogger(__name__)
              invoke_without_command=True)
 @click.pass_context
 def project(ctx):
-    pc = pilot.commands.get_pilot_client()
+    pc = commands.get_pilot_client()
     if not pc.is_logged_in():
         click.echo('You are not logged in.')
         return
@@ -31,7 +32,7 @@ def project(ctx):
 @click.option('--dry-run', is_flag=True, default=False,
               help='Update stored list of projects.')
 def update(dry_run):
-    pc = pilot.commands.get_pilot_client()
+    pc = commands.get_pilot_client()
     try:
         output = pc.project.update_with_diff(dry_run=dry_run)
         if not output:
@@ -40,16 +41,84 @@ def update(dry_run):
             click.echo(k)
             for item in v:
                 click.echo(f'\t{item}')
-    except pilot.exc.HTTPSClientException as hce:
+    except exc.HTTPSClientException as hce:
         click.secho(str(hce), fg='red')
 
 
 @project.command(name='set')
 @click.argument('project', required=True)
 def set_command(project):
-    pc = pilot.commands.get_pilot_client()
+    pc = commands.get_pilot_client()
     try:
         pc.project.current = project
         click.echo(f'Current project set to {project}')
     except ValueError as ve:
         click.secho(str(ve), fg='red')
+
+
+@project.command()
+def add():
+    pc = commands.get_pilot_client()
+    order = ['title', 'short_name', 'endpoint', 'base_path', 'group']
+    queries = {
+        'title': {
+            'prompt': 'Pick a title for your new project',
+            'default': 'My New Project',
+            'help': 'Pick something short and easy to remember',
+            'validation': [input_validation.validate_project_title_unique],
+        },
+        'short_name': {
+            'prompt': 'Pick a short name',
+            'default': lambda v, q: slugify(v.answers['title']),
+            'help': 'The short name will be used in URLs and will be the name '
+                    'users select this new project',
+            'validation': [input_validation.validate_no_spaces,
+                           input_validation.validate_project_slug_unique],
+        },
+        'endpoint': {
+            'prompt': 'Pick a Globus Endpoint to use',
+            'default': 'petrel#ncipilot',
+            'help': 'This is the endpoint which will host files for your '
+                    'project',
+            'validation': [input_validation.validate_project_endpoint],
+        },
+        'base_path': {
+            'prompt': 'Enter a base path',
+            'default': '/test',
+            'help': 'The base path controls the folder under your Globus '
+                    'Endpoint where files are uploaded and downloaded',
+            'validation': [input_validation.validate_project_path_unique],
+        },
+        # 'resource_server': {
+        #     'prompt': 'Set the Resource Server for your new project',
+        #     'default': project_add_get_project_default,
+        #     'help': 'This dictates which tokens the CLI will use to fetch '
+        #             'your files. You should use the default unless you need '
+        #             'different one.',
+        #     'validation': [],
+        # },
+        # 'search_index': {
+        #     'prompt': 'Set your search index',
+        #     'default': project_add_get_project_default,
+        #     'help': 'The search index controls where all file metadata '
+        #             'lives',
+        #     'validation': [],
+        # },
+        'group': {
+            'prompt': 'Set your Globus Group',
+            'default': 'NCI Pilot 1 Users',
+            'help': 'The group determines who has read/write access to files, '
+                    'and who can view records in search',
+            'validation': [input_validation.validate_project_group],
+        },
+    }
+    iv = input_validation.InputValidator(queries=queries, order=order)
+    project = iv.ask_all()
+    project.update({'search_index': pc.project.DEFAULT_SEARCH_INDEX,
+                    'resource_server': pc.project.DEFAULT_RESOURCE_SERVER})
+    project['endpoint'] = pc.project.ENDPOINTS[project['endpoint']]
+    project['group'] = pc.project.GROUPS[project['group']]
+    short_name = project.pop('short_name')
+    pc.project.add_project(short_name, project)
+    click.secho(f'Your new project "{project["title"]}" has been added! Use '
+                f'"pilot project set \'{short_name}\'" to switch.', fg='green')

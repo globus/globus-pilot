@@ -109,7 +109,6 @@ class PilotClient(NativeClient):
     def ls(self, path, project=None, relative=True):
         path = self.get_path(path, project, relative)
         endpoint = self.get_endpoint(project)
-        print(self.get_transfer_client())
         r = self.get_transfer_client().operation_ls(endpoint, path=path)
         return [f['name'] for f in r['DATA'] if f['type'] == 'dir']
 
@@ -135,8 +134,12 @@ class PilotClient(NativeClient):
         sc = self.get_search_client()
         result = sc.ingest(self.get_index(), gmeta_entry)
         pending_states = ['PENDING', 'PROGRESS']
-        while sc.get_task(result['task_id'])['state'] in pending_states:
+        log.debug(f'Ingesting to {self.get_index()}')
+        task_status = sc.get_task(result['task_id'])['state']
+        while task_status in pending_states:
+            log.debug(f'Search task still {task_status}')
             time.sleep(.2)
+            task_status = sc.get_task(result['task_id'])['state']
         if sc.get_task(result['task_id'])['state'] != 'SUCCESS':
             raise exc.PilotClientException('Failed to ingest search subject')
         return True

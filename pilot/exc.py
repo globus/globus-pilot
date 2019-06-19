@@ -10,6 +10,16 @@ class PilotInvalidProject(PilotClientException):
     pass
 
 
+class PilotValidator(PilotClientException):
+
+    def __init__(self, message, *args, **kwargs):
+        super().__init__()
+        self.message = message or 'Error Validating Input'
+
+    def __str__(self):
+        return self.message
+
+
 class RequiredUploadFields(PilotClientException):
 
     def __init__(self, message, fields, *args, **kwargs):
