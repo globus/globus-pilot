@@ -151,7 +151,7 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
                    )
     else:
         click.echo('Uploading data...')
-        response = pc.upload(short_path)
+        response = pc.upload(dataframe, destination)
         if response.status_code == 200:
             click.echo('Upload Successful! URL is \n{}'.format(url))
         else:
@@ -161,12 +161,10 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
 
 @click.command(help='Download a file to your local directory.')
 @click.argument('path', type=click.Path())
-@click.option('--test/--no-test', default=False,
-              help='download from test location')
 @click.option('--overwrite/--no-overwrite', default=True)
 @click.option('--range', help='Download only part of a file. '
                               'Ex: bytes=0-1, 4-5')
-def download(path, test, overwrite, range):
+def download(path, overwrite, range):
     pc = pilot.commands.get_pilot_client()
     if not pc.is_logged_in():
         click.echo('You are not logged in.')
@@ -187,10 +185,11 @@ def download(path, test, overwrite, range):
         click.echo('Aborted! File {} would be overwritten.'.format(fname))
         return
     try:
-        if not pc.ls(fname, dirname, test):
+        log.debug(f'Checking directory "{dirname}" exists...')
+        if not pc.ls(dirname):
             click.echo('File "{}" does not exist.'.format(path))
             return 1
-        url = pc.get_globus_http_url(fname, dirname, test)
+        url = pc.get_globus_http_url(path)
         response = requests.get(url, headers=headers, stream=True)
         with open(fname, 'wb') as fh:
             if range:

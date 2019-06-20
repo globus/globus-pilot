@@ -62,6 +62,11 @@ class PilotClient(NativeClient):
         authorizer = self.get_authorizers()['transfer.api.globus.org']
         return TransferClient(authorizer=authorizer)
 
+    @property
+    def http_headers(self):
+        at = self.load_tokens()["petrel_https_server"]["access_token"]
+        return {'Authorization': f'bearer {at}'}
+
     def get_http_client(self, project=None):
         url = urllib.parse.urlparse(self.get_globus_http_url(
                                     '', project=project, relative=False))
