@@ -68,12 +68,12 @@ def test_ls(monkeypatch, mock_cli_basic):
     transfer_cli.operation_ls.assert_called_with('foo-project-endpoint',
                                                  path='/foo_folder/foo')
     # ensure only the file was returned
-    assert len(result) == 1
+    assert len(result) == 2
 
 
 def test_upload_http(monkeypatch, mixed_tsv, mock_cli_basic):
     put = Mock()
-    monkeypatch.setattr(globus_clients.HTTPSClient, 'put', put)
+    monkeypatch.setattr(globus_clients.HTTPFileClient, 'put', put)
     mock_cli_basic.upload('a.tsv', 'destination')
     assert put.called
     assert put.call_args == call('/foo_folder/destination', filename='a.tsv')

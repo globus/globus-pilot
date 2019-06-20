@@ -1,3 +1,5 @@
+import io
+import json
 import logging
 import time
 from pilot import config
@@ -50,12 +52,13 @@ class Project(config.ConfigSection):
     def update(self, project=None, path=None, dry_run=False):
         self.reset_cache_timer()
         http_cli = self.client.get_http_client(project or self.DEFAULT_PROJECT)
-        projects = http_cli.get(path or self.DEFAULT_PATH).data
+        response = http_cli.get(path or self.DEFAULT_PATH)
+        new_projects = json.loads(response.data)
         if dry_run is False:
             cfg = self.config.load()
-            cfg['projects'] = projects
+            cfg['projects'] = new_projects
             cfg.write()
-        return projects
+        return new_projects
 
     def update_with_diff(self, project=None, path=None, dry_run=False):
         old = self.load_all()
@@ -87,14 +90,13 @@ class Project(config.ConfigSection):
         return True
 
     def push(self, project=None, path=None):
-        http_cli = self.client.get_http_client(project or self.DEFAULT_PROJECT)
-        files = {
-            'file': ('report.csv', 'some,data,to,send\nanother,row,to,send\n')
-        }
-        files.keys()
-        raise NotImplementedError()
-
-        http_cli.put(path or self.DEFAULT_PATH)
+        project = project or self.DEFAULT_PROJECT
+        path = self.client.get_path(path or self.DEFAULT_PATH, project=project,
+                                    relative=False)
+        self.client.delete(path, project=project, relative=False)
+        http_cli = self.client.get_http_client(project)
+        manifest = json.dumps(dict(self.load_all()), indent=4)
+        http_cli.put(path, data=io.StringIO(manifest), allow_redirects=False)
 
     def load_all(self):
         return self.config.load().get('projects', {})
@@ -121,7 +123,6 @@ class Project(config.ConfigSection):
 
     def lookup_endpoint(self, endpoint):
         reverse_lookup = {v: k for k, v in self.ENDPOINTS.items()}
-        log.debug(reverse_lookup)
         return reverse_lookup.get(endpoint)
 
     def lookup_group(self, group):

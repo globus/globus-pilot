@@ -1,14 +1,47 @@
+import logging
 from globus_sdk import AccessTokenAuthorizer, RefreshTokenAuthorizer
 from globus_sdk.base import BaseClient, slash_join
+from globus_sdk.response import GlobusResponse
 from pilot.exc import HTTPSClientException
 from globus_sdk import exc
 import requests
 
+log = logging.getLogger(__name__)
 
-class HTTPSClient(BaseClient):
+
+class FileContentResponse(GlobusResponse):
+
+    def __init__(self, response, client):
+        log.debug('FileContentResponse returned')
+        super().__init__(response, client)
+
+    @property
+    def text(self):
+        return str(self.data)
+
+    @property
+    def data(self):
+        byte_content = b''
+        for content in self.iter_content:
+            byte_content += content
+        return byte_content.decode('utf-8')
+
+    @property
+    def iter_content(self):
+        # return multipart.decoder.MultipartDecoder.from_response(self._data)
+        return self._data.iter_content()
+
+    @property
+    def raw_response(self):
+        return self._data
+
+
+class HTTPFileClient(BaseClient):
     allowed_authorizer_types = (AccessTokenAuthorizer, RefreshTokenAuthorizer)
 
     error_class = HTTPSClientException
+    default_response_class = GlobusResponse
+    file_content_response_class = FileContentResponse
 
     def __init__(self, authorizer=None, base_url='', **kwargs):
         super().__init__(
@@ -16,8 +49,23 @@ class HTTPSClient(BaseClient):
             authorizer=authorizer, **kwargs
         )
 
-    def put(self, path, params=None, headers=None, allow_redirects=False,
+    def get(self, path, params=None, headers=None, allow_redirects=False,
             filename=None, response_class=None, retry_401=True):
+        response_class = response_class or self.file_content_response_class
+        return self.send_custom_request(
+            'GET', path, params=params,
+            headers=headers, allow_redirects=allow_redirects,
+            response_class=response_class, retry_401=retry_401
+        )
+
+    def put(self, path, params=None, headers=None, allow_redirects=False,
+            filename=None, response_class=None, retry_401=True, data=None):
+        if data:
+            return self.send_custom_request(
+                "PUT", path, params=params,
+                headers=headers, allow_redirects=allow_redirects,
+                response_class=response_class, retry_401=retry_401, data=data
+            )
         if not filename:
             raise ValueError('No filename provided')
         with open(filename, 'rb') as data:
@@ -25,12 +73,15 @@ class HTTPSClient(BaseClient):
             return self.send_custom_request(
                 "PUT", path, params=params,
                 headers=headers, allow_redirects=allow_redirects, data=data,
-                response_class=response_class, retry_401=retry_401
+                response_class=response_class, retry_401=retry_401,
             )
 
-    def send_custom_request(self, method, path, params=None, headers=None,
-                            allow_redirects=False, data=None,
-                            response_class=None, retry_401=True):
+    def delete(self, path, **kwargs):
+        return self.send_custom_request('DELETE', path, **kwargs)
+
+    def send_custom_request(self, method, path, headers=None,
+                            allow_redirects=False, response_class=None,
+                            retry_401=True, **kwargs):
         rheaders = dict(self._headers)
         # expand
         if headers is not None:
@@ -57,11 +108,10 @@ class HTTPSClient(BaseClient):
                     method=method,
                     url=url,
                     headers=rheaders,
-                    data=data,
-                    params=params,
                     allow_redirects=allow_redirects,
                     verify=self._verify,
                     timeout=self._http_timeout,
+                    **kwargs
                 )
             except requests.RequestException as e:
                 self.logger.error("NetworkError on request")
@@ -84,18 +134,21 @@ class HTTPSClient(BaseClient):
                 self.authorizer.set_authorization_header(rheaders)
                 r = send_request()
 
-        if 200 <= r.status_code < 400:
+        return self.handle_response(r, response_class)
+
+    def handle_response(self, response, response_class=None):
+        if 200 <= response.status_code < 400:
             self.logger.debug(
                 "request completed with response code: {}".format(
-                    r.status_code)
+                    response.status_code)
             )
             if response_class is None:
-                return self.default_response_class(r, client=self)
+                return self.default_response_class(response, client=self)
             else:
-                return response_class(r, client=self)
+                return response_class(response, client=self)
 
         self.logger.debug(
             "request completed with (error) response code: {}".format(
-                r.status_code)
+                response.status_code)
         )
-        raise self.error_class(r)
+        raise self.error_class(response)
