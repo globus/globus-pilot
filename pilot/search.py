@@ -8,11 +8,9 @@ import json
 import jsonschema
 import logging
 
-from pilot.profile import profile
 from pilot.validation import validate_dataset, validate_user_provided_metadata
 from pilot.analysis import analyze_dataframe
 from pilot.exc import RequiredUploadFields
-import pilot
 
 DEFAULT_HASH_ALGORITHMS = ['sha256', 'md5']
 FOREIGN_KEYS_FILE = os.path.join(os.path.dirname(__file__),
@@ -47,7 +45,7 @@ GROUP_URN_PREFIX = 'urn:globus:groups:id:{}'
 DATACITE_FIELDS = ['title', 'description', 'creators', 'mime_type']
 # Used for user provided metadata. Fields here will be copied into the rfm,
 # even if also provided in other areas.
-REMOTE_FILE_MANIFEST_FIELDS = ['mime_type', 'data_type']
+REMOTE_FILE_MANIFEST_FIELDS = ['mime_type']
 
 log = logging.getLogger(__name__)
 
@@ -56,19 +54,19 @@ def get_formatted_date():
     return datetime.datetime.now(pytz.utc).isoformat().replace('+00:00', 'Z')
 
 
-def get_foreign_keys(filename=FOREIGN_KEYS_FILE, test=False):
+def get_foreign_keys(filename=FOREIGN_KEYS_FILE, pilot_client=None):
+    if not pilot_client:
+        return {}
     with open(filename) as fh:
         fkeys = json.load(fh)
-    pc = pilot.client.PilotClient()
     for fkey_data in fkeys.values():
-        path = fkey_data['reference']['resource']
-        dirname, fname, = os.path.dirname(path), os.path.basename(path)
-        sub = pc.get_subject_url(fname, dirname, test)
+        sub = pilot_client.get_subject_url(fkey_data['reference']['resource'],
+                                           project=pilot_client.project)
         fkey_data['reference']['resource'] = sub
     return fkeys
 
 
-def scrape_metadata(dataframe, url, skip_analysis=True, test=False):
+def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True):
     mimetype = mimetypes.guess_type(dataframe)[0]
     dc_formats = []
     rfm_metadata = {}
@@ -76,15 +74,13 @@ def scrape_metadata(dataframe, url, skip_analysis=True, test=False):
         dc_formats.append(mimetype)
         rfm_metadata['mime_type'] = mimetype
 
-    name = profile.name.split(' ')
-    if len(name) > 1 and ',' not in profile.name:
+    name = pilot_client.profile.name.split(' ')
+    if len(name) > 1 and ',' not in pilot_client.profile.name:
         # If the persons name is ['Samuel', 'L.', 'Jackson'], produces:
         # "Jackson, Samuel L."
         formal_name = '{}, {}'.format(name[-1:][0], ' '.join(name[:-1]))
     else:
-        formal_name = profile.name
-    fkeys = get_foreign_keys(test=test)
-    metadata = analyze_dataframe(dataframe, fkeys) if not skip_analysis else {}
+        formal_name = pilot_client.profile.name
     return {
         'dc': {
             'titles': [
@@ -106,7 +102,8 @@ def scrape_metadata(dataframe, url, skip_analysis=True, test=False):
                 }
             ],
             'publicationYear': str(datetime.datetime.now().year),
-            'publisher': profile.organization or DEFAULT_PUBLISHER,
+            'publisher': (pilot_client.profile.organization or
+                          DEFAULT_PUBLISHER),
             'resourceType': {
                 'resourceType': 'Dataset',
                 'resourceTypeGeneral': 'Dataset'
@@ -120,10 +117,10 @@ def scrape_metadata(dataframe, url, skip_analysis=True, test=False):
             'formats': dc_formats,
             'version': '1'
         },
-        'files': gen_remote_file_manifest(dataframe, url,
-                                          metadata=rfm_metadata),
-        'field_metadata': metadata,
-        'ncipilot': {},
+        'files': gen_remote_file_manifest(dataframe, url, pilot_client,
+                                          metadata=rfm_metadata,
+                                          skip_analysis=skip_analysis),
+        'project_metadata': {},
     }
 
 
@@ -213,15 +210,15 @@ def update_metadata(scraped_metadata, prev_metadata, user_metadata):
                 for manifest in metadata['files']:
                     manifest[field_name] = value
             if field_name not in DATACITE_FIELDS + REMOTE_FILE_MANIFEST_FIELDS:
-                if not metadata.get('ncipilot'):
-                    metadata['ncipilot'] = {}
-                metadata['ncipilot'][field_name] = value
+                if not metadata.get('project_metadata'):
+                    metadata['project_metadata'] = {}
+                metadata['project_metadata'][field_name] = value
             # TODO Remove this once we swith to having these fields in rfms
             if field_name in ['data_type']:
-                if not metadata.get('ncipilot'):
-                    metadata['ncipilot'] = {}
-                metadata['ncipilot'][field_name] = value
-    metadata['ncipilot'] = metadata.get('ncipilot', {})
+                if not metadata.get('project_metadata'):
+                    metadata['project_metadata'] = {}
+                metadata['project_metadata'][field_name] = value
+    metadata['project_metadata'] = metadata.get('project_metadata', {})
     return metadata
 
 
@@ -273,16 +270,21 @@ def gen_dc_formats(metadata, formats):
     metadata['dc']['formats'] = formats
 
 
-def gen_remote_file_manifest(filepath, url, metadata={},
-                             algorithms=DEFAULT_HASH_ALGORITHMS):
+def gen_remote_file_manifest(filepath, url, pilot_client, metadata={},
+                             algorithms=DEFAULT_HASH_ALGORITHMS,
+                             skip_analysis=True):
     rfm = metadata.copy()
     rfm.update({alg: compute_checksum(filepath, getattr(hashlib, alg)())
                 for alg in algorithms})
+    fkeys = get_foreign_keys(pilot_client)
+    metadata = analyze_dataframe(filepath, fkeys) if not skip_analysis else {}
     rfm.update({
         'filename': os.path.basename(filepath),
         'url': url,
-        'length': os.stat(filepath).st_size
+        'length': os.stat(filepath).st_size,
+        'field_metadata': metadata,
     })
+
     return [rfm]
 
 

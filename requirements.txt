@@ -5,3 +5,5 @@ colorama>=0.4.1
 jsonschema<3.0,>=2.5
 pandas
 tableschema
+configobj
+python-slugify

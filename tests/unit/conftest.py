@@ -1,16 +1,15 @@
 import pytest
-from configparser import ConfigParser
+from configobj import ConfigObj
 import os
 import json
 import copy
 import globus_sdk
 from unittest.mock import Mock
 from .mocks import (MemoryStorage, MOCK_TOKEN_SET, GlobusTransferTaskResponse,
-                    ANALYSIS_FILE_BASE_DIR, CLIENT_FILE_BASE_DIR,
-                    MOCK_PROFILE)
+                    ANALYSIS_FILE_BASE_DIR, SCHEMA_FILE_BASE_DIR,
+                    MOCK_PROFILE, MOCK_PROJECTS)
 
-from pilot.client import PilotClient
-import pilot
+from pilot import client, config, commands
 
 
 @pytest.fixture
@@ -25,28 +24,35 @@ def mock_tokens():
 
 @pytest.fixture
 def mock_config(monkeypatch):
+    class MockConfig:
+        cfg = ConfigObj()
 
-    class MockConfig(pilot.config.Config):
-        data = {}
-
-        def save(self, data):
-            self.data = {str(k): v for k, v in data.items()}
+        def save(self, cfg):
+            self.cfg = cfg
 
         def load(self):
-            cfg = ConfigParser()
-            for key in self.data:
-                cfg[key] = self.data[key]
-            return cfg
+            return self.cfg
 
-    mc = MockConfig()
-    monkeypatch.setattr(pilot.config, 'config', mc)
-    monkeypatch.setattr(pilot.profile, 'profile', pilot.profile.Profile())
-    return mc
+    mock_cfg = MockConfig()
+    monkeypatch.setattr(config.Config, 'load', mock_cfg.load)
+    monkeypatch.setattr(config.Config, 'save', mock_cfg.save)
+    return config.Config()
 
 
 @pytest.fixture
-def mock_profile(monkeypatch, mock_config):
-    pilot.profile.profile.save_user_info(MOCK_PROFILE)
+def mock_profile(mock_config):
+    cfg = mock_config.load()
+    cfg['profile'] = MOCK_PROFILE
+    mock_config.save(cfg)
+    return mock_config
+
+
+@pytest.fixture
+def mock_projects(mock_config):
+    cfg = mock_config.load()
+    cfg['projects'] = MOCK_PROJECTS
+    mock_config.save(cfg)
+    return mock_config
 
 
 @pytest.fixture
@@ -60,6 +66,27 @@ def numbers_tsv():
 
 
 @pytest.fixture
+def mock_search_data():
+    fname = os.path.join(SCHEMA_FILE_BASE_DIR, 'dataset', 'valid-typical.json')
+    with open(fname) as fh:
+        return json.load(fh)
+
+
+@pytest.fixture
+def mock_search_results(mock_search_data):
+    return {'@datatype': 'GSearchResult', '@version': '2017-09-01', 'count': 1,
+            'gmeta': [{'@datatype': 'GMetaResult', '@version': '2017-09-01',
+                       'content': [mock_search_data],
+                       'subject': 'foo_folder'}],
+            'offset': 0, 'total': 1}
+
+
+@pytest.fixture
+def mock_search_result(mock_search_results):
+    return mock_search_results['gmeta'][0]
+
+
+@pytest.fixture
 def mock_transfer_client(monkeypatch):
     st = Mock()
     monkeypatch.setattr(globus_sdk.TransferClient, 'submit_transfer', st)
@@ -69,31 +96,19 @@ def mock_transfer_client(monkeypatch):
 
 
 @pytest.fixture
-def mock_auth_pilot_cli(monkeypatch, mock_transfer_client):
-    """
-    Returns a mock logged in pilot client. Storage is mocked with a custom
-    object, so this does behave slightly differently than the real client.
-    All methods that reach out to remote resources are mocked, you need to
-    re-mock them to return the test data you want.
-    """
-    pc = PilotClient()
+def mock_cli_basic(monkeypatch, mock_config, mock_projects):
+    pc = client.PilotClient()
 
     def load_tokens(*args, **kwargs):
         return MOCK_TOKEN_SET
 
     monkeypatch.setattr(pc, 'load_tokens', load_tokens)
-
-    pc.BASE_DIR = 'prod'
-    pc.ENDPOINT = 'endpoint'
-    pc.SEARCH_INDEX = 'search_index'
-    pc.SEARCH_INDEX_TEST = 'search_index_test'
-    pc.upload = Mock()
-    pc.login = Mock()
-    pc.logout = Mock()
-    pc.ingest_entry = Mock()
-    pc.get_search_entry = Mock(return_value=None)
-    pc.ls = Mock()
-    pc.delete_entry = Mock()
+    monkeypatch.setattr(commands, 'get_pilot_client', Mock(return_value=pc))
+    monkeypatch.setattr(pc, 'config', mock_config)
+    pc.config = mock_config
+    pc.profile.config = mock_config
+    pc.project.config = mock_config
+    pc.project.current = 'foo-project'
     # Sanity. This *should* always return True, but will fail if we update
     # tokens at a later time.
     assert pc.is_logged_in()
@@ -101,18 +116,18 @@ def mock_auth_pilot_cli(monkeypatch, mock_transfer_client):
 
 
 @pytest.fixture
-def mock_command_pilot_cli(mock_auth_pilot_cli, monkeypatch):
-    mock_func = Mock()
-    mock_func.return_value = mock_auth_pilot_cli
-    monkeypatch.setattr(pilot.commands, 'get_pilot_client', mock_func)
-    return mock_auth_pilot_cli
-
-
-@pytest.fixture
-def mock_pc_existing_search_entry(mock_auth_pilot_cli):
-    fname = os.path.join(CLIENT_FILE_BASE_DIR, 'search_entry_v1.json')
-    with open(fname) as fh:
-        entry_json = json.load(fh)
-    print(entry_json)
-    mock_auth_pilot_cli.get_search_entry.return_value = entry_json
-    return mock_auth_pilot_cli
+def mock_cli(mock_cli_basic, mock_transfer_client):
+    """
+    Returns a mock logged in pilot client. Storage is mocked with a custom
+    object, so this does behave slightly differently than the real client.
+    All methods that reach out to remote resources are mocked, you need to
+    re-mock them to return the test data you want.
+    """
+    mock_cli_basic.upload = Mock()
+    mock_cli_basic.login = Mock()
+    mock_cli_basic.logout = Mock()
+    mock_cli_basic.ingest_entry = Mock()
+    mock_cli_basic.get_search_entry = Mock(return_value=None)
+    mock_cli_basic.ls = Mock()
+    mock_cli_basic.delete_entry = Mock()
+    return mock_cli_basic

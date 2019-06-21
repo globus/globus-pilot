@@ -1,5 +1,4 @@
 import click
-import os
 import globus_sdk
 import pilot
 
@@ -22,17 +21,15 @@ def delete_command(path, entry_id, subject, test, dry_run, delete_data, yes):
         click.echo('You are not logged in.')
         return
 
-    fname, dirname = os.path.basename(path), os.path.dirname(path)
-
-    sub_url = pc.get_subject_url(fname, dirname, test)
+    sub_url = pc.get_subject_url(path)
     if dry_run:
         click.secho('Dry Run (No Delete Performed)')
         click.secho('Search Entry: {}'.format(sub_url))
-        click.secho('File: {}'.format(pc.get_path(fname, dirname, test)))
+        click.secho('File: {}'.format(pc.get_path(path, test)))
         return
 
     try:
-        pc.delete_entry(fname, dirname, test, entry_id=entry_id,
+        pc.delete_entry(path, entry_id=entry_id,
                         full_subject=subject)
         click.secho('Removed {} Successfully'.format(path), fg='green')
     except globus_sdk.exc.SearchAPIError as se:

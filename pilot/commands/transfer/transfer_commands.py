@@ -1,5 +1,6 @@
 import os
 import json
+import logging
 import click
 import globus_sdk
 import datetime
@@ -8,7 +9,10 @@ import pilot
 from pilot.search import (scrape_metadata, update_metadata, gen_gmeta,
                           files_modified)
 from pilot.exc import RequiredUploadFields
+from pilot import transfer_log
 from jsonschema.exceptions import ValidationError
+
+log = logging.getLogger(__name__)
 
 
 @click.command(help='Upload dataframe to location on Globus and categorize it '
@@ -47,23 +51,17 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         click.echo('You are not logged in.')
         return
 
-    if test:
-        click.secho('Using test location: {}'.format(pc.TESTING_DIR),
-                    fg='yellow')
-        click.secho('Using test index for Globus Search', fg='yellow')
-
     if not destination:
-        path = pc.get_path('', '', test)
-        dirs = pc.ls('', '', test)
+        dirs = pc.ls('')
         click.echo('No Destination Provided. Please select one from the '
-                   'directory "{}":\n{}'.format(path, '\t '.join(dirs)))
+                   'directory:\n{}'.format('\t '.join(dirs)))
         return
 
     try:
-        pc.ls(dataframe, destination, test)
+        pc.ls(destination)
     except globus_sdk.exc.TransferAPIError as tapie:
         if tapie.code == 'ClientError.NotFound':
-            url = pc.get_globus_app_url('', test)
+            url = pc.get_globus_app_url('')
             click.secho('Directory does not exist: "{}"\nPlease create it at: '
                         '{}'.format(destination, url), err=True, bg='red')
             return 1
@@ -77,17 +75,18 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
     else:
         user_metadata = {}
 
-    filename = os.path.basename(dataframe)
-    prev_metadata = pc.get_search_entry(filename, destination, test)
+    short_path = os.path.join(destination, os.path.basename(dataframe))
+    prev_metadata = pc.get_search_entry(short_path)
 
-    url = pc.get_globus_http_url(filename, destination, test)
-    new_metadata = scrape_metadata(dataframe, url, no_analyze, test)
+    url = pc.get_globus_http_url(short_path)
+    new_metadata = scrape_metadata(dataframe, url, pc,
+                                   skip_analysis=no_analyze)
 
     try:
         new_metadata = update_metadata(new_metadata, prev_metadata,
                                        user_metadata)
-        subject = pc.get_subject_url(filename, destination, test)
-        gmeta = gen_gmeta(subject, pc.GROUP, new_metadata)
+        subject = pc.get_subject_url(short_path)
+        gmeta = gen_gmeta(subject, pc.get_group(), new_metadata)
     except (RequiredUploadFields, ValidationError) as e:
         click.secho('Error Validating Metadata: {}'.format(e), fg='red')
         return 1
@@ -102,7 +101,7 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         dt = datetime.datetime.strptime(last_updated, '%Y-%m-%dT%H:%M:%S.%fZ')
         click.echo('Existing record found for {}, specify -u to update.\n'
                    'Last updated: {: %A, %b %d, %Y}'
-                   ''.format(filename, dt))
+                   ''.format(short_path, dt))
         return 1
 
     if dry_run:
@@ -119,7 +118,8 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         return
 
     click.echo('Ingesting record into search...')
-    pc.ingest_entry(gmeta, test)
+    log.debug(f'Ingesting {subject}')
+    pc.ingest_entry(gmeta)
     click.echo('Success!')
 
     if prev_metadata and not files_modified(new_metadata['files'],
@@ -133,17 +133,16 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         auth = pc.get_authorizers()['transfer.api.globus.org']
         tc = globus_sdk.TransferClient(authorizer=auth)
         tdata = globus_sdk.TransferData(
-            tc, local_ep, pc.ENDPOINT,
+            tc, local_ep, pc.get_endpoint(),
             label='{} Transfer'.format(pc.APP_NAME),
             notify_on_succeeded=False,
             sync_level='checksum',
             encrypt_data=True)
-        path = pc.get_path(filename, destination, test)
-        tdata.add_item(dataframe, path)
+        tdata.add_item(dataframe, pc.get_path(short_path))
         click.echo('Starting Transfer...')
         transfer_result = tc.submit_transfer(tdata)
-        short_path = os.path.join(destination, filename)
-        pilot.config.config.add_transfer_log(transfer_result, short_path)
+        tl = transfer_log.TransferLog()
+        tl.add_log(transfer_result, short_path)
         click.echo('{}. You can check the status below: \n'
                    'https://app.globus.org/activity/{}/overview\n'
                    'URL will be: {}'.format(
@@ -152,7 +151,7 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
                    )
     else:
         click.echo('Uploading data...')
-        response = pc.upload(dataframe, destination, test)
+        response = pc.upload(short_path)
         if response.status_code == 200:
             click.echo('Upload Successful! URL is \n{}'.format(url))
         else:

@@ -1,10 +1,12 @@
 import click
 
-from pilot.config import config
-from pilot.client import PilotClient
+from pilot.commands import get_pilot_client
+from pilot import transfer_log
 import globus_sdk
 
 PENDING_TASK_STATES = ['Accepted', 'ACTIVE', 'INACTIVE']
+
+transfer_log = transfer_log.TransferLog()
 
 
 def update_tasks(transfer_tasks):
@@ -15,7 +17,7 @@ def update_tasks(transfer_tasks):
 
     User must be logged in!
     """
-    pc = PilotClient()
+    pc = get_pilot_client()
     auth = pc.get_authorizers()['transfer.api.globus.org']
     tc = globus_sdk.TransferClient(authorizer=auth)
     statuses = {r.data['task_id']: r.data['status'] for r in
@@ -26,7 +28,7 @@ def update_tasks(transfer_tasks):
             click.secho('Unable to update status for {}'.format(task['id']),
                         fg='yellow')
         else:
-            config.update_transfer_log(task['task_id'], status)
+            transfer_log.update_log(task['task_id'], status)
 
 
 @click.command(help='Check status of transfers')
@@ -38,13 +40,13 @@ def status(number):
     ordered_tlogs = []
     tlog_order = ['id', 'dataframe', 'status', 'start_time', 'task_id']
     # Fetch a limmited set of logs by the most recent entries
-    tlogs = config.get_transfer_log()[:number]
+    tlogs = transfer_log.get_log()[:number]
 
     pending_tasks = [t for t in tlogs if t['status'] in PENDING_TASK_STATES]
     if pending_tasks:
         click.secho('Updating tasks...', fg='green')
         update_tasks(pending_tasks)
-        tlogs = config.get_transfer_log()[:number]
+        tlogs = transfer_log.get_log()[:number]
 
     for tlog in tlogs:
         tlog['id'] = str(tlog['id'])

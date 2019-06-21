@@ -1,74 +1,74 @@
+import pytest
 from urllib.parse import urlparse
 from pilot.client import PilotClient
+from pilot.exc import PilotInvalidProject
+
+from tests.unit.mocks import MOCK_PROJECTS
 
 
-def test_get_index():
+def test_get_index(mock_projects):
     pc = PilotClient()
-    assert pc.get_index() == pc.SEARCH_INDEX
+    pc.project.current = 'foo-project'
+    assert pc.get_index() == 'foo-search-index'
+    assert pc.get_index(project='foo-project-test') == 'foo-test-search-index'
 
 
-def test_get_test_index():
+def test_invalid_project(mock_projects):
     pc = PilotClient()
-    index = pc.get_index(test=True)
-    assert index == pc.SEARCH_INDEX_TEST
+    with pytest.raises(PilotInvalidProject):
+        pc.get_index()
 
 
-def test_get_path():
+def test_invalid_project_with_explicit_name(mock_projects):
     pc = PilotClient()
-    path = pc.get_path('dataframe.dat', 'my_folder')
-    pieces = path.split('/')
-    assert 'my_folder' in pieces
-    assert 'dataframe.dat' in pieces
-    assert pc.BASE_DIR in path
-    assert pc.TESTING_DIR not in path
+    with pytest.raises(PilotInvalidProject):
+        pc.get_index('does-not-exist')
 
 
-def test_get_test_path():
+def test_get_path(mock_projects):
     pc = PilotClient()
-    path = pc.get_path('dataframe.dat', 'my_folder', test=True)
-    pieces = path.split('/')
-    assert 'my_folder' in pieces
-    assert 'dataframe.dat' in pieces
-    assert pc.TESTING_DIR in path
+    pc.project.current = 'foo-project'
+    assert pc.get_path('folder/file.txt') == '/foo_folder/folder/file.txt'
+    path = pc.get_path('folder/file.txt', project='foo-project-test')
+    assert path == '/foo_test_folder/folder/file.txt'
 
 
-def test_get_globus_http_url():
+def test_get_globus_http_url(mock_projects):
     pc = PilotClient()
-    url = pc.get_globus_http_url('dataframe.dat', 'my_folder')
+    pc.project.current = 'foo-project'
+    url = pc.get_globus_http_url('foo.txt')
     purl = urlparse(url)
-    assert purl.netloc == pc.ENDPOINT + '.e.globus.org'
+    foo = MOCK_PROJECTS['foo-project']
+    assert purl.netloc == foo['endpoint'] + '.e.globus.org'
     assert purl.scheme == 'https'
-    assert 'my_folder' in purl.path
-    assert pc.TESTING_DIR not in purl.path
+    assert purl.path == '/foo_folder/foo.txt'
 
 
-def test_get_test_globus_http_url():
+def test_get_globus_url(mock_projects):
+    foo = MOCK_PROJECTS['foo-project']
     pc = PilotClient()
-    url = pc.get_globus_http_url('dataframe.dat', 'my_folder', test=True)
+    pc.project.current = 'foo-project'
+    url = pc.get_globus_url('metadata/foo.txt')
     purl = urlparse(url)
-    assert pc.TESTING_DIR in purl.path
-
-
-def test_get_globus_url():
-    pc = PilotClient()
-    url = pc.get_globus_url('dataframe.dat', 'my_folder')
-    purl = urlparse(url)
-    assert purl.netloc == pc.ENDPOINT
+    assert purl.netloc == foo['endpoint']
     assert purl.scheme == 'globus'
-    assert 'my_folder' in purl.path
-    assert pc.TESTING_DIR not in purl.path
+    assert purl.path == '/foo_folder/metadata/foo.txt'
 
 
-def test_get_test_globus_url():
+def test_get_globus_app_url(mock_projects):
     pc = PilotClient()
-    url = pc.get_globus_url('dataframe.dat', 'my_folder', test=True)
+    pc.project.current = 'foo-project'
+    url = pc.get_globus_app_url('metadata/foo.txt')
     purl = urlparse(url)
-    assert pc.TESTING_DIR in purl.path
+    assert purl.netloc == 'app.globus.org'
+    assert purl.scheme == 'https'
+    assert purl.path == '/file-manager'
+    assert purl.query == 'origin_id=foo-project-endpoint&' \
+                         'origin_path=%2Ffoo_folder%2Fmetadata%2Ffoo.txt'
 
 
-def test_get_subject_url():
+def test_get_subject_url(mock_projects):
     pc = PilotClient()
-    args = ('dataframe.dat', 'my_folder', False)
-    test_args = ('dataframe.dat', 'my_folder', True)
+    pc.project.current = 'foo-project'
+    args = ('myfolder/dataframe.dat',)
     assert pc.get_globus_url(*args) == pc.get_subject_url(*args)
-    assert pc.get_globus_url(*test_args) == pc.get_subject_url(*test_args)
