@@ -1,6 +1,8 @@
 pilot1-tools User Guide
 =======================
 
+.. contents:: Table of Contents
+
 Installation
 ------------
 
