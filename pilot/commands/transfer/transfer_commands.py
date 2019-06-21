@@ -4,11 +4,10 @@ import logging
 import click
 import globus_sdk
 import datetime
-import requests
 import pilot
 from pilot.search import (scrape_metadata, update_metadata, gen_gmeta,
                           files_modified)
-from pilot.exc import RequiredUploadFields
+from pilot.exc import RequiredUploadFields, HTTPSClientException
 from pilot import transfer_log
 from jsonschema.exceptions import ValidationError
 
@@ -169,43 +168,21 @@ def download(path, overwrite, range):
     if not pc.is_logged_in():
         click.echo('You are not logged in.')
         return
-
-    headers = pc.http_headers
-    if range:
-        try:
-            from requests_toolbelt.multipart import decoder
-        except ImportError:
-            click.secho('"requests-toolbelt" package required for ranges.',
-                        bg='red')
-            return 255
-        headers['Range'] = range
-
-    fname, dirname = os.path.basename(path), os.path.dirname(path)
+    fname = os.path.basename(path)
     if os.path.exists(fname) and not overwrite:
         click.echo('Aborted! File {} would be overwritten.'.format(fname))
         return
     try:
-        log.debug(f'Checking directory "{dirname}" exists...')
-        if not pc.ls(dirname):
-            click.echo('File "{}" does not exist.'.format(path))
-            return 1
-        url = pc.get_globus_http_url(path)
-        response = requests.get(url, headers=headers, stream=True)
-        with open(fname, 'wb') as fh:
-            if range:
-                r_content = decoder.MultipartDecoder.from_response(response)
-                for part in r_content.parts:
-                    fh.write(part.content)
-            else:
-                # Download content in 1MB chunks
-                r_content = response.iter_content(chunk_size=2048)
-                lb = 'Downloading {}'.format(fname)
-                with click.progressbar(r_content, label=lb,
-                                       show_pos=True) as rc:
-                    for chunk in rc:
-                        fh.write(chunk)
-
+        r_content = pc.download(path, range=range, yield_written=True)
+        lb = 'Downloading {}'.format(fname)
+        with click.progressbar(r_content, label=lb, show_pos=True) as rc:
+            for _ in rc:
+                pass
         click.echo('Saved {}'.format(fname))
-    except globus_sdk.exc.TransferAPIError:
-        click.echo('Directory "{}" does not exist.'.format(dirname))
-        return 1
+    except HTTPSClientException as hce:
+        log.exception(hce)
+        if hce.http_status == 404:
+            click.secho(f'File not found {path}', fg='red')
+        else:
+            click.secho('An unexpected error occurred, please contact your '
+                        'system administrator', fg='red')

@@ -180,6 +180,20 @@ class PilotClient(NativeClient):
         path = self.get_path(destination, project=project)
         return http_client.put(path, filename=dataframe)
 
+    def download(self, path, project=None, relative=True, range=None,
+                 yield_written=False):
+        fname = os.path.basename(path)
+        url = self.get_path(path, project=project, relative=relative)
+        http_client = self.get_http_client(project=project)
+        log.debug(f'Fetching item {url}')
+        response = http_client.get(url, range=range)
+        with open(fname, 'wb') as fh:
+            for part in response.iter_content:
+                bytes_written = fh.write(part)
+                if yield_written:
+                    yield bytes_written
+        log.debug('Fetch Successful')
+
     def delete(self, path, project=None, relative=True, recursive=False):
         tc = self.get_transfer_client()
         endpoint = self.get_endpoint(project)

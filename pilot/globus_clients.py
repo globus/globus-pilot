@@ -5,6 +5,7 @@ from globus_sdk.response import GlobusResponse
 from pilot.exc import HTTPSClientException
 from globus_sdk import exc
 import requests
+from requests_toolbelt import multipart
 
 log = logging.getLogger(__name__)
 
@@ -12,7 +13,6 @@ log = logging.getLogger(__name__)
 class FileContentResponse(GlobusResponse):
 
     def __init__(self, response, client):
-        log.debug('FileContentResponse returned')
         super().__init__(response, client)
 
     @property
@@ -28,8 +28,10 @@ class FileContentResponse(GlobusResponse):
 
     @property
     def iter_content(self):
-        # return multipart.decoder.MultipartDecoder.from_response(self._data)
-        return self._data.iter_content()
+        if 'multipart/byteranges' in self._data.headers.get('Content-Type'):
+            md = multipart.decoder.MultipartDecoder.from_response(self._data)
+            return [part.content for part in md.parts]
+        return self._data.iter_content(chunk_size=(2**20 * 2))
 
     @property
     def raw_response(self):
@@ -50,12 +52,15 @@ class HTTPFileClient(BaseClient):
         )
 
     def get(self, path, params=None, headers=None, allow_redirects=False,
-            filename=None, response_class=None, retry_401=True):
+            filename=None, response_class=None, retry_401=True, range=None):
+        headers = headers or {}
+        if range:
+            headers['Range'] = f'bytes={range}'
         response_class = response_class or self.file_content_response_class
         return self.send_custom_request(
             'GET', path, params=params,
             headers=headers, allow_redirects=allow_redirects,
-            response_class=response_class, retry_401=retry_401
+            response_class=response_class, retry_401=retry_401, stream=True
         )
 
     def put(self, path, params=None, headers=None, allow_redirects=False,

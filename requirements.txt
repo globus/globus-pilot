@@ -7,3 +7,4 @@ pandas
 tableschema
 configobj
 python-slugify
+requests-toolbelt
