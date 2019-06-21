@@ -131,3 +131,5 @@ Downloading Datasets
 
 TODO
 
+- Describe Globus vs. HTTPS
+- Add ``set endpoint <endpoint>:<path>`` to override GCP
