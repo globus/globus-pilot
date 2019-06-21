@@ -17,7 +17,7 @@ def project(ctx):
         click.echo('You are not logged in.')
         return
     if ctx.invoked_subcommand is None:
-        click.echo('Set project with "pilot project set myproject"')
+        click.echo('Set project with "pilot project set <myproject>"')
         projects = pc.project.load_all()
         current = pc.project.current if pc.project.is_set() else None
         fmt = '{} {}'
