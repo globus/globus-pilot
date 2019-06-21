@@ -96,12 +96,6 @@
     }
   ],
   "project_metadata": {
-    "dataframe_type": "List",
-    "data_type": "Metadata",
-    "source": [
-      "InChIKey",
-      "SMILES",
-      "PubChem"
-    ]
+    "project-slug": "foo-bar"
   }
 }
