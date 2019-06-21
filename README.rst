@@ -58,6 +58,13 @@ First, login using Globus:
 
     pilot login
 
+Then choose your project. See ``pilot project info`` for info on any listed project:
+
+.. code-block:: bash
+
+    pilot project
+    pilot project set <myproject>
+
 You can use ``list`` to get a high level overview of the data:
 
 .. code-block:: bash
@@ -84,9 +91,9 @@ data in addition to creating a record in Globus Search to track it.
 .. code-block:: bash
 
     touch my_data.tsv
-    pilot upload my_data.tsv test_dir --test --dry-run --verbose -j my_metadata.json
+    pilot upload my_data.tsv test_dir --dry-run --verbose -j my_metadata.json
 
-The three flags '--test --dry-run --verbose' are optional but handy for testing. '-j my_metadata.json'
+The two flags '--dry-run --verbose' are optional but handy for testing. '-j my_metadata.json'
 is for providing any extra metadata the pilot tool can't automatically determine. Here is an example of the metadata:
 
 .. code-block:: json
