@@ -26,17 +26,6 @@
     }
   ],
   "project_metadata": {
-    "numrows": 2401,
-    "numcols": 14017,
-    "data_type": "Microarray",
-    "dataframe_type": "Matrix",
-    "source": [
-      "NCI-60",
-      "SCL",
-      "SCLC",
-      "CCLE",
-      "GDSC",
-      "CLDX"
-    ]
+    "project-slug": "foo-bar-baz"
   }
 }

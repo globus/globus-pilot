@@ -120,7 +120,9 @@ def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True):
         'files': gen_remote_file_manifest(dataframe, url, pilot_client,
                                           metadata=rfm_metadata,
                                           skip_analysis=skip_analysis),
-        'project_metadata': {},
+        'project_metadata': {
+            'project-slug': pilot_client.project.current
+        },
     }
 
 

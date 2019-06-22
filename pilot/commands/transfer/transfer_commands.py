@@ -4,11 +4,10 @@ import logging
 import click
 import globus_sdk
 import datetime
-import requests
 import pilot
 from pilot.search import (scrape_metadata, update_metadata, gen_gmeta,
                           files_modified)
-from pilot.exc import RequiredUploadFields
+from pilot.exc import RequiredUploadFields, HTTPSClientException
 from pilot import transfer_log
 from jsonschema.exceptions import ValidationError
 
@@ -151,7 +150,7 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
                    )
     else:
         click.echo('Uploading data...')
-        response = pc.upload(short_path)
+        response = pc.upload(dataframe, destination)
         if response.status_code == 200:
             click.echo('Upload Successful! URL is \n{}'.format(url))
         else:
@@ -161,52 +160,29 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
 
 @click.command(help='Download a file to your local directory.')
 @click.argument('path', type=click.Path())
-@click.option('--test/--no-test', default=False,
-              help='download from test location')
 @click.option('--overwrite/--no-overwrite', default=True)
 @click.option('--range', help='Download only part of a file. '
                               'Ex: bytes=0-1, 4-5')
-def download(path, test, overwrite, range):
+def download(path, overwrite, range):
     pc = pilot.commands.get_pilot_client()
     if not pc.is_logged_in():
         click.echo('You are not logged in.')
         return
-
-    headers = pc.http_headers
-    if range:
-        try:
-            from requests_toolbelt.multipart import decoder
-        except ImportError:
-            click.secho('"requests-toolbelt" package required for ranges.',
-                        bg='red')
-            return 255
-        headers['Range'] = range
-
-    fname, dirname = os.path.basename(path), os.path.dirname(path)
+    fname = os.path.basename(path)
     if os.path.exists(fname) and not overwrite:
         click.echo('Aborted! File {} would be overwritten.'.format(fname))
         return
     try:
-        if not pc.ls(fname, dirname, test):
-            click.echo('File "{}" does not exist.'.format(path))
-            return 1
-        url = pc.get_globus_http_url(fname, dirname, test)
-        response = requests.get(url, headers=headers, stream=True)
-        with open(fname, 'wb') as fh:
-            if range:
-                r_content = decoder.MultipartDecoder.from_response(response)
-                for part in r_content.parts:
-                    fh.write(part.content)
-            else:
-                # Download content in 1MB chunks
-                r_content = response.iter_content(chunk_size=2048)
-                lb = 'Downloading {}'.format(fname)
-                with click.progressbar(r_content, label=lb,
-                                       show_pos=True) as rc:
-                    for chunk in rc:
-                        fh.write(chunk)
-
+        r_content = pc.download(path, range=range, yield_written=True)
+        lb = 'Downloading {}'.format(fname)
+        with click.progressbar(r_content, label=lb, show_pos=True) as rc:
+            for _ in rc:
+                pass
         click.echo('Saved {}'.format(fname))
-    except globus_sdk.exc.TransferAPIError:
-        click.echo('Directory "{}" does not exist.'.format(dirname))
-        return 1
+    except HTTPSClientException as hce:
+        log.exception(hce)
+        if hce.http_status == 404:
+            click.secho(f'File not found {path}', fg='red')
+        else:
+            click.secho('An unexpected error occurred, please contact your '
+                        'system administrator', fg='red')

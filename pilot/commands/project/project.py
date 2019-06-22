@@ -35,8 +35,9 @@ def update(dry_run):
     pc = commands.get_pilot_client()
     try:
         output = pc.project.update_with_diff(dry_run=dry_run)
-        if not output:
+        if not any(output.values()):
             click.secho('Project is up to date', fg='green')
+            return
         for k, v in output.items():
             click.echo(k)
             for item in v:
@@ -157,3 +158,11 @@ def info(project=None):
     click.echo(output)
     click.echo()
     click.echo(info['description'])
+
+
+@project.command(help='Update the global list of projects')
+def push():
+    pc = commands.get_pilot_client()
+    pc.project.push()
+    click.secho('Global projects have been updated. Users will be notified '
+                'within 24 hours.', fg='green')

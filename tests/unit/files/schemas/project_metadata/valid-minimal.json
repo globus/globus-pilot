@@ -1,6 +1,5 @@
 {
   "project_metadata": {
-    "data_type": "Microarray",
-    "dataframe_type": "Matrix"
+    "project-slug": "foo-bar-baz"
   }
 }

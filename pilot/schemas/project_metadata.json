@@ -44,7 +44,7 @@
                     }
                 }
             },
-            "required": ["data_type", "dataframe_type"]
+            "required": ["project-slug"]
         }
     }
 }

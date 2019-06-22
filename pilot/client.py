@@ -69,7 +69,8 @@ class PilotClient(NativeClient):
                                             '', ''))
         rs = self.project.get_info(project)['resource_server']
         auth = self.get_authorizers()[rs]
-        return globus_clients.HTTPSClient(authorizer=auth, base_url=base_url)
+        return globus_clients.HTTPFileClient(authorizer=auth,
+                                             base_url=base_url)
 
     def get_group(self, project=None):
         return self.project.get_info(project)['group']
@@ -110,7 +111,7 @@ class PilotClient(NativeClient):
         path = self.get_path(path, project, relative)
         endpoint = self.get_endpoint(project)
         r = self.get_transfer_client().operation_ls(endpoint, path=path)
-        return [f['name'] for f in r['DATA'] if f['type'] == 'dir']
+        return [f['name'] for f in r['DATA']]
 
     def get_search_entry(self, path, project=None, relative=True):
         sc = self.get_search_client()
@@ -173,3 +174,31 @@ class PilotClient(NativeClient):
         http_client = self.get_http_client(project)
         path = self.get_path(destination, project=project)
         return http_client.put(path, filename=dataframe)
+
+    def download(self, path, project=None, relative=True, range=None,
+                 yield_written=False):
+        fname = os.path.basename(path)
+        url = self.get_path(path, project=project, relative=relative)
+        http_client = self.get_http_client(project=project)
+        log.debug(f'Fetching item {url}')
+        response = http_client.get(url, range=range)
+        with open(fname, 'wb') as fh:
+            for part in response.iter_content:
+                bytes_written = fh.write(part)
+                if yield_written:
+                    yield bytes_written
+        log.debug('Fetch Successful')
+
+    def delete(self, path, project=None, relative=True, recursive=False):
+        tc = self.get_transfer_client()
+        endpoint = self.get_endpoint(project)
+        full_path = self.get_path(path, project=project, relative=relative)
+        log.debug(f'Deleting item '
+                  f'{self.project.lookup_endpoint(endpoint)}{full_path}')
+        ddata = globus_sdk.DeleteData(
+            tc, endpoint, recursive=recursive, notify_on_succeeded=False,
+            label=f'File Deletion with {self.app_name}')
+        ddata.add_item(full_path)
+        delete_result = tc.submit_delete(ddata)
+        tc.task_wait(delete_result.data['task_id'])
+        log.debug('Success!')

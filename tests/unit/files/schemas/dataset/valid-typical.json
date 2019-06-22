@@ -103,6 +103,6 @@
   "project_metadata": {
     "dataframe_type": "Matrix",
     "data_type": "Drug Descriptor",
-    "project_slug": "my-project"
+    "project-slug": "my-project"
   }
 }
