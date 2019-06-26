@@ -62,9 +62,9 @@ class PilotClient(NativeClient):
         authorizer = self.get_authorizers()['transfer.api.globus.org']
         return TransferClient(authorizer=authorizer)
 
-    def get_http_client(self, project=None):
-        url = urllib.parse.urlparse(self.get_globus_http_url(
-                                    '', project=project, relative=False))
+    def get_http_client(self, project):
+        # Fetch the base url for the globus http endpoint
+        url = urllib.parse.urlparse(self.get_globus_http_url(''))
         base_url = urllib.parse.urlunparse((url.scheme, url.netloc, '', '',
                                             '', ''))
         rs = self.project.get_info(project)['resource_server']
@@ -82,8 +82,32 @@ class PilotClient(NativeClient):
         return self.project.get_info(project)['search_index']
 
     def get_path(self, path, project=None, relative=True):
-        bdir = self.project.get_info(project)['base_path'] if relative else ''
-        return os.path.join(bdir, path)
+        """
+        Resolve the absolute Globus endpoint path given a relative project
+        path. Raises PilotClientException if relative=False and path is not
+        in the project's directory.
+        :param path: Path to file or directory
+        :param project: The project to use. Defaults to current project
+        :param relative: If True, prepends the path to the project. If False,
+        does not prepend path but ensures it's in the project's directory
+        :return:
+        """
+        bdir = self.project.get_info(project)['base_path']
+        path = path.lstrip('.')
+        if relative is True:
+            path = path.lstrip('/')
+            if path:
+                path = os.path.join(bdir, path.lstrip('/'))
+            else:
+                path = bdir
+        else:
+            if bdir not in path:
+                raise exc.PilotClientException(
+                    'Absolute path {} not in project {} path {}'.format(
+                        path, project or self.project.current, bdir)
+                )
+        log.debug('Path: {}'.format(path))
+        return path
 
     def get_globus_http_url(self, path, project=None, relative=True):
         host = '{}.e.globus.org'.format(self.get_endpoint(project))
@@ -176,9 +200,8 @@ class PilotClient(NativeClient):
             return search_cli.delete_entry(index, subject, entry_id=entry_id)
 
     def upload(self, dataframe, destination, project=None):
-        http_client = self.get_http_client(project)
         path = self.get_path(destination, project=project)
-        return http_client.put(path, filename=dataframe)
+        return self.get_http_client(project).put(path, filename=dataframe)
 
     def download(self, path, project=None, relative=True, range=None,
                  yield_written=False):
