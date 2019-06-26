@@ -17,7 +17,7 @@ def get_short_path(result):
     pc = commands.get_pilot_client()
     base_path = pc.get_path('')
     sub = urllib.parse.urlparse(result['subject'])
-    return sub.path.replace(base_path, '')
+    return sub.path.replace(base_path, '').lstrip('/')
 
 
 @click.command(name='list', help='List known records in Globus Search')
