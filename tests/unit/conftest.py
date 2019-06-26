@@ -129,5 +129,6 @@ def mock_cli(mock_cli_basic, mock_transfer_client):
     mock_cli_basic.ingest_entry = Mock()
     mock_cli_basic.get_search_entry = Mock(return_value=None)
     mock_cli_basic.ls = Mock()
+    mock_cli_basic.mkdir = Mock()
     mock_cli_basic.delete_entry = Mock()
     return mock_cli_basic
