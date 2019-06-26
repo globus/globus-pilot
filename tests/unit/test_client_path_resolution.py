@@ -1,7 +1,7 @@
 import pytest
 from urllib.parse import urlparse
 from pilot.client import PilotClient
-from pilot.exc import PilotInvalidProject
+from pilot.exc import PilotInvalidProject, PilotClientException
 
 from tests.unit.mocks import MOCK_PROJECTS
 
@@ -31,6 +31,22 @@ def test_get_path(mock_projects):
     assert pc.get_path('folder/file.txt') == '/foo_folder/folder/file.txt'
     path = pc.get_path('folder/file.txt', project='foo-project-test')
     assert path == '/foo_test_folder/folder/file.txt'
+
+
+def test_special_paths(mock_projects):
+    pc = PilotClient()
+    pc.project.current = 'foo-project'
+    assert pc.get_path('///') == '/foo_folder'
+    assert pc.get_path('.') == '/foo_folder'
+    assert pc.get_path('..') == '/foo_folder'
+    assert pc.get_path('/foo/bar/baz.txt') == '/foo_folder/foo/bar/baz.txt'
+
+
+def test_absolute_path_without_project_dir_raises_error(mock_projects):
+    pc = PilotClient()
+    pc.project.current = 'foo-project'
+    with pytest.raises(PilotClientException):
+        pc.get_path('not-in-foo-project', relative=False)
 
 
 def test_get_globus_http_url(mock_projects):
