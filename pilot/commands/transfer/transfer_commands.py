@@ -186,3 +186,28 @@ def download(path, overwrite, range):
         else:
             click.secho('An unexpected error occurred, please contact your '
                         'system administrator', fg='red')
+
+
+@click.command(help='The new path to create')
+@click.argument('path', type=click.Path())
+def mkdir(path):
+    pc = pilot.commands.get_pilot_client()
+    if not pc.is_logged_in():
+        click.echo('You are not logged in.')
+        return
+    try:
+        pc.mkdir(path)
+        click.secho('Created directory {}'.format(path), fg='green')
+    except globus_sdk.exc.TransferAPIError as tapie:
+        if tapie.code == 'ExternalError.MkdirFailed.Exists':
+            click.secho('Directory already exists')
+        elif 'No such file or directory' in tapie.message:
+            click.secho('Parent directory does not exist', fg='red')
+        elif tapie.code == 'EndpointPermissionDenied':
+            click.secho('Permission Denied, you do not have access to create '
+                        'directories on {}'.format(pc.project.current),
+                        fg='red')
+        else:
+            log.exception(tapie)
+            click.secho('Unknown error, please send this to your system '
+                        'administrator', fg='red')

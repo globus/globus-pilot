@@ -113,6 +113,11 @@ class PilotClient(NativeClient):
         r = self.get_transfer_client().operation_ls(endpoint, path=path)
         return [f['name'] for f in r['DATA']]
 
+    def mkdir(self, path, project=None, relative=True):
+        rpath = self.get_path(path, project=project, relative=relative)
+        tc = self.get_transfer_client()
+        tc.operation_mkdir(self.get_endpoint(project), rpath)
+
     def get_search_entry(self, path, project=None, relative=True):
         sc = self.get_search_client()
         subject = self.get_subject_url(path, project, relative)
