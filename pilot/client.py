@@ -102,7 +102,7 @@ class PilotClient(NativeClient):
                 path = bdir
         else:
             if bdir not in path:
-                raise exc.PilotClientException(
+                log.warning(
                     'Absolute path {} not in project {} path {}'.format(
                         path, project or self.project.current, bdir)
                 )
