@@ -85,7 +85,7 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         new_metadata = update_metadata(new_metadata, prev_metadata,
                                        user_metadata)
         subject = pc.get_subject_url(short_path)
-        gmeta = gen_gmeta(subject, pc.get_group(), new_metadata)
+        gmeta = gen_gmeta(subject, [pc.get_group()], new_metadata)
     except (RequiredUploadFields, ValidationError) as e:
         click.secho('Error Validating Metadata: {}'.format(e), fg='red')
         return 1

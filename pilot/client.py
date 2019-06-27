@@ -73,7 +73,7 @@ class PilotClient(NativeClient):
                                              base_url=base_url)
 
     def get_group(self, project=None):
-        return self.project.get_info(project)['group']
+        return self.project.get_info(project)['group'] or 'public'
 
     def get_endpoint(self, project=None):
         return self.project.get_info(project)['endpoint']

@@ -231,8 +231,11 @@ def gen_gmeta(subject, visible_to, content):
         if any([m in ve.message for m in MINIMUM_USER_REQUIRED_FIELDS]):
             raise RequiredUploadFields(ve.message,
                                        MINIMUM_USER_REQUIRED_FIELDS) from None
+    visible_to = [vt if vt == 'public' else GROUP_URN_PREFIX.format(vt)
+                  for vt in visible_to]
+    log.debug('visible_to for {} set to {}'.format(subject, visible_to))
     entry = GMETA_ENTRY.copy()
-    entry['visible_to'] = [GROUP_URN_PREFIX.format(visible_to)]
+    entry['visible_to'] = visible_to
     entry['subject'] = subject
     entry['content'] = content
     entry['id'] = 'metadata'
