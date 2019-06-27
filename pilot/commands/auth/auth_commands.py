@@ -31,6 +31,9 @@ def login(refresh_tokens, force, local_server, browser):
              no_local_server=not local_server,
              no_browser=not browser,
              force=force)
+    if not pc.project.load_all():
+        log.debug('NO project info saved, updating...')
+        pc.project.update_with_diff()
     click.secho('You have been logged in.', fg='green')
     if prev_info != pc.profile.load_user_info():
         report = (
