@@ -90,8 +90,8 @@ Change your project with the ``project set`` subcommand:
 
 .. code-block:: bash
 
-   pilot project set ncipilot1-test
-   Current project set to ncipilot1-test
+   pilot project set pilot-tutorial
+   Current project set to pilot-tutorial
 
 
 .. code-block:: bash
@@ -99,24 +99,82 @@ Change your project with the ``project set`` subcommand:
    pilot project 
    Set project with "pilot project set <myproject>"
      ncipilot1
-     * ncipilot1-test
+     * pilot-tutorial
 
 
 Working with Datasets
 ---------------------
 
-TODO
+Each Dataset represents a file on Petrel and a corresponding search entry in
+Globus Search. You can discover datasets with the  ``list`` and ``describe``
+commands, and fetch data using the ``download`` command.
+
+Each of these commands will only act on datasets within your selected _project_.
 
 Listing Datasets
 ^^^^^^^^^^^^^^^^
 
-Searching for Datasets
-^^^^^^^^^^^^^^^^^^^^^^
+Use the list command to see all of the datasets for this project:
+
+.. code-block:: bash
+
+   pilot list
+   Title                Data       Dataframe Rows   Column Size   Path
+   example.tsv                               95     2      674    myfolder/example.tsv
+
+This will list high level general info about datasets in this project, in addition to
+a **path** we can use to refer to a specific dataset. For this example, we would refer
+to the dataset "example.tsv" above using ``myfolder/example.tsv``
+
+
+Describing Datasets
+^^^^^^^^^^^^^^^^^^^
+
+Use ``pilot describe <dataset>`` to get detailed info about a dataset.
+
+In the ``pilot list`` example above, we saw there was one record with the path
+"myfolder/example.tsv". Running the following command gives us the following
+output:
+
+.. code-block:: bash
+
+   pilot describe myfolder/example.tsv
+   Title                example.tsv
+   Authors              Curie, Marie
+   Publisher            University of Paris
+   Subjects             radium
+                        physics
+   Dates                Created:  Thursday, Jun 27, 1910
+   Data
+   Dataframe
+   Rows                 95
+   Columns              2
+   Formats              text/tab-separated-values
+   Version              1
+   Size                 674
+   Description
+
+
+   Column Name          Type    Count  Freq Top         Unique Min    Max    Mean   Std    25-PCTL 50-PCTL 75-PCTL
+   Numbers              float64 95                             5.0    99.0   52.0   27.568 28.5    52.0    75.5
+   Title                string  95     50   baz         3
+
+   Other Data
+   Subject              globus://ebf55996-33bf-11e9-9fa4-0a06afd4a22e/projects/pilot_tutorial_5/simple.tsv
+   Portal               https://petreldata.net/nci-pilot1/detail/globus%253A%252F%252Febf55996-33bf-11e9-9fa4-0a06afd4a22e%252Fprojects%252Fpilot_tutorial_5%252Fsimple.tsv
+
+
 
 Downloading Datasets
 ^^^^^^^^^^^^^^^^^^^^
 
-TODO
+Use ``pilot download <dataset>`` to download a dataset. Using the example above, where
+"myfolder/example.tsv" is a dataset we discovered from the ``pilot list`` command:
 
-- Describe Globus vs. HTTPS
-- Add ``set endpoint <endpoint>:<path>`` to override GCP
+
+.. code-block:: bash
+
+   pilot describe myfolder/example.tsv
+   Saved example.tsv
+
+
