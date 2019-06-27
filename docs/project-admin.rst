@@ -9,12 +9,12 @@ Introduction
 
 This is guide to using ``pilot`` to create and manage projects and the datasets associated with them.
               
-Prequisites
-^^^^^^^^^^^
+Prerequisites
+^^^^^^^^^^^^^
 
-TODO
+You should review the `User Guide
+<https://github.com/globusonline/pilot1-tools/blob/master/docs/user-guide.rst>`_ for:
 
-You should review the user guide (add link) to
 
 - installing and configuring ``pilot``
 - listing and downloading files
@@ -22,7 +22,11 @@ You should review the user guide (add link) to
 What is a Project?
 ------------------
 
-TODO
+A project is a searchable group of files and directories. When you create a new project,
+all Pilot commands (list, describe, upload, download) will apply only to the files in
+this project.
+
+A project consists of:
 
 - Datasets description?
 
@@ -34,39 +38,110 @@ TODO
 - A web site for searching for and downloading the files
 - Groups to manage access to the files and metadata
 
+See the `User Guide Projects Section <https://github.com/globusonline/pilot1-tools/blob/master/docs/user-guide.rst#id6>`_
+for info on listing, setting, and displaying information about projects.
 
 Creating a Project
 ------------------
 
-TODO
+Create a project with the following:
 
-What happens when a project is created?
+.. code-block:: bash
+
+   pilot project add
 
 
-Adding Datasets to a Project
-----------------------------
+You will be brought through an interactive prompt similar to the one below:
 
-TODO
 
-Updating Datasets
------------------
+.. code-block:: bash
 
-TODO
+   Pick a title for your new project (My New Project)>
+   Pick a short name (my-new-project)>
+   Describe your new project (This project is intended to do X for scientists)>
+   Set your Globus Group (NCI Users)>
+   Summary:
+   title               My New Project
+   short_name          my-new-project
+   description         This project is intended to do X for scientists
+   group               NCI Users
+   Continue with these values? (y/n)
 
-- Metadata
-- Files
+The interactive prompt will try to choose sensible defaults. If your answer
+isn't valid (such as the project name already exists), the prompt will ask you
+to choose another. You can also type 'help' for more info, or 'q' to quite the
+interactive prompt.
+
+- Project Title: This will be displayed in the portal
+- Short Name: This will act as the URL path for your portal
+- Description: This will be shown in the portal on the 'projects' page
+- Group: This Globus Group determines who can access the data you upload
+
+
+
+Uploading Datasets to a Project
+-------------------------------
+
+Prerequisites: Make sure your project is set! You can check this with the ``pilot project`` command.
+
+Upload datasets to your project with the ``upload`` subcommand.
+
+Given the file example.tsv:
+
+.. code-block:: tsv
+
+   Numbers Title
+   5       foo
+   6       foo
+
+We can upload ``example.tsv`` to our project with:
+
+.. code-block:: bash
+
+   pilot upload example.tsv /
+
+If you want to place your file inside a folder, such as after running ``pilot mkdir myfolder``,
+you can provide the relative path instead:
+
+.. code-block:: bash
+
+   pilot upload example.tsv myfolder
+
+
+The above command will upload a file to the root directory of your project.
+It will now be visible in the portal, and will show up when doing a ``pilot list``
+or ``pilot describe example.tsv``.
+
+You may notice some fields are missing from the metadata. Pilot will attempt to
+gather as much metadata as possible about the file you are uploading, but you can
+supplement the data by providing a JSON document ``example_metadata.json``:
+
+.. code-block:: json
+
+    {
+        "data_type": "Metadata",
+        "dataframe_type": "List,
+    }
+
+You can add a metadata JSON document with the ``-j`` flag.
+
+
+.. code-block:: bash
+
+   pilot upload -j my_metadata.json example.tsv /
+
+You can find more info about what to include in ``my_metadata.json`` in the `Reference Guide
+<https://github.com/globusonline/pilot1-tools/blob/master/docs/reference.rst>`_.
+
 
 Deleting Datasets
 -----------------
 
-TODO
+Deleting datasets removes both the file and the search record. Like the ``describe`` command,
+you will refer to the search record by its relative path within the project.
 
-- Full dataset
-- Individual files
+Delete the above example file ``example.tsv`` with the following:
 
 .. code-block:: bash
 
-   pilot project 
-   Set project with "pilot project set <myproject>"
-     * ncipilot1
-     ncipilot1-test
+   pilot delete myfolder/example.tsv

@@ -15,8 +15,7 @@
                 },               
                 "data_type": {
                     "type": "string",
-                    "enum": ["Metadata", "Drug Response", "Microarray", "RNA-seq", "Reference", "Drug Descriptor"],
-                    "description" : "Data category, may be: 'Drug Descriptor', 'Drug Response', 'Microarray', 'RNA-seq', 'Reference', 'Drug Descriptor'"
+                    "description" : "Data category, such as 'Metadata' or 'Physics Experiment'"
                                 },
                 "dataframe_type": {
                     "type": "string",

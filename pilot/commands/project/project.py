@@ -1,9 +1,10 @@
+import os
 import logging
 import click
 from slugify import slugify
 
 from pilot import commands, exc
-from pilot.commands import input_validation
+from pilot.commands import input_validation, path_utils
 
 log = logging.getLogger(__name__)
 
@@ -60,8 +61,7 @@ def set_command(project):
 @project.command()
 def add():
     pc = commands.get_pilot_client()
-    order = ['title', 'short_name', 'endpoint', 'description',
-             'base_path', 'group']
+    order = ['title', 'short_name', 'description', 'group']
     queries = {
         'title': {
             'prompt': 'Pick a title for your new project',
@@ -75,7 +75,8 @@ def add():
             'help': 'The short name will be used in URLs and will be the name '
                     'users select this new project',
             'validation': [input_validation.validate_no_spaces,
-                           input_validation.validate_project_slug_unique],
+                           input_validation.validate_project_slug_unique,
+                           input_validation.validate_slug_to_path_unique],
         },
         'description': {
             'prompt': 'Describe your new project',
@@ -84,53 +85,42 @@ def add():
                     'project does, at a glance',
             'validation': [],
         },
-        'endpoint': {
-            'prompt': 'Pick a Globus Endpoint to use',
-            'default': 'petrel#ncipilot',
-            'help': 'This is the endpoint which will host files for your '
-                    'project',
-            'validation': [input_validation.validate_project_endpoint],
-        },
-        'base_path': {
-            'prompt': 'Enter a base path',
-            'default': '/test',
-            'help': 'The base path controls the folder under your Globus '
-                    'Endpoint where files are uploaded and downloaded',
-            'validation': [input_validation.validate_project_path_unique],
-        },
-        # 'resource_server': {
-        #     'prompt': 'Set the Resource Server for your new project',
-        #     'default': project_add_get_project_default,
-        #     'help': 'This dictates which tokens the CLI will use to fetch '
-        #             'your files. You should use the default unless you need '
-        #             'different one.',
-        #     'validation': [],
-        # },
-        # 'search_index': {
-        #     'prompt': 'Set your search index',
-        #     'default': project_add_get_project_default,
-        #     'help': 'The search index controls where all file metadata '
-        #             'lives',
-        #     'validation': [],
-        # },
         'group': {
             'prompt': 'Set your Globus Group',
-            'default': 'NCI Pilot 1 Users',
+            'default': 'NCI Users',
             'help': 'The group determines who has read/write access to files, '
                     'and who can view records in search',
             'validation': [input_validation.validate_project_group],
         },
     }
+    if any(pc.project.update_with_diff(dry_run=True).values()):
+        click.secho('There is an update for projects, please update '
+                    '("pilot project update") before adding a new project',
+                    fg='red')
+        return
     iv = input_validation.InputValidator(queries=queries, order=order)
     project = iv.ask_all()
     project.update({'search_index': pc.project.DEFAULT_SEARCH_INDEX,
                     'resource_server': pc.project.DEFAULT_RESOURCE_SERVER})
-    project['endpoint'] = pc.project.ENDPOINTS[project['endpoint']]
-    project['group'] = pc.project.GROUPS[project['group']]
+    project['endpoint'] = pc.project.PROJECTS_ENDPOINT
+    project['group'] = pc.project.GROUPS.get(project['group'])
     short_name = project.pop('short_name')
+    project['base_path'] = os.path.join(
+        pc.project.PROJECTS_PATH,
+        path_utils.slug_to_path(short_name)
+    )
+
+    click.secho('Updating global project list... ', nl=False)
     pc.project.add_project(short_name, project)
-    click.secho(f'Your new project "{project["title"]}" has been added! Use '
-                f'"pilot project set \'{short_name}\'" to switch.', fg='green')
+    tc = pc.get_transfer_client()
+    tc.operation_mkdir(project['endpoint'], project['base_path'])
+    pc.project.push()
+    click.secho('Success', fg='green')
+    pc.project.current = short_name
+    click.secho('Switched to project {}'.format(short_name))
+    click.secho('Your new project "{}" has been added! '
+                'Users will be notified within 24 hours next time they use '
+                'this tool.'.format(project['title']), fg='green')
 
 
 @project.command()
@@ -147,8 +137,6 @@ def info(project=None):
         (info['title'], ''),
         ('Endpoint', pc.project.lookup_endpoint(info['endpoint'])),
         ('Group', pc.project.lookup_endpoint(info['group'])),
-        # ('Search Index', info['search_index']),
-        # ('Resource Server', info['resource_server']),
         ('Base Path', info['base_path']),
     ]
 

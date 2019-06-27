@@ -73,7 +73,7 @@ class PilotClient(NativeClient):
                                              base_url=base_url)
 
     def get_group(self, project=None):
-        return self.project.get_info(project)['group']
+        return self.project.get_info(project)['group'] or 'public'
 
     def get_endpoint(self, project=None):
         return self.project.get_info(project)['endpoint']
@@ -102,7 +102,7 @@ class PilotClient(NativeClient):
                 path = bdir
         else:
             if bdir not in path:
-                raise exc.PilotClientException(
+                log.warning(
                     'Absolute path {} not in project {} path {}'.format(
                         path, project or self.project.current, bdir)
                 )
@@ -128,6 +128,30 @@ class PilotClient(NativeClient):
             urllib.parse.urlencode(params), ''
         ])
 
+    def get_portal_url(self, path=None, project=None):
+        """
+        Get a URL to the subject at petreldata.net. If project is none, the
+        current project is used. If path is none, a url to the project is
+        generated instead of a link to a subject.
+        :param path:
+        :param project:
+        :return:
+        """
+        project = project or self.project.current
+        index = self.get_index(project)
+        index_slug_map = {
+            '889729e8-d101-417d-9817-fa9d964fdbc9': 'nci-pilot1',
+            'e0849c9b-b709-46f3-be21-80893fc1db84': 'nci-pilot1-test',
+        }
+        index_slug = index_slug_map.get(index)
+        if path:
+            sub = self.get_subject_url(path, project=project)
+            sub = urllib.parse.quote_plus(urllib.parse.quote_plus(sub))
+            return 'https://petreldata.net/{}/projects/{}/{}/'.format(
+                index_slug, project, sub)
+        return 'https://petreldata.net/{}/projects/{}/'.format(index_slug,
+                                                               project)
+
     def get_subject_url(self, path, project=None, relative=True):
         return self.get_globus_url(path, project, relative)
 
@@ -151,7 +175,7 @@ class PilotClient(NativeClient):
         except globus_sdk.exc.SearchAPIError:
             return None
 
-    def ingest_entry(self, gmeta_entry):
+    def ingest_entry(self, gmeta_entry, index=None):
         """
         Ingest a complete gmeta_entry into search. If test is true, the test
         search index will be used instead.
@@ -162,9 +186,10 @@ class PilotClient(NativeClient):
         :return: True on success Raises exception on fail
         """
         sc = self.get_search_client()
-        result = sc.ingest(self.get_index(), gmeta_entry)
+        index = index or self.get_index()
+        result = sc.ingest(index, gmeta_entry)
         pending_states = ['PENDING', 'PROGRESS']
-        log.debug(f'Ingesting to {self.get_index()}')
+        log.debug('Ingesting to {}'.format(index))
         task_status = sc.get_task(result['task_id'])['state']
         while task_status in pending_states:
             log.debug(f'Search task still {task_status}')
