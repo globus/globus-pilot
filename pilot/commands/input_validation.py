@@ -1,7 +1,11 @@
 import sys
+import logging
 import click
+import globus_sdk
 
 from pilot import exc, commands
+
+log = logging.getLogger(__name__)
 
 
 class InputValidator:
@@ -71,18 +75,37 @@ def validate_project_slug_unique(v, slug):
         raise exc.PilotValidator(f'Slug must be unique from {", ".join(slug)}')
 
 
+def validate_slug_to_path_unique(v, slug):
+    pc = commands.get_pilot_client()
+    tc = pc.get_transfer_client()
+    try:
+        path = commands.path_utils.slug_to_path(slug)
+        response = tc.operation_ls(pc.project.PROJECTS_ENDPOINT,
+                                   path=pc.project.PROJECTS_PATH)
+        existing = [f['name'] for f in response.data['DATA']]
+        if path in existing:
+            raise exc.PilotValidator('The following names are not available, '
+                                     'please choose another')
+    except globus_sdk.exc.TransferAPIError as tapie:
+        log.exception(tapie.message)
+        raise exc.PilotValidator('An error occurred, please try a different '
+                                 'value or notify a system administrator.')
+
+
 def validate_project_endpoint(v, ep):
     pc = commands.get_pilot_client()
     if ep not in pc.project.ENDPOINTS.keys():
-        raise exc.PilotValidator(f'Endpoint must be one of: '
-                                 f'{", ".join(pc.project.ENDPOINTS.keys())}')
+        raise exc.PilotValidator('Endpoint must be one of: "{}"'.format(
+            ', '.join(pc.project.ENDPOINTS.keys())
+        ))
 
 
 def validate_project_group(v, group):
     pc = commands.get_pilot_client()
-    if group not in pc.project.GROUPS.keys():
+    valid_choices = list(pc.project.GROUPS.keys()) + ['None']
+    if group not in valid_choices:
         raise exc.PilotValidator('Group must be one of: '
-                                 f'{", ".join(pc.project.GROUPS.keys())}')
+                                 '{}'.format(', '.join(valid_choices)))
 
 
 def validate_project_path_unique(v, path):
