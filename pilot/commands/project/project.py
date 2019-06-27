@@ -2,9 +2,10 @@ import os
 import logging
 import click
 from slugify import slugify
+import globus_sdk
 
 from pilot import commands, exc
-from pilot.commands import input_validation, path_utils
+from pilot.commands import input_validation, path_utils, search
 
 log = logging.getLogger(__name__)
 
@@ -146,6 +147,51 @@ def info(project=None):
     click.echo(output)
     click.echo()
     click.echo(info['description'])
+
+
+@project.command(help='Delete a project')
+@click.argument('project', required=True)
+def delete(project):
+    pc = commands.get_pilot_client()
+    if project not in pc.project.load_all():
+        click.secho('{} is not a valid project'.format(project), fg='red')
+        return 1
+    results = search.search_commands.search_by_project(project=project)
+    pinfo = pc.project.get_info(project)
+    search_query = {
+        'q': '*',
+        'filters': {
+            'field_name': 'project_metadata.project-slug',
+            'type': 'match_all',
+            'values': [project or pc.project.current]
+        }
+    }
+    project_base_path = pc.get_path('', project=project)
+    search_client = pc.get_search_client()
+    transfer_client = pc.get_transfer_client()
+    log.debug('Base path for delete is: {}'.format(project_base_path))
+    dz = '\n{}\nDANGER ZONE\n{}'.format('/' * 80, '/' * 80)
+    click.secho('{dz}\nThis will delete all data and search results in your'
+                'project.\n{tot} datasets will be deleted for {project}'
+                '{dz}'.format(dz=dz, tot=results['total'], project=project),
+                bg='red')
+    click.echo('Please type the name ({}) of your project to delete it> '
+               .format(project), nl=False)
+    if input() != project:
+        click.secho('Names do not match, aborting...')
+        return 1
+    click.echo('Deleting Data...')
+    ddata = globus_sdk.DeleteData(transfer_client, pinfo['endpoint'],
+                                  recursive=True)
+    ddata.add_item(project_base_path)
+    transfer_client.submit_delete(ddata)
+    click.echo('Deleting Search Records...')
+    search_client.delete_by_query(pinfo['search_index'], search_query)
+    click.echo('Removing project...')
+    pc.project.delete_project(project)
+    pc.project.push()
+    click.secho('Project {} has been deleted successfully.'.format(project),
+                fg='green')
 
 
 @project.command(help='Update the global list of projects')

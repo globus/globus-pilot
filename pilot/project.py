@@ -125,6 +125,13 @@ class Project(config.ConfigSection):
         cfg['projects'][slug] = project_data
         cfg.write()
 
+    def delete_project(self, slug):
+        if self.current == slug:
+            self.current = None
+        cfg = self.config.load()
+        del cfg['projects'][slug]
+        cfg.write()
+
     def lookup_endpoint(self, endpoint):
         reverse_lookup = {v: k for k, v in self.ENDPOINTS.items()}
         return reverse_lookup.get(endpoint)
@@ -143,6 +150,6 @@ class Project(config.ConfigSection):
     @current.setter
     def current(self, value):
         projects = list(self.load_all().keys())
-        if value not in projects:
+        if value not in projects and value is not None:
             raise ValueError(f'Project must be one of: {", ".join(projects)}')
         self.save_option('current', value)
