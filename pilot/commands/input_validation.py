@@ -84,8 +84,8 @@ def validate_slug_to_path_unique(v, slug):
                                    path=pc.project.PROJECTS_PATH)
         existing = [f['name'] for f in response.data['DATA']]
         if path in existing:
-            raise exc.PilotValidator('The following names are not available, '
-                                     'please choose another')
+            raise exc.PilotValidator('"{}" is not available, please choose '
+                                     'another'.format(slug))
     except globus_sdk.exc.TransferAPIError as tapie:
         log.exception(tapie.message)
         raise exc.PilotValidator('An error occurred, please try a different '

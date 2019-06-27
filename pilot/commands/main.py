@@ -1,3 +1,4 @@
+import sys
 import click
 import logging
 
@@ -40,9 +41,13 @@ def cli(ctx):
                     'It may have moved, or the HTTP server hosting it is down.'
                     ' Uploads and downloads may not work. Please check with '
                     'your admin for further details.', fg='red')
-        if not pc.project.is_set() and ctx.invoked_subcommand != 'project':
-            click.secho('No project set, use "pilot project set <myproject>" '
-                        'to set your project', fg='yellow')
+        pcommands = ['delete', 'describe', 'download', 'list', 'mkdir',
+                     'upload']
+        if not pc.project.is_set() and ctx.invoked_subcommand in pcommands:
+            click.secho('No project set, use "pilot project" to list projects '
+                        'and "pilot project set <myproject>" '
+                        'to set your current project.', fg='yellow')
+            sys.exit()
 
     if ctx.invoked_subcommand is None:
         click.echo(ctx.get_help())

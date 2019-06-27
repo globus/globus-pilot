@@ -1,4 +1,5 @@
 import os
+import sys
 import logging
 import click
 from slugify import slugify
@@ -17,6 +18,13 @@ def project(ctx):
     if not pc.is_logged_in():
         click.echo('You are not logged in.')
         return
+    invalid_with_pending_update = ['delete', 'add']
+    if ctx.invoked_subcommand in invalid_with_pending_update:
+        if any(pc.project.update_with_diff(dry_run=True).values()):
+            click.secho('There is an update for projects, please update '
+                        '("pilot project update") before adding a new project',
+                        fg='red')
+            sys.exit()
     if ctx.invoked_subcommand is None:
         click.echo('Set project with "pilot project set <myproject>"')
         projects = pc.project.load_all()
@@ -29,9 +37,8 @@ def project(ctx):
                 click.echo(fmt.format(' ', project))
 
 
-@project.command()
-@click.option('--dry-run', is_flag=True, default=False,
-              help='Update stored list of projects.')
+@project.command(help='Update stored list of projects.')
+@click.option('--dry-run', is_flag=True, default=False)
 def update(dry_run):
     pc = commands.get_pilot_client()
     try:
@@ -47,7 +54,7 @@ def update(dry_run):
         click.secho(str(hce), fg='red')
 
 
-@project.command(name='set')
+@project.command(name='set', help='Set your project')
 @click.argument('project', required=True)
 def set_command(project):
     pc = commands.get_pilot_client()
@@ -58,7 +65,7 @@ def set_command(project):
         click.secho(str(ve), fg='red')
 
 
-@project.command()
+@project.command(help='Add a new project')
 def add():
     pc = commands.get_pilot_client()
     order = ['title', 'short_name', 'description', 'group']
@@ -93,11 +100,6 @@ def add():
             'validation': [input_validation.validate_project_group],
         },
     }
-    if any(pc.project.update_with_diff(dry_run=True).values()):
-        click.secho('There is an update for projects, please update '
-                    '("pilot project update") before adding a new project',
-                    fg='red')
-        return
     iv = input_validation.InputValidator(queries=queries, order=order)
     project = iv.ask_all()
     project.update({'search_index': pc.project.DEFAULT_SEARCH_INDEX,
@@ -123,11 +125,12 @@ def add():
                 'this tool.'.format(project['title']), fg='green')
 
 
-@project.command()
+@project.command(help='Print project details')
 @click.argument('project', required=False)
 def info(project=None):
     pc = commands.get_pilot_client()
-    project = project or pc.project.current if pc.project.is_set() else None
+    current = pc.project.current if pc.project.is_set() else None
+    project = project or current
     if project is None:
         click.echo('Use "pilot project info <project>" to list info about a '
                    'project.')
