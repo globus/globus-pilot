@@ -1,9 +1,8 @@
-import io
-import json
 import logging
 import time
 from pilot import config
 from pilot.exc import PilotInvalidProject
+from pilot.search import gen_gmeta
 
 DEFAULT_PROJECTS = {
     'ncipilot1': {
@@ -33,11 +32,15 @@ class Project(config.ConfigSection):
 
     SECTION = 'project'
     DEFAULT_PROJECT = 'ncipilot1'
-    DEFAULT_PATH = '/test/pilot1-tools-manifest.json'
+    PROJECTS_MANIFEST = 'pilot1-tools-project-manifest.json'
+    PROJECTS_ENDPOINT = 'ebf55996-33bf-11e9-9fa4-0a06afd4a22e'
+    PROJECTS_PATH = '/projects'
     # Cache will go stale in a day
     CACHE_TIMEOUT_SECONDS = 60 * 60 * 24
     ENDPOINTS = {'petrel#ncipilot': 'ebf55996-33bf-11e9-9fa4-0a06afd4a22e'}
-    GROUPS = {'NCI Pilot 1 Users': 'd99b3400-33e7-11e9-8857-0af4690c7c7e'}
+    GROUPS = {'NCI Users': 'd99b3400-33e7-11e9-8857-0af4690c7c7e',
+              'NCI Admins': '9b54f828-144f-11e9-bf08-0edc9bdd56a6s'}
+    PROJECTS_MANIFEST_INDEX = 'e0849c9b-b709-46f3-be21-80893fc1db84'
     DEFAULT_SEARCH_INDEX = 'e0849c9b-b709-46f3-be21-80893fc1db84'
     DEFAULT_RESOURCE_SERVER = 'petrel_https_server'
 
@@ -49,20 +52,24 @@ class Project(config.ConfigSection):
             cfg['projects'] = DEFAULT_PROJECTS
             self.config.save(cfg)
 
-    def update(self, project=None, path=None, dry_run=False):
+    def get_manifest_subject(self):
+        return 'globus://{}'.format(self.PROJECTS_MANIFEST)
+
+    def update(self, index=None, dry_run=False):
         self.reset_cache_timer()
-        http_cli = self.client.get_http_client(project or self.DEFAULT_PROJECT)
-        response = http_cli.get(path or self.DEFAULT_PATH)
-        new_projects = json.loads(response.data)
+        sub = self.get_manifest_subject()
+        index = index or self.PROJECTS_MANIFEST_INDEX
+        sc = self.client.get_search_client()
+        new_projects = sc.get_subject(index, sub).data['content'][0]
         if dry_run is False:
             cfg = self.config.load()
             cfg['projects'] = new_projects
             cfg.write()
         return new_projects
 
-    def update_with_diff(self, project=None, path=None, dry_run=False):
+    def update_with_diff(self, index=None, dry_run=False):
         old = self.load_all()
-        new = self.update(project, path, dry_run)
+        new = self.update(index=index, dry_run=dry_run)
         oldk, newk = set(old.keys()), set(new.keys())
         diff = dict()
         diff['removed'] = {k: old[k] for k in oldk - newk}
@@ -89,14 +96,11 @@ class Project(config.ConfigSection):
                 return False
         return True
 
-    def push(self, project=None, path=None):
-        project = project or self.DEFAULT_PROJECT
-        path = self.client.get_path(path or self.DEFAULT_PATH, project=project,
-                                    relative=False)
-        self.client.delete(path, project=project, relative=False)
-        http_cli = self.client.get_http_client(project)
-        manifest = json.dumps(dict(self.load_all()), indent=4)
-        http_cli.put(path, data=io.StringIO(manifest), allow_redirects=False)
+    def push(self, index=None):
+        sub = self.get_manifest_subject()
+        index = index or self.PROJECTS_MANIFEST_INDEX
+        gmeta = gen_gmeta(sub, ['public'], dict(self.load_all()))
+        self.client.ingest_entry(gmeta, index=index)
 
     def load_all(self):
         return self.config.load().get('projects', {})
