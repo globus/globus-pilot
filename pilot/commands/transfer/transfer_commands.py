@@ -53,16 +53,15 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
     if not destination:
         dirs = pc.ls('')
         click.echo('No Destination Provided. Please select one from the '
-                   'directory:\n{}'.format('\t '.join(dirs)))
+                   'directory or "/" for root:\n{}'.format('\t '.join(dirs)))
         return
 
     try:
         pc.ls(destination)
     except globus_sdk.exc.TransferAPIError as tapie:
         if tapie.code == 'ClientError.NotFound':
-            url = pc.get_globus_app_url('')
-            click.secho('Directory does not exist: "{}"\nPlease create it at: '
-                        '{}'.format(destination, url), err=True, bg='red')
+            click.secho('Directory does not exist: "{}"'.format(destination),
+                        err=True, fg='yellow')
             return 1
         else:
             click.secho(tapie.message, err=True, bg='red')
@@ -143,11 +142,12 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         tl = transfer_log.TransferLog()
         tl.add_log(transfer_result, short_path)
         click.echo('{}. You can check the status below: \n'
-                   'https://app.globus.org/activity/{}/overview\n'
-                   'URL will be: {}'.format(
+                   'https://app.globus.org/activity/{}/overview\n'.format(
                         transfer_result['message'], transfer_result['task_id'],
-                        url)
+                        )
                    )
+        click.echo('You can find your result here: {}'.format(
+            pc.get_portal_url(short_path)))
     else:
         click.echo('Uploading data...')
         response = pc.upload(dataframe, destination)
@@ -156,6 +156,7 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         else:
             click.echo('Failed with status code: {}'.format(
                 response.status_code))
+            return
 
 
 @click.command(help='Download a file to your local directory.')
