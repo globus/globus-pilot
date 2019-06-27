@@ -61,28 +61,32 @@ Working with Projects
 Update & List Projects
 ^^^^^^^^^^^^^^^^^^^^^^
 
-TODO
+Use ``pilot project`` to list available projects. An asterisk (*) marks
+your currently selected project. Other commands, such as ``pilot list``, will
+automatically use the project you select.
+
+.. code-block:: bash
+
+   pilot project
+   Set project with "pilot project set <myproject>"
+     * monty-python-discussions
+     pilot-tutorial
+
+
+Projects may be updated at any time. The Pilot CLI will check for updates every 24 hours,
+but you can check any time with the following:
 
 .. code-block:: bash
 
    pilot project update
-   removed
-   added
-   changed
-
-
-.. code-block:: bash
-
-   pilot project 
-   Set project with "pilot project set <myproject>"
-     ncipilot1
-     ncipilot1-test
+   Added:
+      > monty-python-and-the-holy-grail
 
    
 Setting Your Current Project
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-TODO
+Change your project with the ``project set`` subcommand:
 
 .. code-block:: bash
 
@@ -96,23 +100,6 @@ TODO
    Set project with "pilot project set <myproject>"
      ncipilot1
      * ncipilot1-test
-
-
-Changing Your Current Project
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. code-block:: bash
-
-   pilot project set ncipilot1
-   Current project set to ncipilot1
-
-
-.. code-block:: bash
-
-   pilot project 
-   Set project with "pilot project set <myproject>"
-     * ncipilot1
-     ncipilot1-test
 
 
 Working with Datasets
