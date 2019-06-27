@@ -175,7 +175,7 @@ class PilotClient(NativeClient):
         except globus_sdk.exc.SearchAPIError:
             return None
 
-    def ingest_entry(self, gmeta_entry):
+    def ingest_entry(self, gmeta_entry, index=None):
         """
         Ingest a complete gmeta_entry into search. If test is true, the test
         search index will be used instead.
@@ -186,9 +186,10 @@ class PilotClient(NativeClient):
         :return: True on success Raises exception on fail
         """
         sc = self.get_search_client()
-        result = sc.ingest(self.get_index(), gmeta_entry)
+        index = index or self.get_index()
+        result = sc.ingest(index, gmeta_entry)
         pending_states = ['PENDING', 'PROGRESS']
-        log.debug(f'Ingesting to {self.get_index()}')
+        log.debug('Ingesting to {}'.format(index))
         task_status = sc.get_task(result['task_id'])['state']
         while task_status in pending_states:
             log.debug(f'Search task still {task_status}')
