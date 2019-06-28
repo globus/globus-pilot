@@ -31,3 +31,7 @@ class Profile(config.ConfigSection):
     @organization.setter
     def organization(self, value):
         self.save_option('organization', value)
+
+    @property
+    def local_endpoint(self):
+        return self.load_option('local_endpoint')
