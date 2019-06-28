@@ -120,7 +120,7 @@ class Project(config.ConfigSection):
         except PilotInvalidProject:
             return False
 
-    def add_project(self, slug, project_data):
+    def set_project(self, slug, project_data):
         cfg = self.config.load()
         cfg['projects'][slug] = project_data
         cfg.write()
