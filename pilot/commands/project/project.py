@@ -1,4 +1,5 @@
 import os
+import sys
 import logging
 import click
 from slugify import slugify
@@ -50,6 +51,13 @@ def project_command(ctx):
     if not pc.is_logged_in():
         click.echo('You are not logged in.')
         return
+    invalid_with_pending_update = ['delete', 'add']
+    if ctx.invoked_subcommand in invalid_with_pending_update:
+        if any(pc.project.update_with_diff(dry_run=True).values()):
+            click.secho('There is an update for projects, please update '
+                        '("pilot project update") before adding a new project',
+                        fg='red')
+            sys.exit()
     if ctx.invoked_subcommand is None:
         click.echo('Set project with "pilot project set <myproject>"')
         projects = pc.project.load_all()
@@ -62,9 +70,8 @@ def project_command(ctx):
                 click.echo(fmt.format(' ', project))
 
 
-@project_command.command()
-@click.option('--dry-run', is_flag=True, default=False,
-              help='Update stored list of projects.')
+@project.command(help='Update stored list of projects.')
+@click.option('--dry-run', is_flag=True, default=False)
 def update(dry_run):
     pc = commands.get_pilot_client()
     try:
@@ -80,7 +87,7 @@ def update(dry_run):
         click.secho(str(hce), fg='red')
 
 
-@project_command.command(name='set')
+@project.command(name='set', help='Set your project')
 @click.argument('project', required=True)
 def set_command(project):
     pc = commands.get_pilot_client()
@@ -91,17 +98,42 @@ def set_command(project):
         click.secho(str(ve), fg='red')
 
 
-@project_command.command()
+@project.command(help='Add a new project')
 def add():
     pc = commands.get_pilot_client()
     order = ['title', 'short_name', 'description', 'group']
-    if any(pc.project.update_with_diff(dry_run=True).values()):
-        click.secho('There is an update for projects, please update '
-                    '("pilot project update") before adding a new project',
-                    fg='red')
-        return
-    iv = input_validation.InputValidator(queries=ADD_PROJECT_QUERIES,
-                                         order=order)
+    queries = {
+        'title': {
+            'prompt': 'Pick a title for your new project',
+            'default': 'My New Project',
+            'help': 'Pick something short and easy to remember',
+            'validation': [input_validation.validate_project_title_unique],
+        },
+        'short_name': {
+            'prompt': 'Pick a short name',
+            'default': lambda v, q: slugify(v.answers['title']),
+            'help': 'The short name will be used in URLs and will be the name '
+                    'users select this new project',
+            'validation': [input_validation.validate_no_spaces,
+                           input_validation.validate_project_slug_unique,
+                           input_validation.validate_slug_to_path_unique],
+        },
+        'description': {
+            'prompt': 'Describe your new project',
+            'default': 'This project is intended to do X for scientists',
+            'help': 'A nice description can help people understand what your '
+                    'project does, at a glance',
+            'validation': [],
+        },
+        'group': {
+            'prompt': 'Set your Globus Group',
+            'default': 'NCI Users',
+            'help': 'The group determines who has read/write access to files, '
+                    'and who can view records in search',
+            'validation': [input_validation.validate_project_group],
+        },
+    }
+    iv = input_validation.InputValidator(queries=queries, order=order)
     project = iv.ask_all()
     project.update({'search_index': pc.project.DEFAULT_SEARCH_INDEX,
                     'resource_server': pc.project.DEFAULT_RESOURCE_SERVER})
@@ -126,11 +158,12 @@ def add():
                 'this tool.'.format(project['title']), fg='green')
 
 
-@project_command.command()
+@project.command(help='Print project details')
 @click.argument('project', required=False)
 def info(project=None):
     pc = commands.get_pilot_client()
-    project = project or pc.project.current if pc.project.is_set() else None
+    current = pc.project.current if pc.project.is_set() else None
+    project = project or current
     if project is None:
         click.echo('Use "pilot project info <project>" to list info about a '
                    'project.')

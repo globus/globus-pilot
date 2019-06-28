@@ -4,27 +4,6 @@ from pilot import config
 from pilot.exc import PilotInvalidProject
 from pilot.search import gen_gmeta
 
-DEFAULT_PROJECTS = {
-    'ncipilot1': {
-        'description': 'This is the NCI Pilot Project',
-        'title': 'NCI Pilot 1',
-        'endpoint': 'ebf55996-33bf-11e9-9fa4-0a06afd4a22e',
-        'resource_server': 'petrel_https_server',
-        'search_index': '889729e8-d101-417d-9817-fa9d964fdbc9',
-        'base_path': '/restricted/dataframes',
-        'group': 'd99b3400-33e7-11e9-8857-0af4690c7c7e'
-    },
-    'ncipilot1-test': {
-        'description': 'This is the NCI Pilot Project testing project',
-        'title': 'NCI Pilot 1 TEST',
-        'endpoint': 'ebf55996-33bf-11e9-9fa4-0a06afd4a22e',
-        'resource_server': 'petrel_https_server',
-        'search_index': 'e0849c9b-b709-46f3-be21-80893fc1db84',
-        'base_path': '/test',
-        'group': 'd99b3400-33e7-11e9-8857-0af4690c7c7e'
-    },
-}
-
 log = logging.getLogger(__name__)
 
 
@@ -47,10 +26,6 @@ class Project(config.ConfigSection):
     def __init__(self, client):
         super().__init__()
         self.client = client
-        cfg = self.config.load()
-        if not self.load_all():
-            cfg['projects'] = DEFAULT_PROJECTS
-            self.config.save(cfg)
 
     def get_manifest_subject(self):
         return 'globus://{}'.format(self.PROJECTS_MANIFEST)

@@ -38,7 +38,7 @@ def test_main_warns_no_project_set(monkeypatch, mock_cli):
     monkeypatch.setattr(mock_cli.project, 'is_set', is_set)
 
     runner = CliRunner()
-    result = runner.invoke(cli, [])
+    result = runner.invoke(cli, ['list'])
     assert is_set.called
     assert 'No project set' in result.output
 
