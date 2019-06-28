@@ -115,6 +115,11 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
             click.echo(json.dumps(new_metadata, indent=2))
         return
 
+    if gcp and not pc.profile.local_endpoint:
+        click.secho('No Local endpoint set, please set it with '
+                    '"pilot profile --local-endpoint"', fg='red')
+        return
+
     click.echo('Ingesting record into search...')
     log.debug(f'Ingesting {subject}')
     pc.ingest_entry(gmeta)
@@ -125,13 +130,9 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         click.echo('Metadata updated, dataframe is already up to date.')
         return
     if gcp:
-        local_ep = globus_sdk.LocalGlobusConnectPersonal().endpoint_id
-        if not local_ep:
-            raise Exception('No local GCP client found')
-        auth = pc.get_authorizers()['transfer.api.globus.org']
-        tc = globus_sdk.TransferClient(authorizer=auth)
+        tc = pc.get_transfer_client()
         tdata = globus_sdk.TransferData(
-            tc, local_ep, pc.get_endpoint(),
+            tc, pc.profile.local_endpoint, pc.get_endpoint(),
             label='{} Transfer'.format(pc.APP_NAME),
             notify_on_succeeded=False,
             sync_level='checksum',
