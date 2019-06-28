@@ -2,7 +2,6 @@ import urllib
 import json
 import logging
 import click
-import globus_sdk
 from pilot import commands
 from pilot.search_parse import (
     parse_result, get_titles, get_field_metadata, get_field_metadata_titles
@@ -20,6 +19,22 @@ def get_short_path(result):
     return sub.path.replace(base_path, '').lstrip('/')
 
 
+def search_by_project(project=None, custom_params=None):
+    pc = commands.get_pilot_client()
+    search_data = {
+        'q': '*',
+        'filters': {
+            'field_name': 'project_metadata.project-slug',
+            'type': 'match_all',
+            'values': [project or pc.project.current]
+        }
+    }
+    custom_params = custom_params or {}
+    search_data.update(custom_params)
+    sc = pc.get_search_client()
+    return sc.post_search(pc.get_index(), search_data).data
+
+
 @click.command(name='list', help='List known records in Globus Search')
 @click.option('--json/--no-json', 'output_json', default=False,
               help='Output as JSON.')
@@ -32,11 +47,7 @@ def list_command(output_json, limit):
         click.echo('You are not logged in.')
         return
 
-    search_authorizer = pc.get_authorizers()['search.api.globus.org']
-    sc = globus_sdk.SearchClient(authorizer=search_authorizer)
-    # TO DO: iterate instead of upping limit
-    search_results = sc.search(index_id=pc.get_index(), q='*', limit=limit)
-
+    search_results = search_by_project()
     if output_json:
         click.echo(json.dumps(search_results.data, indent=4))
         return

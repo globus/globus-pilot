@@ -1,13 +1,16 @@
 from unittest.mock import Mock
-import globus_sdk
 from click.testing import CliRunner
 from pilot.commands.search.search_commands import list_command, describe
 
 
 def test_list_command(monkeypatch, mock_cli, mock_search_results):
     sc = Mock()
-    sc.search.return_value = mock_search_results
-    monkeypatch.setattr(globus_sdk, 'SearchClient', Mock(return_value=sc))
+    globus_response = Mock()
+    globus_response.data = mock_search_results
+    sc.post_search.return_value = globus_response
+    mock_cli.get_search_client = Mock(return_value=sc)
+    assert sc.post_search().data == mock_search_results
+
     runner = CliRunner()
     result = runner.invoke(list_command, [])
     assert result.exit_code == 0
