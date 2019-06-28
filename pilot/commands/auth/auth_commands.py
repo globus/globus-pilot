@@ -1,8 +1,11 @@
 import os
+import re
 import logging
+import globus_sdk
 import click
 
 import pilot
+from pilot.commands import input_validation
 
 
 log = logging.getLogger(__name__)
@@ -36,12 +39,17 @@ def login(refresh_tokens, force, local_server, browser):
         pc.project.update_with_diff()
     click.secho('You have been logged in.', fg='green')
     if prev_info != pc.profile.load_user_info():
+        pc.profile.local_endpoint = (
+            pc.profile.local_endpoint or
+            globus_sdk.LocalGlobusConnectPersonal().endpoint_id
+        )
+        pitems = [('Name:', pc.profile.name),
+                  ('Organization:', pc.profile.organization),
+                  ('Local Endpoint:', pc.profile.local_endpoint)]
+        pstr = '\n'.join(['{:16}{}'.format(t, v) for t, v in pitems])
         report = (
-            'Your personal info has been saved as:\n{:15}{}\n{:15}{}\n'
-            '\n\nYou can update these with "pilot profile -i"'.format(
-                'Name:', pc.profile.name, 'Organization:',
-                pc.profile.organization
-            )
+            'Your personal info has been saved as: {}\n\n'
+            'You can update these with "pilot profile -i"'.format(pstr)
         )
         click.secho(report, fg='blue')
 
@@ -74,19 +82,56 @@ def whoami():
 @click.command(name='profile', help='Output Globus Identity used to login')
 @click.option('-i', '--interactive', default=False, is_flag=True,
               help='Interactively set all profile options')
-def profile_command(interactive):
+@click.option('--local-endpoint', help='Set local endpoint (ep:/my/path)')
+def profile_command(interactive, local_endpoint):
     pc = pilot.commands.get_pilot_client()
+    profile_queries = {
+        'name': {
+            'prompt': 'Name', 'default': pc.profile.name,
+            'help': 'When you upload files, your name will be used as the '
+                    'author',
+            'validation': [],
+        },
+        'organization': {
+            'prompt': 'Organization', 'default': pc.profile.organization,
+            'help': 'When you upload files, your organization will be listed',
+            'validation': [],
+        },
+    }
+    if local_endpoint:
+        pattern = r'(?P<endpoint>[\w-]{36})(:(?P<path>[\w/]+))?'
+        match = re.match(pattern, local_endpoint)
+        if not match:
+            click.secho('Provide your local endpoint in the notation: '
+                        'myendpoint:/my/path', fg='red')
+            return
+        tc = pc.get_transfer_client()
+        matchd = match.groupdict()
+        try:
+            tc.operation_ls(matchd['endpoint'], path=matchd.get('path'))
+            name = tc.get_endpoint(matchd['endpoint']).data['display_name']
+            pc.profile.save_option('local_endpoint', matchd['endpoint'])
+            pc.profile.save_option('local_endpoint_path', matchd['path'])
+            pc.profile.save_option('local_endpoint_name', name)
+            click.secho('Your local endpoint has been set!', fg='green')
+        except globus_sdk.exc.TransferAPIError as tapie:
+            click.secho('Unable to access endpoint, please choose a path where'
+                        ' you have read/write access: {}'
+                        ''.format(tapie.message), fg='red')
+
     if interactive:
-        pc.profile.name = (
-            input(f'Name ({pc.profile.name})> ') or pc.profile.name
-        )
-        pc.profile.organization = (
-            input(f'Organization ({pc.profile.organization})> ') or
-            pc.profile.organization
-        )
+        od = ['name', 'organization']
+        iv = input_validation.InputValidator(queries=profile_queries, order=od)
+        info = pc.profile.load_user_info()
+        new_profile = iv.ask_all()
+        info.update(new_profile)
+        pc.profile.save_user_info(info)
         click.secho('Your information has been updated', fg='green')
         return
-    report = 'Your profile:\n{:15}{}\n{:15}{}\n'.format(
-        'Name:', pc.profile.name, 'Organization:', pc.profile.organization
-    )
-    click.echo(report)
+    info = pc.profile.load_user_info()
+    pitems = [('Name:', pc.profile.name),
+              ('Organization:', pc.profile.organization),
+              ('Local Endpoint:', info.get('local_endpoint_name')),
+              ('Local Path:', info.get('local_endpoint_path'))]
+    pstr = '\n'.join(['{:16}{}'.format(t, v) for t, v in pitems])
+    click.echo('Your Profile: \n{}\n'.format(pstr))
