@@ -9,39 +9,6 @@ A Command Line tool for managing data in Globus Search as well as transferring c
 Installation
 ------------
 
-Pilot1 tools supported on Python 3.5 and higher
-
-Install with pip:
-
-.. code-block:: python
-
-    pip install -e git+git@github.com:globusonline/pilot1-tools.git#egg=pilot1-tools
-
-
-You will also need Globus Connect Personal installed on your machine. You can download
-a copy here: https://www.globus.org/globus-connect-personal
-
-
-Mac OSX
-~~~~~~~
-
-For Mac OSX, you may need to install headers. Ensure XCode is installed
-
-.. code-block:: bash
-
-    xcode-select --install
-
-Headers for Mac have moved recently, causing some components not to install. You can reinstall
-the old headers here:
-
-.. code-block:: bash
-
-    open /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg
-
-
-Conda
-~~~~~
-
 These tools are available on Conda for Python 3.6, you can install them with the following:
 
 .. code-block:: bash
@@ -49,8 +16,19 @@ These tools are available on Conda for Python 3.6, you can install them with the
     conda create -n pilot1-env -c conda-forge -c nickolaussaint pilot1-tools
 
 
-Usage
------
+You can see the `Developer Guide Installation
+<https://github.com/globusonline/pilot1-tools/blob/master/docs/developer-guide.rst>`_ for more options.
+
+
+Quick Start
+-----------
+
+For a full walkthrough, see the `User Guide
+<https://github.com/globusonline/pilot1-tools/blob/master/docs/user-guide.rst>`_.
+Administrators can also view the `Admin Guide
+<https://github.com/globusonline/pilot1-tools/blob/master/docs/project-admin.rst>`_.
+
+A quick walkthrough is below.
 
 First, login using Globus:
 
