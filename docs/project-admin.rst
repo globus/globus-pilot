@@ -15,7 +15,6 @@ Prerequisites
 You should review the `User Guide
 <https://github.com/globusonline/pilot1-tools/blob/master/docs/user-guide.rst>`_ for:
 
-
 - installing and configuring ``pilot``
 - listing and downloading files
 

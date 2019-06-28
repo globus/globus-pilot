@@ -3,25 +3,47 @@ pilot1-tools User Guide
 
 .. contents:: Table of Contents
 
+Introduction
+------------
+
+NCI Pilot Tools are a suite of command line utilities for quickly uploading data
+and publicizing it on Globus Search for easy accessibility and discovery. You can
+view the current list of projects by going to `petreldata.net<https://petreldata.net/nci-pilot1/>`_.
+
+By following the guide below, you will be able to use the NCI Pilot tools to discover,
+and access files from the projects you can see on the portal above.
+
 Installation
 ------------
 
-TODO: Link to or copy README
+These tools are available on Conda for Python 3.6, you can install them with the following:
+
+.. code-block:: bash
+
+    conda create -n pilot1-env -c conda-forge -c nickolaussaint pilot1-tools
+
+
+You can see the `Developer Guide Installation
+<https://github.com/globusonline/pilot1-tools/blob/master/docs/developer-guide.rst>`_ for more options.
 
 Uninstall
 ---------
 
-TODO: Link to or copy README
 
 .. code-block:: bash
 
-    pip uninstall pilot1-tools
+    conda uninstall pilot1-tools
 
 
 Updates
 -------
 
-TODO: Link to or copy README
+Updating uses the same command as installation. Conda will ask if you would
+like to upgrade to the latest version.
+
+.. code-block:: bash
+
+    conda install -c conda-forge -c nickolaussaint pilot1-tools
 
 Logging In
 ----------
@@ -176,5 +198,3 @@ Use ``pilot download <dataset>`` to download a dataset. Using the example above,
 
    pilot describe myfolder/example.tsv
    Saved example.tsv
-
-

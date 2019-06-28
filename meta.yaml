@@ -1,9 +1,9 @@
 {% set name = "pilot1-tools" %}
-{% set version = "0.1.0.dev" %}
+{% set data = load_setup_py_data() %}
 
 package:
   name: "{{ name }}"
-  version: "{{ version }}"
+  version: {{ data.get('version') }}
 
 source:
   git_url: https://github.com/globusonline/{{ name }}
@@ -26,6 +26,9 @@ requirements:
     - pandas
     - click
     - tableschema
+    - configobj
+    - python-slugify
+    - requests-toolbelt
 
 test:
   imports:
