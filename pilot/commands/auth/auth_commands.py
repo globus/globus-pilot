@@ -76,7 +76,9 @@ def whoami():
     if not pc.is_logged_in():
         click.echo('You are not logged in.')
     else:
-        click.echo(pc.profile.load_user_info())
+        user_info = pc.profile.load_user_info() 
+        click.echo(user_info['name'])
+        click.echo(user_info['preferred_username'])
 
 
 @click.command(name='profile', help='Output Globus Identity used to login')

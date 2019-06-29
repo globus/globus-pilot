@@ -46,7 +46,7 @@ ADD_PROJECT_QUERIES = {
 @click.group(name='project', help='Set or display project information',
              invoke_without_command=True)
 @click.pass_context
-def project_command(ctx):
+def project(ctx):
     pc = commands.get_pilot_client()
     if not pc.is_logged_in():
         click.echo('You are not logged in.')
@@ -184,7 +184,7 @@ def info(project=None):
     click.echo(info['description'])
 
 
-@project_command.command(help='Delete a project')
+@project.command(help='Delete a project')
 @click.argument('project', required=True)
 def delete(project):
     pc = commands.get_pilot_client()
@@ -229,7 +229,7 @@ def delete(project):
                 fg='green')
 
 
-@project_command.command(help='Edit items about your project')
+@project.command(help='Edit items about your project')
 @click.argument('project', required=False)
 def edit(project=None):
     pc = commands.get_pilot_client()
@@ -253,7 +253,7 @@ def edit(project=None):
     click.secho('Project "{}" has been updated'.format(project), fg='green')
 
 
-@project_command.command(help='Update the global list of projects')
+@project.command(help='Update the global list of projects')
 def push():
     pc = commands.get_pilot_client()
     pc.project.push()
