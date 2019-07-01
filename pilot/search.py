@@ -119,6 +119,7 @@ def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True):
         },
         'files': gen_remote_file_manifest(dataframe, url, pilot_client,
                                           metadata=rfm_metadata,
+                                          mimetype=mimetype,
                                           skip_analysis=skip_analysis),
         'project_metadata': {
             'project-slug': pilot_client.project.current
@@ -277,12 +278,14 @@ def gen_dc_formats(metadata, formats):
 
 def gen_remote_file_manifest(filepath, url, pilot_client, metadata={},
                              algorithms=DEFAULT_HASH_ALGORITHMS,
+                             mimetype=None,
                              skip_analysis=True):
     rfm = metadata.copy()
     rfm.update({alg: compute_checksum(filepath, getattr(hashlib, alg)())
                 for alg in algorithms})
     fkeys = get_foreign_keys(pilot_client)
-    metadata = analyze_dataframe(filepath, fkeys) if not skip_analysis else {}
+    metadata = (analyze_dataframe(filepath, mimetype, fkeys)
+                if not skip_analysis else {})
     rfm.update({
         'filename': os.path.basename(filepath),
         'url': url,

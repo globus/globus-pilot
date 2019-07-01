@@ -2,6 +2,60 @@ import pandas
 import numpy
 import tableschema
 
+TSV_LABELS = {
+    'name': 'Column Name',
+    'type': 'Data Type',
+    'format': 'Format',
+    'count': 'Number of non-null entries',
+    '25': '25th Percentile',
+    '50': '50th Percentile',
+    '75': '75th Percentile',
+    'std': 'Standard Deviation',
+    'mean': 'Mean Value',
+    'min': 'Minimum Value',
+    'max': 'Maximum Value',
+    'unique': 'Unique Values',
+    'top': 'Top Common',
+    'frequency': 'Frequency of Top Common Value',
+    'reference': 'Link to resource definition'
+}
+
+
+def analyze_tsv(filename, foreign_keys=None):
+    return analyze(filename, '\t', foreign_keys)
+
+
+def analyze_csv(filename, foreign_keys=None):
+    return analyze(filename, ',', foreign_keys)
+
+
+def analyze(filename, separator, foreign_keys=None):
+
+    # Pandas analysis
+    df = pandas.read_csv(filename, sep=separator)
+    pandas_info = df.describe(include='all')
+    # Tableschema analysis
+    ts_info = tableschema.Schema(tableschema.infer(filename)).descriptor
+
+    column_metadata = []
+    for column in ts_info['fields'][:10]:
+        df_metadata = column.copy()
+        col_name = column['name']
+        df_metadata.update(get_pandas_field_metadata(pandas_info, col_name))
+        df_metadata.update(get_foreign_key(foreign_keys, column))
+        column_metadata.append(df_metadata)
+
+    dataframe_metadata = {
+        'name': 'Data Dictionary',
+        # df.shape[0] seems to have issues determining rows
+        'numrows': len(df.index),
+        'numcols': df.shape[1],
+        'previewbytes': get_preview_byte_count(filename),
+        'field_definitions': column_metadata,
+        'labels': TSV_LABELS
+    }
+    return dataframe_metadata
+
 
 def get_preview_byte_count(filename, num_rows=11):
     """Count and return number of bytes for the first 11 rows in the given
@@ -61,46 +115,3 @@ def get_foreign_key(foreign_keys, column):
         return{'reference': None}
     ref = foreign_keys.get(column['name'], {}).get('reference') or None
     return {'reference': ref}
-
-
-def analyze_dataframe(filename, foreign_keys=None):
-    # Pandas analysis
-    df = pandas.read_csv(filename, sep='\t')
-    pandas_info = df.describe(include='all')
-    # Tableschema analysis
-    ts_info = tableschema.Schema(tableschema.infer(filename)).descriptor
-
-    column_metadata = []
-    for column in ts_info['fields'][:10]:
-        df_metadata = column.copy()
-        col_name = column['name']
-        df_metadata.update(get_pandas_field_metadata(pandas_info, col_name))
-        df_metadata.update(get_foreign_key(foreign_keys, column))
-        column_metadata.append(df_metadata)
-
-    dataframe_metadata = {
-        'name': 'Data Dictionary',
-        # df.shape[0] seems to have issues determining rows
-        'numrows': len(df.index),
-        'numcols': df.shape[1],
-        'previewbytes': get_preview_byte_count(filename),
-        'field_definitions': column_metadata,
-        'labels': {
-            'name': 'Column Name',
-            'type': 'Data Type',
-            'format': 'Format',
-            'count': 'Number of non-null entries',
-            '25': '25th Percentile',
-            '50': '50th Percentile',
-            '75': '75th Percentile',
-            'std': 'Standard Deviation',
-            'mean': 'Mean Value',
-            'min': 'Minimum Value',
-            'max': 'Maximum Value',
-            'unique': 'Unique Values',
-            'top': 'Top Common',
-            'frequency': 'Frequency of Top Common Value',
-            'reference': 'Link to resource definition'
-        }
-    }
-    return dataframe_metadata
