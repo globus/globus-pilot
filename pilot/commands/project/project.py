@@ -6,7 +6,7 @@ from slugify import slugify
 import globus_sdk
 
 from pilot import commands, exc
-from pilot.commands import input_validation, path_utils, search
+from pilot.commands import input_validation, search
 
 log = logging.getLogger(__name__)
 
