@@ -38,17 +38,30 @@ def login(refresh_tokens, force, local_server, browser):
         log.debug('NO project info saved, updating...')
         pc.project.update_with_diff()
     click.secho('You have been logged in.', fg='green')
+
+    local_ep = (pc.profile.load_option('local_endpoint') or
+                globus_sdk.LocalGlobusConnectPersonal().endpoint_id)
+    local_path = pc.profile.load_option('local_endpoint_path')
+    tc = pc.get_transfer_client()
+    try:
+        if local_ep:
+            name = tc.get_endpoint(local_ep).data['display_name']
+            pc.profile.save_option('local_endpoint', local_ep)
+            pc.profile.save_option('local_endpoint_path', local_path)
+            pc.profile.save_option('local_endpoint_name', name)
+            tc.operation_ls(local_ep, path=local_path)
+    except globus_sdk.exc.TransferAPIError as tapie:
+        click.secho('There was a problem when checking your local endpoint. '
+                    'You should ensure it is working properly. {}'
+                    .format(tapie.message), fg='yellow')
     if prev_info != pc.profile.load_user_info():
-        pc.profile.local_endpoint = (
-            pc.profile.local_endpoint or
-            globus_sdk.LocalGlobusConnectPersonal().endpoint_id
-        )
         pitems = [('Name:', pc.profile.name),
                   ('Organization:', pc.profile.organization),
-                  ('Local Endpoint:', pc.profile.local_endpoint)]
+                  ('Local Endpoint:', pc.profile.load_option(
+                      'local_endpoint_name'))]
         pstr = '\n'.join(['{:16}{}'.format(t, v) for t, v in pitems])
         report = (
-            'Your personal info has been saved as: {}\n\n'
+            'Your personal info has been saved as: \n{}\n\n'
             'You can update these with "pilot profile -i"'.format(pstr)
         )
         click.secho(report, fg='blue')
