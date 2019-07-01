@@ -32,7 +32,7 @@ def search_by_project(project=None, custom_params=None):
     custom_params = custom_params or {}
     search_data.update(custom_params)
     sc = pc.get_search_client()
-    return sc.post_search(pc.get_index(), search_data).data
+    return sc.post_search(pc.get_index(project=project), search_data).data
 
 
 @click.command(name='list', help='List known records in Globus Search')

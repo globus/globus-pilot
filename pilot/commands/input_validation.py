@@ -102,7 +102,7 @@ def validate_project_endpoint(v, ep):
 
 def validate_project_group(v, group):
     pc = commands.get_pilot_client()
-    valid_choices = list(pc.project.GROUPS.keys()) + ['None']
+    valid_choices = list(pc.project.GROUPS.keys()) + ['public']
     if group not in valid_choices:
         raise exc.PilotValidator('Group must be one of: '
                                  '{}'.format(', '.join(valid_choices)))
