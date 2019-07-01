@@ -142,7 +142,7 @@ def add():
     short_name = project.pop('short_name')
     project['base_path'] = os.path.join(
         pc.project.PROJECTS_PATH,
-        path_utils.slug_to_path(short_name)
+        short_name
     )
 
     click.secho('Updating global project list... ', nl=False)
