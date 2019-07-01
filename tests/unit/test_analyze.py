@@ -4,7 +4,7 @@ from io import StringIO
 
 
 def test_analyze_dataframe(mixed_tsv):
-    ana = analyze_dataframe(mixed_tsv)
+    ana = analyze_dataframe(mixed_tsv, 'text/tab-separated-values')
     assert ana['numcols'] == 2
     assert ana['numrows'] == 99
     row1_keys = set(ana['field_definitions'][0].keys())
@@ -18,7 +18,7 @@ def test_analyze_dataframe(mixed_tsv):
 
 
 def test_preview_bytes(mixed_tsv):
-    ana = analyze_dataframe(mixed_tsv)
+    ana = analyze_dataframe(mixed_tsv, 'text/tab-separated-values')
     with open(mixed_tsv) as fp:
         preview_data = StringIO(fp.read(ana['previewbytes']))
     preview_df = pandas.read_csv(preview_data, sep='\t', encoding='utf8')
@@ -27,3 +27,7 @@ def test_preview_bytes(mixed_tsv):
     assert list(preview_df.columns) == list(normal_df.columns)
     assert preview_df.head(10).to_dict() == normal_df.head(10).to_dict()
     assert preview_df.head(11).to_dict() != normal_df.head(11).to_dict()
+
+
+def test_analyze_dataframe_with_unknown_mimetype(mixed_tsv):
+    assert analyze_dataframe(mixed_tsv, 'completely_unknown_mimetype') == {}
