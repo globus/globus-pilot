@@ -138,7 +138,7 @@ def add():
     project.update({'search_index': pc.project.DEFAULT_SEARCH_INDEX,
                     'resource_server': pc.project.DEFAULT_RESOURCE_SERVER})
     project['endpoint'] = pc.project.PROJECTS_ENDPOINT
-    project['group'] = pc.project.GROUPS.get(project['group'])
+    project['group'] = pc.project.GROUPS.get(project['group'], 'public')
     short_name = project.pop('short_name')
     project['base_path'] = os.path.join(
         pc.project.PROJECTS_PATH,
