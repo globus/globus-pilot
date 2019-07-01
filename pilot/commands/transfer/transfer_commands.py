@@ -115,7 +115,7 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
             click.echo(json.dumps(new_metadata, indent=2))
         return
 
-    if gcp and not pc.profile.local_endpoint:
+    if gcp and not pc.profile.load_option('local_endpoint'):
         click.secho('No Local endpoint set, please set it with '
                     '"pilot profile --local-endpoint"', fg='red')
         return
@@ -132,7 +132,7 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
     if gcp:
         tc = pc.get_transfer_client()
         tdata = globus_sdk.TransferData(
-            tc, pc.profile.local_endpoint, pc.get_endpoint(),
+            tc, pc.profile.load_option('local_endpoint'), pc.get_endpoint(),
             label='{} Transfer'.format(pc.APP_NAME),
             notify_on_succeeded=False,
             sync_level='checksum',
