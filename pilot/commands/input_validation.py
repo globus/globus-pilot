@@ -79,11 +79,10 @@ def validate_slug_to_path_unique(v, slug):
     pc = commands.get_pilot_client()
     tc = pc.get_transfer_client()
     try:
-        path = commands.path_utils.slug_to_path(slug)
         response = tc.operation_ls(pc.project.PROJECTS_ENDPOINT,
                                    path=pc.project.PROJECTS_PATH)
         existing = [f['name'] for f in response.data['DATA']]
-        if path in existing:
+        if slug in existing:
             raise exc.PilotValidator('"{}" is not available, please choose '
                                      'another'.format(slug))
     except globus_sdk.exc.TransferAPIError as tapie:
