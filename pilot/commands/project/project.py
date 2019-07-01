@@ -70,7 +70,7 @@ def project_command(ctx):
                 click.echo(fmt.format(' ', project))
 
 
-@project.command(help='Update stored list of projects.')
+@project_command.command(help='Update stored list of projects.')
 @click.option('--dry-run', is_flag=True, default=False)
 def update(dry_run):
     pc = commands.get_pilot_client()
@@ -87,7 +87,7 @@ def update(dry_run):
         click.secho(str(hce), fg='red')
 
 
-@project.command(name='set', help='Set your project')
+@project_command.command(name='set', help='Set your project')
 @click.argument('project', required=True)
 def set_command(project):
     pc = commands.get_pilot_client()
@@ -98,7 +98,7 @@ def set_command(project):
         click.secho(str(ve), fg='red')
 
 
-@project.command(help='Add a new project')
+@project_command.command(help='Add a new project')
 def add():
     pc = commands.get_pilot_client()
     order = ['title', 'short_name', 'description', 'group']
@@ -158,7 +158,7 @@ def add():
                 'this tool.'.format(project['title']), fg='green')
 
 
-@project.command(help='Print project details')
+@project_command.command(help='Print project details')
 @click.argument('project', required=False)
 def info(project=None):
     pc = commands.get_pilot_client()
