@@ -217,7 +217,7 @@ def delete(project):
         return 1
     click.echo('Deleting Data...')
     ddata = globus_sdk.DeleteData(transfer_client, pinfo['endpoint'],
-                                  recursive=True)
+                                  recursive=True, notify_on_succeeded=False)
     ddata.add_item(project_base_path)
     transfer_client.submit_delete(ddata)
     click.echo('Deleting Search Records...')
