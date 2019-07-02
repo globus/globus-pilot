@@ -47,7 +47,7 @@ Create a project with the following:
 
 .. code-block:: bash
 
-   pilot project add
+   (pilot1-env) $ pilot project add
 
 
 You will be brought through an interactive prompt similar to the one below:
@@ -76,6 +76,14 @@ interactive prompt.
 - Description: This will be shown in the portal on the 'projects' page
 - Group: This Globus Group determines who can access the data you upload
 
+Making Directories
+------------------
+
+You can make directories within your project with the ``mkdir`` command.
+
+.. code-block:: bash
+
+    (pilot1-env) $ pilot mkdir myfolder
 
 
 Uploading Datasets to a Project
@@ -97,14 +105,14 @@ We can upload ``example.tsv`` to our project with:
 
 .. code-block:: bash
 
-   pilot upload example.tsv /
+   (pilot1-env) $ pilot upload example.tsv /
 
 If you want to place your file inside a folder, such as after running ``pilot mkdir myfolder``,
 you can provide the relative path instead:
 
 .. code-block:: bash
 
-   pilot upload example.tsv myfolder
+   (pilot1-env) $ pilot upload example.tsv myfolder
 
 
 The above command will upload a file to the root directory of your project.
@@ -127,7 +135,7 @@ You can add a metadata JSON document with the ``-j`` flag.
 
 .. code-block:: bash
 
-   pilot upload -j my_metadata.json example.tsv /
+   (pilot1-env) $ pilot upload -j my_metadata.json example.tsv /
 
 You can find more info about what to include in ``my_metadata.json`` in the `Reference Guide
 <https://github.com/globusonline/pilot1-tools/blob/master/docs/reference.rst>`_.
@@ -143,4 +151,4 @@ Delete the above example file ``example.tsv`` with the following:
 
 .. code-block:: bash
 
-   pilot delete myfolder/example.tsv
+   (pilot1-env) $ pilot delete myfolder/example.tsv
