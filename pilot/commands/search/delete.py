@@ -1,6 +1,9 @@
+import logging
 import click
 import globus_sdk
 import pilot
+
+log = logging.getLogger(__name__)
 
 
 @click.command(name='delete', help='Delete a search entry')
@@ -29,12 +32,24 @@ def delete_command(path, entry_id, subject, test, dry_run, delete_data, yes):
         return
 
     try:
-        pc.delete_entry(path, entry_id=entry_id,
-                        full_subject=subject)
-        click.secho('Removed {} Successfully'.format(path), fg='green')
+        import os
+        dir_list = pc.ls(os.path.dirname(path), extended=True)
+        dirname, basename = os.path.dirname(path), os.path.basename(path)
+        log.debug('Checking if {} in {}'.format(basename, dir_list))
+
+        if os.path.basename(path) not in dir_list:
+            click.secho('No file "{}" exists'.format(path), fg='yellow')
+            return
+        # elif di
+        click.echo('Removing data... ', nl=False)
+        pc.delete(path)
+        click.echo('Done. \nRemoving search record...', nl=False)
+        pc.delete_entry(path, entry_id=entry_id, full_subject=subject)
+        click.secho('Done. \n{} has been deleted successfully'.format(path),
+                    fg='green')
     except globus_sdk.exc.SearchAPIError as se:
         if se.code == 'NotFound.Generic':
-            click.secho('{} does not exist, or cannot be found at your '
+            click.secho('\n{} does not exist, or cannot be found at your '
                         'permission level.'.format(path), fg='yellow')
         else:
             click.secho(str(se))
