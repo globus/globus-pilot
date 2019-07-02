@@ -155,10 +155,12 @@ class PilotClient(NativeClient):
     def get_subject_url(self, path, project=None, relative=True):
         return self.get_globus_url(path, project, relative)
 
-    def ls(self, path, project=None, relative=True):
+    def ls(self, path, project=None, relative=True, extended=False):
         path = self.get_path(path, project, relative)
         endpoint = self.get_endpoint(project)
         r = self.get_transfer_client().operation_ls(endpoint, path=path)
+        if extended:
+            return {f['name']: f for f in r['DATA']}
         return [f['name'] for f in r['DATA']]
 
     def mkdir(self, path, project=None, relative=True):
