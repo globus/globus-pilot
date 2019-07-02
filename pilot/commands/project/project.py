@@ -253,7 +253,8 @@ def edit(project=None):
     click.secho('Project "{}" has been updated'.format(project), fg='green')
 
 
-@project_command.command(help='Update the global list of projects')
+@project_command.command(help='Update the global list of projects',
+                         hidden=True)
 def push():
     pc = commands.get_pilot_client()
     pc.project.push()

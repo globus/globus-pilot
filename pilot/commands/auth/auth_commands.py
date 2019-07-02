@@ -83,15 +83,10 @@ def logout(purge):
                     fg='green')
 
 
-@click.command(help='Output Globus Identity used to login')
-def whoami():
-    pc = pilot.commands.get_pilot_client()
-    if not pc.is_logged_in():
-        click.echo('You are not logged in.')
-    else:
-        user_info = pc.profile.load_user_info()
-        click.echo(user_info['name'])
-        click.echo(user_info['preferred_username'])
+@click.command(help='Output Globus Identity used to login', deprecated=True)
+@click.pass_context
+def whoami(ctx):
+    ctx.invoke(profile_command)
 
 
 @click.command(name='profile', help='Output Globus Identity used to login')
@@ -146,6 +141,7 @@ def profile_command(interactive, local_endpoint):
     info = pc.profile.load_user_info()
     pitems = [('Name:', pc.profile.name),
               ('Organization:', pc.profile.organization),
+              ('Identity: ', pc.profile.load_option('preferred_username')),
               ('Local Endpoint:', info.get('local_endpoint_name')),
               ('Local Path:', info.get('local_endpoint_path'))]
     pstr = '\n'.join(['{:16}{}'.format(t, v) for t, v in pitems])
