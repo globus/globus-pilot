@@ -19,8 +19,8 @@ class Project(config.ConfigSection):
     ENDPOINTS = {'petrel#ncipilot': 'ebf55996-33bf-11e9-9fa4-0a06afd4a22e'}
     GROUPS = {'NCI Users': 'd99b3400-33e7-11e9-8857-0af4690c7c7e',
               'NCI Admins': '9b54f828-144f-11e9-bf08-0edc9bdd56a6s'}
-    PROJECTS_MANIFEST_INDEX = 'e0849c9b-b709-46f3-be21-80893fc1db84'
-    DEFAULT_SEARCH_INDEX = 'e0849c9b-b709-46f3-be21-80893fc1db84'
+    PROJECTS_MANIFEST_INDEX = '889729e8-d101-417d-9817-fa9d964fdbc9'
+    DEFAULT_SEARCH_INDEX = '889729e8-d101-417d-9817-fa9d964fdbc9'
     DEFAULT_RESOURCE_SERVER = 'petrel_https_server'
 
     def __init__(self, client):
