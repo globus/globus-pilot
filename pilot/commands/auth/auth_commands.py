@@ -42,6 +42,7 @@ def login(refresh_tokens, force, local_server, browser):
     local_ep = (pc.profile.load_option('local_endpoint') or
                 globus_sdk.LocalGlobusConnectPersonal().endpoint_id)
     local_path = pc.profile.load_option('local_endpoint_path')
+    log.debug('Local Endpoint set to {}:{}'.format(local_ep, local_path))
     tc = pc.get_transfer_client()
     try:
         if local_ep:
@@ -51,6 +52,8 @@ def login(refresh_tokens, force, local_server, browser):
             pc.profile.save_option('local_endpoint_name', name)
             tc.operation_ls(local_ep, path=local_path)
     except globus_sdk.exc.TransferAPIError as tapie:
+        log.debug('Endpoint UUID: {}, local path: {}'
+                  .format(local_ep, local_path))
         click.secho('There was a problem when checking your local endpoint. '
                     'You should ensure it is working properly. {}'
                     .format(tapie.message), fg='yellow')
@@ -109,7 +112,7 @@ def profile_command(interactive, local_endpoint):
         },
     }
     if local_endpoint:
-        pattern = r'(?P<endpoint>[\w-]{36})(:(?P<path>[\w/]+))?'
+        pattern = r'(?P<endpoint>[\w-]{36})(:(?P<path>[\w/~]+))?'
         match = re.match(pattern, local_endpoint)
         if not match:
             click.secho('Provide your local endpoint in the notation: '
@@ -143,6 +146,8 @@ def profile_command(interactive, local_endpoint):
               ('Organization:', pc.profile.organization),
               ('Identity: ', pc.profile.load_option('preferred_username')),
               ('Local Endpoint:', info.get('local_endpoint_name')),
-              ('Local Path:', info.get('local_endpoint_path'))]
+              ('Local Path:', info.get('local_endpoint_path')),
+              ('Endpoint UUID:', info.get('local_endpoint'))
+              ]
     pstr = '\n'.join(['{:16}{}'.format(t, v) for t, v in pitems])
     click.echo('Your Profile: \n{}\n'.format(pstr))
