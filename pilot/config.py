@@ -1,8 +1,11 @@
 import os
+import logging
 from configobj import ConfigObj
 from fair_research_login import ConfigParserTokenStorage
 
 from pilot.version import __version__
+
+log = logging.getLogger(__name__)
 
 
 class Config():
@@ -87,8 +90,13 @@ class ConfigSection:
         section = section or self.SECTION
         if cfg.get(section) is None:
             cfg[section] = {}
+        # Configparser takes a literal approach to 'None' and will save it as
+        # a string, which can cause issues for things expecting null values.
+        # Save as the empty string instead.
+        value = '' if value is None else value
         cfg[section][option] = value
         self.config.save(cfg)
 
     def load_option(self, option, section=None):
-        return self.config.load().get(section or self.SECTION, {}).get(option)
+        op = self.config.load().get(section or self.SECTION, {}).get(option)
+        return op or None
