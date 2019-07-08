@@ -1,0 +1,19 @@
+{
+	"description": "This was a paper published this year to search for Quarks",
+	"creators": [{"creatorName": "CERN"}],
+	"publisher": "CERN",
+	"title": "Searching For Squarks",
+	"subjects": [{"subject": "s-quarks"}, {"subject": "CERN"}],
+	"version": "2",
+	"publicationYear": 2018,
+	"resourceType": {
+		"resourceType": "FOO",
+		"resourceTypeGeneral": "Workflow"
+	},
+	"dates": [
+		{
+			"dateType": "Issued",
+			"date": "2018-07-08T16:32:07.436912Z"
+		}
+	]
+}

@@ -32,5 +32,9 @@ class RequiredUploadFields(PilotClientException):
                 '\n {}'.format(self.message, json.dumps(example, indent=4)))
 
 
+class InvalidField(PilotClientException):
+    pass
+
+
 class HTTPSClientException(PilotClientException, GlobusAPIError):
     pass
