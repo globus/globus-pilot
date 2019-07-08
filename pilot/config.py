@@ -50,6 +50,8 @@ class Config():
         for tset in tokens:
             tokens[tset]['expires_at_seconds'] = \
                 int(tokens[tset]['expires_at_seconds'])
+            rt = tokens[tset]['refresh_token']
+            tokens[tset]['refresh_token'] = None if rt == 'None' else rt
         return tokens
 
     def write_tokens(self, tokens):
