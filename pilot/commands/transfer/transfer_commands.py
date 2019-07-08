@@ -7,7 +7,7 @@ import datetime
 import pilot
 from pilot.search import (scrape_metadata, update_metadata, gen_gmeta,
                           files_modified)
-from pilot.exc import RequiredUploadFields, HTTPSClientException
+from pilot.exc import RequiredUploadFields, HTTPSClientException, InvalidField
 from pilot import transfer_log
 from jsonschema.exceptions import ValidationError
 
@@ -85,7 +85,7 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
                                        user_metadata)
         subject = pc.get_subject_url(short_path)
         gmeta = gen_gmeta(subject, [pc.get_group()], new_metadata)
-    except (RequiredUploadFields, ValidationError) as e:
+    except (RequiredUploadFields, ValidationError, InvalidField) as e:
         click.secho('Error Validating Metadata: {}'.format(e), fg='red')
         return 1
 

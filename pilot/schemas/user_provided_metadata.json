@@ -10,8 +10,26 @@
         "creators": {
             "$ref": "dc.json#/properties/dc/properties/creators"
         },
+        "publisher": {
+            "$ref": "dc.json#/properties/dc/properties/publisher"
+        },
+        "subjects": {
+            "$ref": "dc.json#/properties/dc/properties/subjects"
+        },
+        "dates": {
+            "$ref": "dc.json#/properties/dc/properties/dates"
+        },
+        "resourceType": {
+            "$ref": "dc.json#/properties/dc/properties/resourceType"
+        },
+        "version": {
+            "$ref": "dc.json#/properties/dc/properties/version"
+        },
         "description": {
             "$ref": "dc.json#/properties/dc/properties/descriptions/items/properties/description"
+        },
+        "descriptions": {
+            "$ref": "dc.json#/properties/dc/properties/descriptions"
         },
         "formats": {
             "$ref": "dc.json#/properties/dc/properties/formats"

@@ -10,7 +10,7 @@ import logging
 
 from pilot.validation import validate_dataset, validate_user_provided_metadata
 from pilot.analysis import analyze_dataframe
-from pilot.exc import RequiredUploadFields
+from pilot.exc import RequiredUploadFields, InvalidField
 
 DEFAULT_HASH_ALGORITHMS = ['sha256', 'md5']
 FOREIGN_KEYS_FILE = os.path.join(os.path.dirname(__file__),
@@ -42,7 +42,9 @@ GROUP_URN_PREFIX = 'urn:globus:groups:id:{}'
 
 # Used for user provided metadata. These fields will be stripped out and used
 # in the datacite fields.
-DATACITE_FIELDS = ['title', 'description', 'creators', 'mime_type']
+DATACITE_FIELDS = ['title', 'description', 'creators', 'mime_type',
+                   'publisher', 'subjects', 'publicationYear', 'resourceType',
+                   'dates', 'version', 'descriptions']
 # Used for user provided metadata. Fields here will be copied into the rfm,
 # even if also provided in other areas.
 REMOTE_FILE_MANIFEST_FIELDS = ['mime_type']
@@ -246,11 +248,22 @@ def gen_gmeta(subject, visible_to, content):
 
 
 def set_dc_field(metadata, field_name, value):
+    """In an effort to make things more user friendly, the user is allowed to
+    set some dc fields incorrectly. For example in "formats", even though dc
+    specifies a list, the user can use a string instead and it will be
+    automatically corrected."""
     dc_fields = {
         'title': gen_dc_title,
         'description': gen_dc_description,
+        'descriptions': gen_dc_description,
         'creators': gen_dc_creators,
         'mime_type': gen_dc_formats,
+        'publisher': gen_dc_publisher,
+        'subjects': gen_dc_subjects,
+        'publicationYear': gen_dc_publication_year,
+        'resourceType': gen_dc_resource_type,
+        'dates': gen_dc_dates,
+        'version': gen_dc_version,
     }
     if field_name not in dc_fields.keys():
         raise NotImplementedError('Cannot resolve field {}'.format(field_name))
@@ -262,12 +275,43 @@ def gen_dc_title(metadata, title):
 
 
 def gen_dc_description(metadata, description):
-    metadata['dc']['descriptions'] = [{'description': description,
-                                       'descriptionType': 'Other'}]
+    if isinstance(description, str):
+        metadata['dc']['descriptions'] = [{'description': description,
+                                           'descriptionType': 'Other'}]
+    else:
+        metadata['dc']['descriptions'] = description
 
 
 def gen_dc_creators(metadata, creators):
     metadata['dc']['creators'] = creators
+
+
+def gen_dc_publisher(metadata, publisher):
+    metadata['dc']['publisher'] = publisher
+
+
+def gen_dc_subjects(metadata, subjects):
+    metadata['dc']['subjects'] = subjects
+
+
+def gen_dc_publication_year(metadata, pub_year):
+    metadata['dc']['publicationYear'] = pub_year
+
+
+def gen_dc_resource_type(metadata, resource_type):
+    metadata['dc']['resourceType'] = resource_type
+
+
+def gen_dc_dates(metadata, dates):
+    metadata['dc']['dates'] = dates
+
+
+def gen_dc_version(metadata, version):
+    try:
+        int(version)
+    except ValueError:
+        raise InvalidField('"version" must be a number') from None
+    metadata['dc']['version'] = str(version)
 
 
 def gen_dc_formats(metadata, formats):
