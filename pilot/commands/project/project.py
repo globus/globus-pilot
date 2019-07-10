@@ -10,7 +10,7 @@ from pilot.commands import input_validation, search
 
 log = logging.getLogger(__name__)
 
-ADD_PROJECT_QUERIES = {
+PROJECT_QUERIES = {
     'title': {
         'prompt': 'Pick a title for your new project',
         'default': 'My New Project',
@@ -34,7 +34,8 @@ ADD_PROJECT_QUERIES = {
         'validation': [],
     },
     'group': {
-        'prompt': 'Set your Globus Group',
+        'prompt': '',
+        'groups': [],
         'default': 'NCI Users',
         'help': 'The group determines who has read/write access to files, '
                 'and who can view records in search',
@@ -102,43 +103,19 @@ def set_command(project):
 def add():
     pc = commands.get_pilot_client()
     order = ['title', 'short_name', 'description', 'group']
-    queries = {
-        'title': {
-            'prompt': 'Pick a title for your new project',
-            'default': 'My New Project',
-            'help': 'Pick something short and easy to remember',
-            'validation': [input_validation.validate_project_title_unique],
-        },
-        'short_name': {
-            'prompt': 'Pick a short name',
-            'default': lambda v, q: slugify(v.answers['title']),
-            'help': 'The short name will be used in URLs and will be the name '
-                    'users select this new project',
-            'validation': [input_validation.validate_no_spaces,
-                           input_validation.validate_project_slug_unique,
-                           input_validation.validate_slug_to_path_unique],
-        },
-        'description': {
-            'prompt': 'Describe your new project',
-            'default': 'This project is intended to do X for scientists',
-            'help': 'A nice description can help people understand what your '
-                    'project does, at a glance',
-            'validation': [],
-        },
-        'group': {
-            'prompt': 'Set your Globus Group',
-            'default': 'NCI Users',
-            'help': 'The group determines who has read/write access to files, '
-                    'and who can view records in search',
-            'validation': [input_validation.validate_project_group],
-        },
-    }
-    iv = input_validation.InputValidator(queries=queries, order=order)
+
+    PROJECT_QUERIES['group']['groups'] = (list(pc.project.load_groups()) +
+                                          ['public'])
+    PROJECT_QUERIES['group']['prompt'] = (
+        'Available Groups: {}\nSet your group'
+        ''.format(', '.join(PROJECT_QUERIES['group']['groups']))
+    )
+    iv = input_validation.InputValidator(queries=PROJECT_QUERIES, order=order)
     project = iv.ask_all()
     project.update({'search_index': pc.project.DEFAULT_SEARCH_INDEX,
                     'resource_server': pc.project.DEFAULT_RESOURCE_SERVER})
     project['endpoint'] = pc.project.PROJECTS_ENDPOINT
-    project['group'] = pc.project.GROUPS.get(project['group'], 'public')
+    project['group'] = pc.project.load_groups().get(project['group'], 'public')
     short_name = project.pop('short_name')
     project['base_path'] = os.path.join(
         pc.project.PROJECTS_PATH,
@@ -240,8 +217,8 @@ def edit(project=None):
                    'project.')
         return
     info = pc.project.get_info(project)
-    queries = {'title': ADD_PROJECT_QUERIES['title'].copy(),
-               'description': ADD_PROJECT_QUERIES['description'].copy()}
+    queries = {'title': PROJECT_QUERIES['title'].copy(),
+               'description': PROJECT_QUERIES['description'].copy()}
     for key in queries:
         queries[key]['default'] = info[key]
     iv = input_validation.InputValidator(queries=queries,

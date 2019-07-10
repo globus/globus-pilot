@@ -100,11 +100,10 @@ def validate_project_endpoint(v, ep):
 
 
 def validate_project_group(v, group):
-    pc = commands.get_pilot_client()
-    valid_choices = list(pc.project.GROUPS.keys()) + ['public']
-    if group not in valid_choices:
+    groups = v.queries['group']['groups']
+    if group not in groups:
         raise exc.PilotValidator('Group must be one of: '
-                                 '{}'.format(', '.join(valid_choices)))
+                                 '{}'.format(', '.join(groups)))
 
 
 def validate_project_path_unique(v, path):
