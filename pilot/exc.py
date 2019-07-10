@@ -36,5 +36,12 @@ class InvalidField(PilotClientException):
     pass
 
 
+class AnalysisException(PilotClientException):
+    def __init__(self, message, exc):
+        super().__init__(message)
+        self.message = message
+        self.original_exc_info = exc
+
+
 class HTTPSClientException(PilotClientException, GlobusAPIError):
     pass
