@@ -168,7 +168,12 @@ def info(project=None):
         click.echo('Use "pilot project info <project>" to list info about a '
                    'project.')
         return
-    info = pc.project.get_info(project)
+    try:
+        info = pc.project.get_info(project)
+    except exc.PilotInvalidProject as pip:
+        click.secho(str(pip), fg='red')
+        return
+
     dinfo = [
         (info['title'], ''),
         ('Endpoint', pc.project.lookup_endpoint(info['endpoint'])),
