@@ -5,7 +5,7 @@ log = logging.getLogger(__name__)
 
 ANALYZE_MAP = {
     'text/tab-separated-values': tsv.analyze_tsv,
-    'text/comma-separated-values': tsv.analyze_csv,
+    'text/csv': tsv.analyze_csv,
 }
 
 
