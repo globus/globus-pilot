@@ -5,9 +5,11 @@ import click
 import globus_sdk
 import datetime
 import pilot
+import traceback
 from pilot.search import (scrape_metadata, update_metadata, gen_gmeta,
                           files_modified)
-from pilot.exc import RequiredUploadFields, HTTPSClientException, InvalidField
+from pilot.exc import (RequiredUploadFields, HTTPSClientException,
+                       InvalidField, AnalysisException)
 from pilot import transfer_log
 from jsonschema.exceptions import ValidationError
 
@@ -77,8 +79,17 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
     prev_metadata = pc.get_search_entry(short_path)
 
     url = pc.get_globus_http_url(short_path)
-    new_metadata = scrape_metadata(dataframe, url, pc,
-                                   skip_analysis=no_analyze)
+    try:
+        new_metadata = scrape_metadata(dataframe, url, pc,
+                                       skip_analysis=no_analyze)
+    except AnalysisException as ae:
+        click.secho('Error analyzing {}, skipping...'.format(dataframe),
+                    fg='yellow')
+        if verbose:
+            traceback.print_exception(*ae.original_exc_info)
+        else:
+            click.secho('(Use --verbose to see full error)', fg='yellow')
+        new_metadata = scrape_metadata(dataframe, url, pc, skip_analysis=True)
 
     try:
         new_metadata = update_metadata(new_metadata, prev_metadata,
