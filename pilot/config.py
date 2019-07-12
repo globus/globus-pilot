@@ -2,6 +2,7 @@ import os
 import logging
 from configobj import ConfigObj
 from fair_research_login import ConfigParserTokenStorage
+from fair_research_login import version as frl_version
 
 from pilot.version import __version__
 
@@ -55,10 +56,14 @@ class Config():
                 int(tokens[tset]['expires_at_seconds'])
             rt = tokens[tset]['refresh_token']
             tokens[tset]['refresh_token'] = None if rt == 'None' else rt
-        return tokens
+        if frl_version.__version__ < '0.2.0.dev':
+            return tokens
+        return [tokens] if tokens else []
 
     def write_tokens(self, tokens):
         cfg = self.load()
+        if isinstance(tokens, list):
+            tokens = tokens[0]
         cfg['tokens'] = tokens
         cfg.write()
 
