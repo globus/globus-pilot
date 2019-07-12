@@ -11,14 +11,12 @@ class Project(config.ConfigSection):
 
     SECTION = 'project'
     DEFAULT_PROJECT = 'ncipilot1'
-    PROJECTS_MANIFEST = 'pilot1-tools-project-manifest.json'
+    PROJECTS_MANIFEST = 'pilot1-tools-project-manifest-v2.json'
     PROJECTS_ENDPOINT = 'ebf55996-33bf-11e9-9fa4-0a06afd4a22e'
     PROJECTS_PATH = '/projects'
     # Cache will go stale in a day
     CACHE_TIMEOUT_SECONDS = 60 * 60 * 24
     ENDPOINTS = {'petrel#ncipilot': 'ebf55996-33bf-11e9-9fa4-0a06afd4a22e'}
-    GROUPS = {'NCI Users': 'd99b3400-33e7-11e9-8857-0af4690c7c7e',
-              'NCI Admins': '9b54f828-144f-11e9-bf08-0edc9bdd56a6s'}
     PROJECTS_MANIFEST_INDEX = '889729e8-d101-417d-9817-fa9d964fdbc9'
     DEFAULT_SEARCH_INDEX = '889729e8-d101-417d-9817-fa9d964fdbc9'
     DEFAULT_RESOURCE_SERVER = 'petrel_https_server'
@@ -35,16 +33,17 @@ class Project(config.ConfigSection):
         sub = self.get_manifest_subject()
         index = index or self.PROJECTS_MANIFEST_INDEX
         sc = self.client.get_search_client()
-        new_projects = sc.get_subject(index, sub).data['content'][0]
+        manifest = sc.get_subject(index, sub).data['content'][0]
         if dry_run is False:
             cfg = self.config.load()
-            cfg['projects'] = new_projects
+            cfg['projects'] = manifest['projects']
+            cfg['groups'] = manifest['groups']
             cfg.write()
-        return new_projects
+        return manifest
 
     def update_with_diff(self, index=None, dry_run=False):
         old = self.load_all()
-        new = self.update(index=index, dry_run=dry_run)
+        new = self.update(index=index, dry_run=dry_run)['projects']
         oldk, newk = set(old.keys()), set(new.keys())
         diff = dict()
         diff['removed'] = {k: old[k] for k in oldk - newk}
@@ -74,11 +73,18 @@ class Project(config.ConfigSection):
     def push(self, index=None):
         sub = self.get_manifest_subject()
         index = index or self.PROJECTS_MANIFEST_INDEX
-        gmeta = gen_gmeta(sub, ['public'], dict(self.load_all()))
+        manifest = {
+            'projects': dict(self.load_all()),
+            'groups': dict(self.load_groups()),
+        }
+        gmeta = gen_gmeta(sub, ['public'], manifest)
         self.client.ingest_entry(gmeta, index=index)
 
     def load_all(self):
         return self.config.load().get('projects', {})
+
+    def load_groups(self):
+        return dict(self.config.load().get('groups', {}))
 
     def get_info(self, project=None):
         if project is None:
