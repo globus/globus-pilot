@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 
 PILOT_COMMAND="pilot"
-TEST_FILES_BASE="https://raw.githubusercontent.com/NickolausDS/pilot1-tools/branch-test/docs/scripts/supporting_files"
 PILOT_TUTORIAL='pilot-tutorial'
 FILES_DIR='supporting_files'
-TEST_DIRECTORY='pilot-tutorial-staging-dir'
 
 function PILOT {
   echo "------------- pilot $@ --------------"
@@ -35,6 +33,7 @@ PILOT project
 CREATE_NEW_PROJECT=false
 GET_PROJECT=$($PILOT_COMMAND project | grep $PILOT_TUTORIAL | cut -c 3-)
 if [ "$GET_PROJECT" == "$PILOT_TUTORIAL" ]; then
+  PILOT project set "$PILOT_TUTORIAL"
   PILOT list
   CONTENT=$($PILOT_COMMAND list | tail -n +2 | wc -l | awk '{print $1}')
   echo "Found $CONTENT records in project."
