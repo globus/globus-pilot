@@ -1,0 +1,20 @@
+{
+	"description":
+	  "This is a handy resource for understanding skewt plots",
+	"creators": [{"creatorName": "Roland Stull"}],
+	"publisher": "Roland Stull",
+	"title": "Practical Meteorology - Atmospheric Stability",
+	"subjects": [{"subject": "skewt"}, {"subject": "meteorology"}],
+	"publicationYear": "2017",
+	"resourceType": {
+		"resourceType": "Text",
+		"resourceTypeGeneral": "Text"
+	},
+	"dates": [
+		{
+			"dateType": "Created",
+			"date": "2017-01-01T00:00:00.000000Z"
+		}
+	],
+	"data_type": "Meteorology"
+}

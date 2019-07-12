@@ -55,16 +55,21 @@ You will be brought through an interactive prompt similar to the one below:
 
 .. code-block:: bash
 
-   Pick a title for your new project (My New Project)>
-   Pick a short name (my-new-project)>
-   Describe your new project (This project is intended to do X for scientists)>
-   Set your Globus Group (NCI Users)>
-   Summary:
-   title               My New Project
-   short_name          my-new-project
-   description         This project is intended to do X for scientists
-   group               NCI Users
-   Continue with these values? (y/n)
+  4 items to set. Type "help" for more information or "q" to quit.
+  Pick a title for your new project (My New Project)> Pilot Tutorial
+  Pick a short name (pilot-tutorial)>
+  Describe your new project (This project is intended to do X for scientists)> Guide to using the pilot CLI for managing and accessing data.
+  Available Groups: NCI Admins, NCI Users, Public
+  Set your group (NCI Users)> Public
+  Summary:
+  title               Pilot Tutorial
+  short_name          pilot-tutorial
+  description         Guide to using the pilot CLI for managing and accessing data.
+  group               Public
+  Continue with these values? (y/n)y
+  Updating global project list... Success
+  Switched to project pilot-tutorial
+  Your new project "Pilot Tutorial" has been added! Users will be notified within 24 hours next time they use this tool.
 
 The interactive prompt will try to choose sensible defaults. If your answer
 isn't valid (such as the project name already exists), the prompt will ask you
@@ -83,7 +88,7 @@ You can make directories within your project with the ``mkdir`` command.
 
 .. code-block:: bash
 
-    (pilot1-env) $ pilot mkdir myfolder
+    (pilot1-env) $ pilot mkdir tabular
 
 
 Uploading Datasets to a Project
@@ -107,12 +112,12 @@ We can upload ``example.tsv`` to our project with:
 
    (pilot1-env) $ pilot upload example.tsv /
 
-If you want to place your file inside a folder, such as after running ``pilot mkdir myfolder``,
+If you want to place your file inside a folder, such as after running ``pilot mkdir tabular``,
 you can provide the relative path instead:
 
 .. code-block:: bash
 
-   (pilot1-env) $ pilot upload example.tsv myfolder
+   (pilot1-env) $ pilot upload example.tsv tabular
 
 
 The above command will upload a file to the root directory of your project.
@@ -151,4 +156,4 @@ Delete the above example file ``example.tsv`` with the following:
 
 .. code-block:: bash
 
-   (pilot1-env) $ pilot delete myfolder/example.tsv
+   (pilot1-env) $ pilot delete tabular/example.tsv
