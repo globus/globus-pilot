@@ -104,8 +104,7 @@ def add():
     pc = commands.get_pilot_client()
     order = ['title', 'short_name', 'description', 'group']
 
-    PROJECT_QUERIES['group']['groups'] = (list(pc.project.load_groups()) +
-                                          ['public'])
+    PROJECT_QUERIES['group']['groups'] = list(pc.project.load_groups())
     PROJECT_QUERIES['group']['prompt'] = (
         'Available Groups: {}\nSet your group'
         ''.format(', '.join(PROJECT_QUERIES['group']['groups']))
@@ -157,7 +156,7 @@ def info(project=None):
     dinfo = [
         (info['title'], ''),
         ('Endpoint', pc.project.lookup_endpoint(info['endpoint'])),
-        ('Group', pc.project.lookup_endpoint(info['group'])),
+        ('Group', pc.project.lookup_group(info['group'])),
         ('Base Path', info['base_path']),
     ]
 

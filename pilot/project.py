@@ -118,7 +118,7 @@ class Project(config.ConfigSection):
         return reverse_lookup.get(endpoint)
 
     def lookup_group(self, group):
-        reverse_lookup = {v: k for k, v in self.GROUPS.items()}
+        reverse_lookup = {v: k for k, v in self.load_groups().items()}
         return reverse_lookup.get(group)
 
     @property
