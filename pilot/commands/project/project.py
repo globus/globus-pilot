@@ -110,6 +110,9 @@ def add():
         'Available Groups: {}\nSet your group'
         ''.format(', '.join(PROJECT_QUERIES['group']['groups']))
     )
+    titles = [p['title'] for p in pc.project.load_all().values()]
+    PROJECT_QUERIES['title']['current'] = titles
+
     iv = input_validation.InputValidator(queries=PROJECT_QUERIES, order=order)
     project = iv.ask_all()
     project.update({'search_index': pc.project.DEFAULT_SEARCH_INDEX,
@@ -224,6 +227,10 @@ def edit(project=None):
     info = pc.project.get_info(project)
     queries = {'title': PROJECT_QUERIES['title'].copy(),
                'description': PROJECT_QUERIES['description'].copy()}
+    titles = [p['title'] for p in pc.project.load_all().values()
+              if p['title'] != info['title']]
+    queries['title']['current'] = titles
+
     for key in queries:
         queries[key]['default'] = info[key]
     iv = input_validation.InputValidator(queries=queries,
