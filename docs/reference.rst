@@ -7,6 +7,40 @@ pilot1-tools Reference
 Metadata
 --------
 
+Datacite Metadata
+~~~~~~~~~~~~~~~~~
+
+Here is a list of supported Datacite fields you can modify for your file.
+
+.. code-block:: json
+
+    {
+      "description":
+        "This is tabular skewt data showing air above Chicago on July 12th, from ground level to 100,000 feet.",
+      "creators": [{"creatorName": "NOAA"}],
+      "publisher": "NOAA",
+      "title": "Raw tabular data for skewt plot of air above Chicago",
+      "subjects": [{"subject": "skewt"}, {"subject": "chicago"}],
+      "publicationYear": "2019",
+      "resourceType": {
+        "resourceType": "Dataset",
+        "resourceTypeGeneral": "Dataset"
+      }
+    }
+
+Example my_metadata.json:
+
+.. code-block:: json
+
+    {
+        "description": "This is tabular data for a skewt plot.",
+        "creators": [{"creatorName": "NOAA"}]
+    }
+
+``pilot upload -j my_metadata.json myfile.csv /``
+
+This will upload myfile.csv with a description and custom creator.
+
 
 Project Metadata
 ~~~~~~~~~~~~~~~~

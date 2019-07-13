@@ -61,8 +61,7 @@ def validate_no_spaces(v, string):
 
 
 def validate_project_title_unique(v, title):
-    pc = commands.get_pilot_client()
-    titles = [p['title'] for p in pc.project.load_all().values()]
+    titles = v.queries['title']['current']
     if title in titles:
         raise exc.PilotValidator('Title must be unique from '
                                  f'{", ".join(titles)}')

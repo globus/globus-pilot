@@ -235,7 +235,7 @@ but you can check any time with the following:
 
    (pilot1-env) $ pilot project update
    Added:
-      > monty-python-discussions
+      > new-project
 
 Fetch Info on a Project
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -259,8 +259,8 @@ You can also query other projects:
     (pilot1-env) $ pilot project info pilot-tutorial
     Pilot Tutorial
     Endpoint                 petrel#ncipilot
-    Group                    public
-    Base Path                /projects/pilot_tutorial
+    Group                    Public
+    Base Path                /projects/pilot-tutorial
 
     Guide to using the pilot CLI for managing and accessing data.
 
@@ -304,11 +304,14 @@ Use the list command to see all of the datasets for this project:
 
    (pilot1-env) $ pilot list
    Title                Data       Dataframe Rows   Column Size   Path
-   example.tsv                               95     2      674    myfolder/example.tsv
+   Raw tabular data for Meteorolog List      61     6      2 k    tabular/chicago_skewt.csv
+   Raw tabular data for Meteorolog List      61     6      2 k    tabular/chicago_skewt.tsv
+   Image plot of air ab Meteorolog                         511 k  chicago_skewt.png
+   Practical Meteorolog Meteorolog                         1 M    practical_meteorology.pdf
 
 This will list high level general info about datasets in this project, in addition to
 a **path** we can use to refer to a specific dataset. For this example, we would refer
-to the dataset "example.tsv" above using ``myfolder/example.tsv``
+to the dataset "chicago_skewt.csv" above using ``tabular/chicago_skewt.csv``
 
 
 Describing Datasets
@@ -317,49 +320,52 @@ Describing Datasets
 Use ``pilot describe <dataset>`` to get detailed info about a dataset.
 
 In the ``pilot list`` example above, we saw there was one record with the path
-"myfolder/example.tsv". Running the following command gives us the following
+"tabular/chicago_skewt.csv". Running the following command gives us the following
 output:
 
 .. code-block:: bash
 
-   (pilot1-env) $ pilot describe myfolder/example.tsv
-   Title                example.tsv
-   Authors              Curie, Marie
-   Publisher            University of Paris
-   Subjects             radium
-                        physics
-   Dates                Created:  Thursday, Jun 27, 1910
-   Data
-   Dataframe
-   Rows                 95
-   Columns              2
-   Formats              text/tab-separated-values
-   Version              1
-   Size                 674
-   Description
+  (pilot1-env) $ pilot describe tabular/chicago_skewt.csv
+  Title                Raw tabular data for skewt plot of air above Chicago
+  Authors              NOAA
+  Publisher            NOAA
+  Subjects             skewt
+                       chicago
+  Dates                Created:  Thursday, Jul 12, 2018
+  Data                 Meteorology
+  Dataframe            List
+  Rows                 61
+  Columns              6
+  Formats              text/csv
+  Version              1
+  Size                 2 k
+  Description          This is tabular skewt data showing air above Chicago on July 12th, from ground level to 100,000 feet.
 
 
-   Column Name          Type    Count  Freq Top         Unique Min    Max    Mean   Std    25-PCTL 50-PCTL 75-PCTL
-   Numbers              float64 95                             5.0    99.0   52.0   27.568 28.5    52.0    75.5
-   Title                string  95     50   baz         3
+  Column Name          Type    Count  Freq Top         Unique Min    Max    Mean   Std    25-PCTL 50-PCTL 75-PCTL
+  altitude_ft          float64 61                             725.0  99150. 34291. 26538. 10328.0 31644.0 53031.0
+  pressure_mb          float64 61                             12.0   989.0  406.55 333.61 108.0   300.0   702.0
+  t/td                 string  61     2    -64/-72.5   60
+  wind_dir             float64 61                             45.0   350.0  259.11 87.789 272.0   287.0   313.0
+  wind_spd_kts         float64 61                             0.0    37.0   18.704 11.314 7.0     20.0    28.0
+  time                 float64 61                             1900.0 1900.0 1900.0 0.0    1900.0  1900.0  1900.0
 
-   Other Data
-   Subject              globus://ebf55996-33bf-11e9-9fa4-0a06afd4a22e/projects/pilot_tutorial_5/simple.tsv
-   Portal               https://petreldata.net/nci-pilot1/detail/globus%253A%252F%252Febf55996-33bf-11e9-9fa4-0a06afd4a22e%252Fprojects%252Fpilot_tutorial_5%252Fsimple.tsv
-
+  Other Data
+  Subject              globus://ebf55996-33bf-11e9-9fa4-0a06afd4a22e/projects/pilot-tutorial/tabular/chicago_skewt.csv
+  Portal               https://petreldata.net/nci-pilot1/detail/globus%253A%252F%252Febf55996-33bf-11e9-9fa4-0a06afd4a22e%252Fprojects%252Fpilot-tutorial%252Ftabular%252Fchicago_skewt.csv
 
 
 Downloading Datasets
 ^^^^^^^^^^^^^^^^^^^^
 
 Use ``pilot download <dataset>`` to download a dataset. Using the example above, where
-"myfolder/example.tsv" is a dataset we discovered from the ``pilot list`` command:
+"tabular/chicago_skewt.csv" is a dataset we discovered from the ``pilot list`` command:
 
 
 .. code-block:: bash
 
-   pilot describe myfolder/example.tsv
-   Saved example.tsv
+   pilot describe tabular/chicago_skewt.csv
+   Saved chicago_skewt.csv
 
 
 Checking Status of Transfers
@@ -370,4 +376,4 @@ with the ``pilot status`` command.
 
 (pilot1-env) $ pilot status
 ID  Dataframe                     Status    Start Time        Task ID
-0   /simple.tsv                   SUCCEEDED 2019-07-01 09:04  da1ffbdc-9c19-11e9-8219-02b7a92d8e58
+0   /chicago_skewt.csv                   SUCCEEDED 2019-07-01 09:04  da1ffbdc-9c19-11e9-8219-02b7a92d8e58
