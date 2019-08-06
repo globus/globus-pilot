@@ -157,3 +157,29 @@ class HTTPFileClient(BaseClient):
                 response.status_code)
         )
         raise self.error_class(response)
+
+
+class NexusClient(BaseClient):
+    """This is a custom nexus client for fetching groups. It is not available
+    outside of this client."""
+    allowed_authorizer_types = (AccessTokenAuthorizer, RefreshTokenAuthorizer)
+    error_class = HTTPSClientException
+    default_response_class = GlobusResponse
+    file_content_response_class = FileContentResponse
+
+    def __init__(self, authorizer=None, base_url='', **kwargs):
+        base_url = base_url or 'https://nexus.api.globusonline.org/groups/'
+        super().__init__(
+            self, "custom_pilot_nexus_client", base_url=base_url,
+            authorizer=authorizer, **kwargs
+        )
+
+    def get_subgroups(self, group, **params):
+        """
+        Get a list of Globus Sub-Groups for a given group. Max depth is by
+        default 100.
+        """
+        log.debug('Nexus GET for subgroups in "{}"'.format(group))
+        request_params = {'root': group, 'depth': 100}
+        request_params.update(params)
+        return self.get('list', params=request_params)

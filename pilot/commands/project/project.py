@@ -73,10 +73,13 @@ def project_command(ctx):
 
 @project_command.command(help='Update stored list of projects.')
 @click.option('--dry-run', is_flag=True, default=False)
-def update(dry_run):
+@click.option('--update-groups-cache/--no-update-groups-cache', default=True,
+              help='Fetch the latest subgroups from Globus')
+def update(dry_run, update_groups_cache):
     pc = commands.get_pilot_client()
     try:
-        output = pc.project.update_with_diff(dry_run=dry_run)
+        output = pc.project.update_with_diff(
+            dry_run=dry_run, update_groups_cache=update_groups_cache)
         if not any(output.values()):
             click.secho('Project is up to date', fg='green')
             return

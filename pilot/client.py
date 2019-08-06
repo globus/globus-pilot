@@ -20,6 +20,7 @@ class PilotClient(NativeClient):
         'urn:globus:auth:scope:transfer.api.globus.org:all',
         'https://auth.globus.org/scopes/'
         '56ceac29-e98a-440a-a594-b41e7a084b62/all',
+        'urn:globus:auth:scope:nexus.api.globus.org:groups',
     ]
     CLIENT_ID = 'e4d82438-00df-4dbd-ab90-b6258933c335'
     APP_NAME = 'NCI Pilot 1 Dataframe Manager'
@@ -61,6 +62,10 @@ class PilotClient(NativeClient):
     def get_transfer_client(self):
         authorizer = self.get_authorizers()['transfer.api.globus.org']
         return TransferClient(authorizer=authorizer)
+
+    def get_nexus_client(self):
+        authorizer = self.get_authorizers()['nexus.api.globus.org']
+        return globus_clients.NexusClient(authorizer=authorizer)
 
     def get_http_client(self, project):
         # Fetch the base url for the globus http endpoint
