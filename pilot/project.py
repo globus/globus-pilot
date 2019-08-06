@@ -13,6 +13,7 @@ class Project(config.ConfigSection):
     DEFAULT_PROJECT = 'ncipilot1'
     PROJECTS_MANIFEST = 'pilot1-tools-project-manifest-v2.json'
     PROJECTS_ENDPOINT = 'ebf55996-33bf-11e9-9fa4-0a06afd4a22e'
+    PROJECTS_GROUP = '679d11e1-5c7d-11e9-8ab8-0e4a32f5e3b8'
     PROJECTS_PATH = '/projects'
     # Cache will go stale in a day
     CACHE_TIMEOUT_SECONDS = 60 * 60 * 24
@@ -28,12 +29,22 @@ class Project(config.ConfigSection):
     def get_manifest_subject(self):
         return 'globus://{}'.format(self.PROJECTS_MANIFEST)
 
-    def update(self, index=None, dry_run=False):
+    def update(self, index=None, dry_run=False, update_groups_cache=True):
+        """Update the local list of projects and groups."""
         self.reset_cache_timer()
         sub = self.get_manifest_subject()
         index = index or self.PROJECTS_MANIFEST_INDEX
         sc = self.client.get_search_client()
         manifest = sc.get_subject(index, sub).data['content'][0]
+        if update_groups_cache is True:
+            log.debug('Updating groups...')
+            subgroups = self.fetch_subgroups(group=self.PROJECTS_GROUP)
+            groups = {sg['name']: sg['id'] for sg in subgroups}
+            if groups:
+                manifest['groups'] = groups
+            else:
+                log.warning('No groups returned, user may not have access to '
+                            'subgroups for this group.')
         if dry_run is False:
             cfg = self.config.load()
             cfg['projects'] = manifest['projects']
@@ -41,9 +52,17 @@ class Project(config.ConfigSection):
             cfg.write()
         return manifest
 
-    def update_with_diff(self, index=None, dry_run=False):
-        old = self.load_all()
-        new = self.update(index=index, dry_run=dry_run)['projects']
+    def update_with_diff(self, index=None, dry_run=False,
+                         update_groups_cache=True):
+        new = self.update(index=index, dry_run=dry_run,
+                           update_groups_cache=update_groups_cache)
+        return {
+            'projects': self.get_diff(self.load_all(), new['projects']),
+            'groups': self.get_diff(self.load_groups(), new['groups'])
+        }
+
+    def get_diff(self, old, new):
+        """Fetch the differences between two dictionaries"""
         oldk, newk = set(old.keys()), set(new.keys())
         diff = dict()
         diff['removed'] = {k: old[k] for k in oldk - newk}
@@ -51,8 +70,8 @@ class Project(config.ConfigSection):
         diff['changed'] = {}
         for k in oldk.intersection(newk):
             if old[k] != new[k]:
-                changed = [pk for pk in set(old[k]) - set(new[k])
-                           if old[k][pk] != new[k][pk]]
+                changed = [pk for pk in set(old[k]).union(set(new[k]))
+                           if old[k].get(pk) != new[k].get(pk)]
                 changed_str = [f'{old[k][c]} --> {new[k][c]}'
                                for c in changed]
                 diff['changed'][k] = dict(zip(changed, changed_str))
@@ -85,6 +104,11 @@ class Project(config.ConfigSection):
 
     def load_groups(self):
         return dict(self.config.load().get('groups', {}))
+
+    def fetch_subgroups(self, group=None):
+        nc = self.client.get_nexus_client()
+        resp = nc.get_subgroups(group or self.PROJECTS_GROUP)
+        return resp.data.json().get('children')
 
     def get_info(self, project=None):
         if project is None:
