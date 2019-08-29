@@ -153,7 +153,7 @@ class PilotClient(NativeClient):
         index_slug_map = {
             '889729e8-d101-417d-9817-fa9d964fdbc9': 'nci-pilot1',
             'e0849c9b-b709-46f3-be21-80893fc1db84': 'nci-pilot1-test',
-            '6871e83e-866b-41bc-8430-e3cf83b43bdc': 'aps_beamline_data',
+            '6871e83e-866b-41bc-8430-e3cf83b43bdc': 'xpcs',
         }
         index_slug = index_slug_map.get(index)
         if path:
