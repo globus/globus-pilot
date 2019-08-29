@@ -358,10 +358,10 @@ def gen_remote_file_manifest(filepath, url, pilot_client, metadata={},
     rfm.update({
         'filename': os.path.basename(filepath),
         'url': url,
-        'length': os.stat(filepath).st_size,
         'field_metadata': metadata,
     })
-
+    if os.path.exists(filepath):
+        rfm['length'] = os.stat(filepath).st_size
     return [rfm]
 
 
