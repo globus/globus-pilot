@@ -4,8 +4,10 @@ import globus_sdk
 import urllib
 import logging
 from globus_sdk import AuthClient, SearchClient, TransferClient
-from fair_research_login import NativeClient, LoadError
-from pilot import project, profile, config, globus_clients, exc, logging_cfg
+from fair_research_login import NativeClient, LoadError, ScopesMismatch
+from pilot import (
+    project, profile, config, globus_clients, exc, logging_cfg, context
+)
 
 logging_cfg.setup_logging()
 log = logging.getLogger(__name__)
@@ -18,20 +20,20 @@ class PilotClient(NativeClient):
         'openid',
         'urn:globus:auth:scope:search.api.globus.org:all',
         'urn:globus:auth:scope:transfer.api.globus.org:all',
-        'https://auth.globus.org/scopes/'
-        '56ceac29-e98a-440a-a594-b41e7a084b62/all',
-        'urn:globus:auth:scope:nexus.api.globus.org:groups',
     ]
-    CLIENT_ID = 'e4d82438-00df-4dbd-ab90-b6258933c335'
-    APP_NAME = 'NCI Pilot 1 Dataframe Manager'
+    GROUPS_SCOPE = 'urn:globus:auth:scope:nexus.api.globus.org:groups'
 
     def __init__(self):
         self.config = config.Config()
-        super().__init__(client_id=self.CLIENT_ID,
+        self.context = context.Context(self)
+        default_scopes = self.context.get_value('scopes')
+        default_scopes = default_scopes or self.DEFAULT_SCOPES
+
+        super().__init__(client_id=self.context.get_value('client_id'),
                          token_storage=self.config,
-                         default_scopes=self.DEFAULT_SCOPES,
-                         app_name=self.APP_NAME)
-        self.project = project.Project(self)
+                         default_scopes=default_scopes,
+                         app_name=self.context.get_value('app_name'))
+        self.project = project.Project()
         self.profile = profile.Profile()
 
     def login(self, *args, **kwargs):
@@ -46,7 +48,7 @@ class PilotClient(NativeClient):
 
     def is_logged_in(self):
         try:
-            self.load_tokens()
+            self.load_tokens(requested_scopes=self.context.get_value('scopes'))
             return True
         except LoadError:
             return False
@@ -64,8 +66,12 @@ class PilotClient(NativeClient):
         return TransferClient(authorizer=authorizer)
 
     def get_nexus_client(self):
-        authorizer = self.get_authorizers()['nexus.api.globus.org']
-        return globus_clients.NexusClient(authorizer=authorizer)
+        rs = {'requested_scopes': [self.GROUPS_SCOPE]}
+        try:
+            authorizer = self.get_authorizers_by_scope(**rs)[self.GROUPS_SCOPE]
+            return globus_clients.NexusClient(authorizer=authorizer)
+        except ScopesMismatch:
+            return None
 
     def get_http_client(self, project):
         # Fetch the base url for the globus http endpoint
@@ -147,6 +153,7 @@ class PilotClient(NativeClient):
         index_slug_map = {
             '889729e8-d101-417d-9817-fa9d964fdbc9': 'nci-pilot1',
             'e0849c9b-b709-46f3-be21-80893fc1db84': 'nci-pilot1-test',
+            'e55b4eab-6d04-11e5-ba46-22000b92c6ec': 'aps_beamline_data',
         }
         index_slug = index_slug_map.get(index)
         if path:
@@ -253,11 +260,10 @@ class PilotClient(NativeClient):
         tc = self.get_transfer_client()
         endpoint = self.get_endpoint(project)
         full_path = self.get_path(path, project=project, relative=relative)
-        log.debug(f'Deleting item '
-                  f'{self.project.lookup_endpoint(endpoint)}{full_path}')
+        app_name = self.context.get_value('app_name')
         ddata = globus_sdk.DeleteData(
             tc, endpoint, recursive=recursive, notify_on_succeeded=False,
-            label=f'File Deletion with {self.app_name}')
+            label='File Deletion with {}'.format(app_name))
         ddata.add_item(full_path)
         delete_result = tc.submit_delete(ddata)
         tc.task_wait(delete_result.data['task_id'])

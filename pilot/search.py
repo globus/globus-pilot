@@ -68,7 +68,8 @@ def get_foreign_keys(filename=FOREIGN_KEYS_FILE, pilot_client=None):
     return fkeys
 
 
-def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True):
+def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True,
+                    skip_hashing=False):
     mimetype = mimetypes.guess_type(dataframe)[0]
     dc_formats = []
     rfm_metadata = {}
@@ -122,7 +123,8 @@ def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True):
         'files': gen_remote_file_manifest(dataframe, url, pilot_client,
                                           metadata=rfm_metadata,
                                           mimetype=mimetype,
-                                          skip_analysis=skip_analysis),
+                                          skip_analysis=skip_analysis,
+                                          skip_hashing=skip_hashing),
         'project_metadata': {
             'project-slug': pilot_client.project.current
         },
@@ -323,20 +325,22 @@ def gen_dc_formats(metadata, formats):
 def gen_remote_file_manifest(filepath, url, pilot_client, metadata={},
                              algorithms=DEFAULT_HASH_ALGORITHMS,
                              mimetype=None,
-                             skip_analysis=True):
+                             skip_analysis=True,
+                             skip_hashing=False):
     rfm = metadata.copy()
-    rfm.update({alg: compute_checksum(filepath, getattr(hashlib, alg)())
-                for alg in algorithms})
+    if skip_hashing is False:
+        rfm.update({alg: compute_checksum(filepath, getattr(hashlib, alg)())
+                    for alg in algorithms})
     fkeys = get_foreign_keys(pilot_client)
     metadata = (analyze_dataframe(filepath, mimetype, fkeys)
                 if not skip_analysis else {})
     rfm.update({
         'filename': os.path.basename(filepath),
         'url': url,
-        'length': os.stat(filepath).st_size,
         'field_metadata': metadata,
     })
-
+    if os.path.exists(filepath):
+        rfm['length'] = os.stat(filepath).st_size
     return [rfm]
 
 

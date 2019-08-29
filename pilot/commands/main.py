@@ -7,7 +7,7 @@ from pilot.version import __version__
 from pilot.commands.auth import auth_commands
 from pilot.commands.search import search_commands, delete
 from pilot.commands.transfer import transfer_commands, status_commands
-from pilot.commands.project import project
+from pilot.commands.project import project, context
 
 log = logging.getLogger(__name__)
 
@@ -28,9 +28,9 @@ def cli(ctx):
                         f'{pc.config.CFG_FILENAME} and logging in '
                         f'again.', fg='red')
     if pc.is_logged_in():
-        if pc.project.is_cache_stale():
+        if pc.context.is_cache_stale():
             try:
-                if pc.project.update_with_diff(dry_run=True):
+                if pc.context.update_with_diff(dry_run=True):
                     click.secho('Projects have updated. Use '
                                 '"pilot project update"'
                                 ' to get the newest changes.', fg='yellow')
@@ -64,6 +64,7 @@ cli.add_command(auth_commands.whoami)
 cli.add_command(auth_commands.profile_command)
 
 cli.add_command(project.project_command)
+cli.add_command(context.context_command)
 
 cli.add_command(search_commands.list_command)
 cli.add_command(search_commands.describe)
@@ -72,6 +73,7 @@ cli.add_command(delete.delete_command)
 cli.add_command(transfer_commands.upload)
 cli.add_command(transfer_commands.download)
 cli.add_command(transfer_commands.mkdir)
+cli.add_command(transfer_commands.register)
 cli.add_command(status_commands.status)
 
 cli.add_command(version)

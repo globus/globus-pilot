@@ -36,7 +36,7 @@ PROJECT_QUERIES = {
     'group': {
         'prompt': '',
         'groups': [],
-        'default': 'NCI Users',
+        'default': '',
         'help': 'The group determines who has read/write access to files, '
                 'and who can view records in search',
         'validation': [input_validation.validate_project_group],
@@ -54,7 +54,7 @@ def project_command(ctx):
         return
     invalid_with_pending_update = ['delete', 'add']
     if ctx.invoked_subcommand in invalid_with_pending_update:
-        if any(pc.project.update_with_diff(dry_run=True).values()):
+        if any(pc.context.update_with_diff(dry_run=True).values()):
             click.secho('There is an update for projects, please update '
                         '("pilot project update") before adding a new project',
                         fg='red')
@@ -78,7 +78,7 @@ def project_command(ctx):
 def update(dry_run, update_groups_cache):
     pc = commands.get_pilot_client()
     try:
-        output = pc.project.update_with_diff(
+        output = pc.context.update_with_diff(
             dry_run=dry_run, update_groups_cache=update_groups_cache)
         if not any(output.values()):
             click.secho('Project is up to date', fg='green')
@@ -107,11 +107,16 @@ def add():
     pc = commands.get_pilot_client()
     order = ['title', 'short_name', 'description', 'group']
 
-    PROJECT_QUERIES['group']['groups'] = list(pc.project.load_groups())
-    PROJECT_QUERIES['group']['prompt'] = (
-        'Available Groups: {}\nSet your group'
-        ''.format(', '.join(PROJECT_QUERIES['group']['groups']))
-    )
+    if pc.project.load_groups():
+        PROJECT_QUERIES['group']['groups'] = list(pc.project.load_groups())
+        PROJECT_QUERIES['group']['prompt'] = (
+            'Available Groups: {}\nSet your group'
+            ''.format(', '.join(PROJECT_QUERIES['group']['groups']))
+        )
+    else:
+        PROJECT_QUERIES['group']['validation'] = (
+            input_validation.validate_is_uuid
+        )
     titles = [p['title'] for p in pc.project.load_all().values()]
     PROJECT_QUERIES['title']['current'] = titles
 
@@ -156,9 +161,18 @@ def info(project=None):
         click.secho(str(pip), fg='red')
         return
 
+    ep_name = info['endpoint']
+    try:
+        tc = pc.get_transfer_client()
+        ep = tc.get_endpoint(info['endpoint']).data
+        ep_name = ep['display_name'] or ep['canonical_name'] or ep_name
+    except globus_sdk.exc.TransferAPIError:
+        click.echo('Failed to lookup endpoint {}, please ensure it is active.'
+                   .format(info['endpoint']))
+
     dinfo = [
         (info['title'], ''),
-        ('Endpoint', pc.project.lookup_endpoint(info['endpoint'])),
+        ('Endpoint', ep_name),
         ('Group', pc.project.lookup_group(info['group'])),
         ('Base Path', info['base_path']),
     ]

@@ -6,6 +6,10 @@ class PilotClientException(Exception):
     pass
 
 
+class PilotContextException(Exception):
+    pass
+
+
 class PilotInvalidProject(PilotClientException):
     pass
 

@@ -36,7 +36,7 @@ def login(refresh_tokens, force, local_server, browser):
              force=force)
     if not pc.project.load_all():
         log.debug('NO project info saved, updating...')
-        pc.project.update_with_diff()
+        pc.context.update_with_diff()
     click.secho('You have been logged in.', fg='green')
 
     local_ep = (pc.profile.load_option('local_endpoint') or
