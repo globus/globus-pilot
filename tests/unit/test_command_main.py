@@ -20,9 +20,9 @@ def test_main_no_config(monkeypatch, mock_cli, mock_config):
 
 def test_main_notify_update(monkeypatch, mock_cli):
     is_cache_stale = Mock(return_value=True)
-    monkeypatch.setattr(mock_cli.project, 'is_cache_stale', is_cache_stale)
+    monkeypatch.setattr(mock_cli.context, 'is_cache_stale', is_cache_stale)
     update_with_diff = Mock(return_value={'added': 'stuff'})
-    monkeypatch.setattr(mock_cli.project, 'update_with_diff', update_with_diff)
+    monkeypatch.setattr(mock_cli.context, 'update_with_diff', update_with_diff)
 
     runner = CliRunner()
     runner.invoke(cli, [])
@@ -32,7 +32,7 @@ def test_main_notify_update(monkeypatch, mock_cli):
 
 def test_main_warns_no_project_set(monkeypatch, mock_cli):
     # Ensures we don't call update and try to load tokens
-    monkeypatch.setattr(mock_cli.project, 'is_cache_stale',
+    monkeypatch.setattr(mock_cli.context, 'is_cache_stale',
                         Mock(return_value=False))
     is_set = Mock(return_value=False)
     monkeypatch.setattr(mock_cli.project, 'is_set', is_set)
@@ -45,11 +45,11 @@ def test_main_warns_no_project_set(monkeypatch, mock_cli):
 
 def test_main_error_fetching_projects(monkeypatch, mock_cli):
     is_cache_stale = Mock(return_value=True)
-    monkeypatch.setattr(mock_cli.project, 'is_cache_stale', is_cache_stale)
+    monkeypatch.setattr(mock_cli.context, 'is_cache_stale', is_cache_stale)
     update_with_diff = Mock(return_value={'added': 'stuff'})
     monkeypatch.setattr(exc, 'HTTPSClientException', Exception)
     update_with_diff.side_effect = exc.HTTPSClientException
-    monkeypatch.setattr(mock_cli.project, 'update_with_diff', update_with_diff)
+    monkeypatch.setattr(mock_cli.context, 'update_with_diff', update_with_diff)
 
     runner = CliRunner()
     result = runner.invoke(cli, [])
