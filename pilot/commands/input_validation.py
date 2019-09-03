@@ -79,9 +79,10 @@ def validate_slug_to_path_unique(v, slug):
     pc = commands.get_pilot_client()
     tc = pc.get_transfer_client()
     try:
-        context_info = pc.context.get_context()
-        response = tc.operation_ls(context_info.get('projects_endpoint'),
-                                   path=context_info.get('projects_base_path'))
+        ctx = pc.context.get_context()
+        ep, path = ctx.get('projects_endpoint'), ctx.get('projects_base_path')
+        log.debug('Checking ep: {} path: {}'.format(ep, path))
+        response = tc.operation_ls(ep, path=path)
         existing = [f['name'] for f in response.data['DATA']]
         if slug in existing:
             raise exc.PilotValidator('"{}" is not available, please choose '
