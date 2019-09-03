@@ -18,7 +18,8 @@ PROJECT_QUERIES = {
         'validation': [input_validation.validate_project_title_unique],
     },
     'short_name': {
-        'prompt': 'Pick a short name',
+        'prompt': 'Pick a short name, this will create a directory on "{}" to '
+                  'store your files.',
         'default': lambda v, q: slugify(v.answers['title']),
         'help': 'The short name will be used in URLs and will be the name '
                 'users select this new project',
@@ -117,26 +118,29 @@ def add():
         PROJECT_QUERIES['group']['validation'] = (
             input_validation.validate_is_uuid
         )
+    base_path = pc.context.get_value('projects_base_path')
+    PROJECT_QUERIES['short_name']['prompt'] = \
+        PROJECT_QUERIES['short_name']['prompt'].format(base_path)
     titles = [p['title'] for p in pc.project.load_all().values()]
     PROJECT_QUERIES['title']['current'] = titles
 
     iv = input_validation.InputValidator(queries=PROJECT_QUERIES, order=order)
     project = iv.ask_all()
-    project.update({'search_index': pc.project.DEFAULT_SEARCH_INDEX,
-                    'resource_server': pc.project.DEFAULT_RESOURCE_SERVER})
-    project['endpoint'] = pc.project.PROJECTS_ENDPOINT
+    project.update(
+        {'search_index': pc.context.get_value('projects_default_search_index'),
+         'resource_server':
+            pc.context.get_value('projects_default_resource_server')}
+    )
+    project['endpoint'] = pc.context.get_value('projects_endpoint')
     project['group'] = pc.project.load_groups().get(project['group'], 'public')
     short_name = project.pop('short_name')
-    project['base_path'] = os.path.join(
-        pc.project.PROJECTS_PATH,
-        short_name
-    )
+    project['base_path'] = os.path.join(base_path, short_name)
 
     click.secho('Updating global project list... ', nl=False)
     pc.project.set_project(short_name, project)
     tc = pc.get_transfer_client()
     tc.operation_mkdir(project['endpoint'], project['base_path'])
-    pc.project.push()
+    pc.context.push()
     click.secho('Success', fg='green')
     pc.project.current = short_name
     click.secho('Switched to project {}'.format(short_name))
