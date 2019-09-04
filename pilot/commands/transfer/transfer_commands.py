@@ -16,47 +16,15 @@ from jsonschema.exceptions import ValidationError
 log = logging.getLogger(__name__)
 
 
-@click.command(help='Upload dataframe to location on Globus and categorize it '
-                    'in search')
-@click.argument('dataframe',
-                type=click.Path(exists=True, file_okay=True, dir_okay=False,
-                                readable=True, resolve_path=True),)
-@click.argument('destination', type=click.Path(), required=False)
-@click.option('-j', '--json', 'metadata', type=click.Path(),
-              help='Metadata in JSON format')
-@click.option('-u', '--update/--no-update', default=False,
-              help='Overwrite an existing dataframe and increment the version')
-@click.option('--gcp/--no-gcp', default=True,
-              help='Use Globus Connect Personal to start a transfer instead '
-                   'of uploading using direct HTTP')
-@click.option('--test', is_flag=True, default=False,
-              help='upload/ingest to test locations')
-@click.option('--dry-run', is_flag=True, default=False,
-              help='Do checks and validation but do not upload/ingest. ')
-@click.option('--verbose', is_flag=True, default=False)
-@click.option('--no-analyze', is_flag=True, default=False,
-              help='Analyze the field to collect additional metadata.')
-# @click.option('--x-labels', type=click.Path(),
-#               help='Path to x label file')
-# @click.option('--y-labels', type=click.Path(),
-#               help='Path to y label file')
-def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
-           verbose, no_analyze):
-    """
-    Create a search entry and upload this file to the GCS Endpoint.
-
-    # TODO: Fault tolerance for interrupted or failed file uploads (rollback)
-    """
+def click_prepare_dataframe(ctx, dataframe, destination, metadata, update,
+                            dry_run, verbose, no_analyze):
     pc = pilot.commands.get_pilot_client()
-    if not pc.is_logged_in():
-        click.echo('You are not logged in.')
-        return
 
     if not destination:
         dirs = pc.ls('')
         click.echo('No Destination Provided. Please select one from the '
                    'directory or "/" for root:\n{}'.format('\t '.join(dirs)))
-        return
+        ctx.exit(1)
 
     try:
         pc.ls(destination)
@@ -64,10 +32,10 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         if tapie.code == 'ClientError.NotFound':
             click.secho('Directory does not exist: "{}"'.format(destination),
                         err=True, fg='yellow')
-            return 1
+            ctx.exit(1)
         else:
             click.secho(tapie.message, err=True, bg='red')
-            return 1
+            ctx.exit(1)
 
     if metadata is not None:
         with open(metadata) as mf_fh:
@@ -98,12 +66,12 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         gmeta = gen_gmeta(subject, [pc.get_group()], new_metadata)
     except (RequiredUploadFields, ValidationError, InvalidField) as e:
         click.secho('Error Validating Metadata: {}'.format(e), fg='red')
-        return 1
+        ctx.exit(1)
 
     if json.dumps(new_metadata) == json.dumps(prev_metadata):
         click.secho('Files and search entry are an exact match. No update '
                     'necessary.', fg='green')
-        return 1
+        ctx.exit(1)
 
     if prev_metadata and not update:
         last_updated = prev_metadata['dc']['dates'][-1]['date']
@@ -111,7 +79,7 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         click.echo('Existing record found for {}, specify -u to update.\n'
                    'Last updated: {: %A, %b %d, %Y}'
                    ''.format(short_path, dt))
-        return 1
+        ctx.exit(1)
 
     if dry_run:
         click.echo('Success! (Dry Run -- No changes made.)')
@@ -124,22 +92,24 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         if verbose:
             click.echo('Ingesting the following data:')
             click.echo(json.dumps(new_metadata, indent=2))
-        return
+        ctx.exit(0)
 
-    if gcp and not pc.profile.load_option('local_endpoint'):
-        click.secho('No Local endpoint set, please set it with '
-                    '"pilot profile --local-endpoint"', fg='red')
-        return
+    nun = prev_metadata and not files_modified(new_metadata['files'],
+                                               prev_metadata['files'])
+    return {'gmeta': gmeta, 'no_update_needed': nun}
 
+
+def click_ingest_dataframe(gmeta):
     click.echo('Ingesting record into search...')
-    log.debug(f'Ingesting {subject}')
+    log.debug(f'Ingesting {gmeta}')
+    pc = pilot.commands.get_pilot_client()
     pc.ingest_entry(gmeta)
     click.echo('Success!')
 
-    if prev_metadata and not files_modified(new_metadata['files'],
-                                            prev_metadata['files']):
-        click.echo('Metadata updated, dataframe is already up to date.')
-        return
+
+def click_upload_dataframe(dataframe, destination, gcp=True):
+    pc = pilot.commands.get_pilot_client()
+    short_path = os.path.join(destination, os.path.basename(dataframe))
     if gcp:
         tc = pc.get_transfer_client()
         tdata = globus_sdk.TransferData(
@@ -161,6 +131,7 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         click.echo('You can find your result here: {}'.format(
             pc.get_portal_url(short_path)))
     else:
+        url = pc.get_globus_http_url(short_path)
         click.echo('Uploading data...')
         response = pc.upload(dataframe, destination)
         if response.status_code == 200:
@@ -171,8 +142,62 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
             return
 
 
+@click.command(help='Upload dataframe to location on Globus and categorize it '
+                    'in search')
+@click.argument('dataframe',
+                type=click.Path(exists=True, file_okay=True, dir_okay=False,
+                                readable=True, resolve_path=True),)
+@click.argument('destination', type=click.Path(), required=False)
+@click.option('-j', '--json', 'metadata', type=click.Path(),
+              help='Metadata in JSON format')
+@click.option('-u', '--update/--no-update', default=False,
+              help='Overwrite an existing dataframe and increment the version')
+@click.option('--gcp/--no-gcp', default=True,
+              help='Use Globus Connect Personal to start a transfer instead '
+                   'of uploading using direct HTTP')
+@click.option('--test', is_flag=True, default=False,
+              help='upload/ingest to test locations')
+@click.option('--dry-run', is_flag=True, default=False,
+              help='Do checks and validation but do not upload/ingest. ')
+@click.option('--verbose', is_flag=True, default=False)
+@click.option('--no-analyze', is_flag=True, default=False,
+              help='Analyze the field to collect additional metadata.')
+@click.pass_context
+# @click.option('--x-labels', type=click.Path(),
+#               help='Path to x label file')
+# @click.option('--y-labels', type=click.Path(),
+#               help='Path to y label file')
+def upload(ctx, dataframe, destination, metadata, gcp, update, test, dry_run,
+           verbose, no_analyze):
+    """
+    Create a search entry and upload this file to the GCS Endpoint.
+
+    # TODO: Fault tolerance for interrupted or failed file uploads (rollback)
+    """
+    pc = pilot.commands.get_pilot_client()
+    if not pc.is_logged_in():
+        click.echo('You are not logged in.')
+        return
+
+    if gcp and not pc.profile.load_option('local_endpoint'):
+        click.secho('No Local endpoint set, please set it with '
+                    '"pilot profile --local-endpoint"', fg='red')
+        return
+
+    data = click_prepare_dataframe(ctx, dataframe, destination, metadata,
+                                   update, dry_run, verbose, no_analyze)
+    click_ingest_dataframe(data['gmeta'])
+    if data['no_update_needed']:
+        click.echo('Dataframe is up-to-date, no upload needed')
+    else:
+        click_upload_dataframe(dataframe, destination, gcp)
+
+
 @click.command(help='Register an existing dataframe in search')
-@click.argument('short_path', type=click.Path(), required=False)
+@click.argument('dataframe',
+                type=click.Path(exists=True, file_okay=True, dir_okay=False,
+                                readable=True, resolve_path=True),)
+@click.argument('destination', type=click.Path(), required=False)
 @click.option('-j', '--json', 'metadata', type=click.Path(),
               help='Metadata in JSON format')
 @click.option('-u', '--update/--no-update', default=False,
@@ -180,7 +205,11 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
 @click.option('--dry-run', is_flag=True, default=False,
               help='Do checks and validation but do not upload/ingest. ')
 @click.option('--verbose', is_flag=True, default=False)
-def register(short_path, metadata, update, dry_run, verbose):
+@click.option('--no-analyze', is_flag=True, default=False,
+              help='Analyze the field to collect additional metadata.')
+@click.pass_context
+def register(ctx, dataframe, destination, metadata, update, dry_run, verbose,
+             no_analyze):
     """
     Create a search entry for a pre-existing file
     """
@@ -189,80 +218,9 @@ def register(short_path, metadata, update, dry_run, verbose):
         click.echo('You are not logged in.')
         return
 
-    destination = os.path.dirname(short_path)
-    prev_metadata = pc.get_search_entry(short_path) or {}
-
-    # if not destination:
-    #     dirs = pc.ls('')
-    #     click.echo('No Destination Provided. Please select one from the '
-    #                'directory or "/" for root:\n{}'.format('\t '.join(dirs)))
-    #     return
-
-    try:
-        pc.ls(destination)
-    except globus_sdk.exc.TransferAPIError as tapie:
-        if tapie.code == 'ClientError.NotFound':
-            click.secho('Directory does not exist: "{}"'.format(destination),
-                        err=True, fg='yellow')
-            return 1
-        else:
-            click.secho(tapie.message, err=True, bg='red')
-            return 1
-
-    if metadata is not None:
-        with open(metadata) as mf_fh:
-            user_metadata = json.load(mf_fh)
-    else:
-        user_metadata = {}
-
-    url = pc.get_globus_http_url(short_path)
-    new_metadata = scrape_metadata(short_path, url, pc, skip_analysis=True,
-                                   skip_hashing=True)
-
-    try:
-        new_metadata = update_metadata(new_metadata, prev_metadata,
-                                       user_metadata)
-        subject = pc.get_subject_url(short_path)
-        gmeta = gen_gmeta(subject, [pc.get_group()], new_metadata)
-    except (RequiredUploadFields, ValidationError, InvalidField) as e:
-        click.secho('Error Validating Metadata: {}'.format(e), fg='red')
-        return 1
-
-    if json.dumps(new_metadata) == json.dumps(prev_metadata):
-        click.secho('Files and search entry are an exact match. No update '
-                    'necessary.', fg='green')
-        return 1
-
-    if prev_metadata and not update:
-        last_updated = prev_metadata['dc']['dates'][-1]['date']
-        dt = datetime.datetime.strptime(last_updated, '%Y-%m-%dT%H:%M:%S.%fZ')
-        click.echo('Existing record found for {}, specify -u to update.\n'
-                   'Last updated: {: %A, %b %d, %Y}'
-                   ''.format(short_path, dt))
-        return 1
-
-    if dry_run:
-        click.echo('Success! (Dry Run -- No changes made.)')
-        click.echo('Pre-existing record: {}'.format(
-            'yes' if prev_metadata else 'no'))
-        click.echo('Version: {}'.format(new_metadata['dc']['version']))
-        click.echo('Search Subject: {}\nURL: {}'.format(
-            subject, url
-        ))
-        if verbose:
-            click.echo('Ingesting the following data:')
-            click.echo(json.dumps(new_metadata, indent=2))
-        return
-
-    click.echo('Ingesting record into search...')
-    log.debug(f'Ingesting {subject}')
-    pc.ingest_entry(gmeta)
-    click.echo('Success!')
-
-    if prev_metadata and not files_modified(new_metadata['files'],
-                                            prev_metadata['files']):
-        click.echo('Metadata updated, dataframe is already up to date.')
-        return
+    data = click_prepare_dataframe(ctx, dataframe, destination, metadata,
+                                   update, dry_run, verbose, no_analyze)
+    click_ingest_dataframe(data['gmeta'])
 
 
 @click.command(help='Download a file to your local directory.')
