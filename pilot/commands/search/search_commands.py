@@ -7,8 +7,6 @@ from pilot.search_parse import (
     parse_result, get_titles, get_field_metadata, get_field_metadata_titles
 )
 
-PORTAL_DETAIL_PAGE_PREFIX = 'https://petreldata.net/nci-pilot1/detail/'
-
 log = logging.getLogger(__name__)
 
 
@@ -122,11 +120,8 @@ def describe(path, output_json):
         output.append(fmt.format(*[str(i) for i in fm_data]))
 
     # print other useful data
-    sub = pc.get_subject_url(path)
-    qsub = urllib.parse.quote_plus(urllib.parse.quote_plus(sub))
-    portal_url = '{}{}'.format(PORTAL_DETAIL_PAGE_PREFIX, qsub)
-    other_data = [general_fmt.format('Subject', sub),
-                  general_fmt.format('Portal', portal_url)]
+    other_data = [general_fmt.format('Subject', pc.get_subject_url(path)),
+                  general_fmt.format('Portal', pc.get_portal_url(path))]
     output = '\n'.join(output)
     output = '{}\n\nOther Data\n{}'.format(output, '\n'.join(other_data))
     click.echo(output)
