@@ -7,7 +7,7 @@ import globus_sdk
 from unittest.mock import Mock
 from .mocks import (MemoryStorage, MOCK_TOKEN_SET, GlobusTransferTaskResponse,
                     ANALYSIS_FILE_BASE_DIR, SCHEMA_FILE_BASE_DIR,
-                    MOCK_PROFILE, MOCK_PROJECTS)
+                    MOCK_PROFILE, MOCK_PROJECTS, MOCK_CONTEXT)
 
 from pilot import client, config, commands
 
@@ -51,6 +51,15 @@ def mock_profile(mock_config):
 def mock_projects(mock_config):
     cfg = mock_config.load()
     cfg['projects'] = MOCK_PROJECTS
+    mock_config.save(cfg)
+    return mock_config
+
+
+@pytest.fixture
+def mock_context(mock_config):
+    cfg = mock_config.load()
+    cfg['contexts'] = MOCK_CONTEXT
+    cfg['context'] = {'current': list(MOCK_CONTEXT.keys())[0]}
     mock_config.save(cfg)
     return mock_config
 

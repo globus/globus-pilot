@@ -327,21 +327,19 @@ class PilotClient(NativeClient):
         >>> pc.get_portal_url('foo/bar.txt')
         'https://myportal/foo/bar.txt'
         """
+        portal_url = self.context.get_value('projects_portal_url')
+        if not portal_url:
+            return None
         project = project or self.project.current
-        index = self.get_index(project)
-        index_slug_map = {
-            '889729e8-d101-417d-9817-fa9d964fdbc9': 'nci-pilot1',
-            'e0849c9b-b709-46f3-be21-80893fc1db84': 'nci-pilot1-test',
-            '6871e83e-866b-41bc-8430-e3cf83b43bdc': 'xpcs',
-        }
-        index_slug = index_slug_map.get(index)
+        subject = ''
         if path:
             sub = self.get_subject_url(path, project=project)
-            sub = urllib.parse.quote_plus(urllib.parse.quote_plus(sub))
-            return 'https://petreldata.net/{}/projects/{}/{}/'.format(
-                index_slug, project, sub)
-        return 'https://petreldata.net/{}/projects/{}/'.format(index_slug,
-                                                               project)
+            subject = urllib.parse.quote_plus(urllib.parse.quote_plus(sub))
+        portal_url = portal_url.format(project=project, subject=subject)
+        # If no subject was given, remove trailing slash
+        if portal_url.endswith('//'):
+            portal_url = portal_url[0:-1]
+        return portal_url
 
     def get_subject_url(self, path, project=None, relative=True):
         """
