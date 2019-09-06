@@ -81,3 +81,17 @@ def test_get_subject_url(mock_projects):
     pc.project.current = 'foo-project'
     args = ('myfolder/dataframe.dat',)
     assert pc.get_globus_url(*args) == pc.get_subject_url(*args)
+
+
+def test_get_portal_url(mock_projects, mock_context):
+    pc = PilotClient()
+    pc.project.current = 'foo-project'
+    assert pc.get_portal_url('') == 'https://myportal/foo-project/'
+    assert pc.get_portal_url('foo') == (
+        'https://myportal/foo-project/'
+        'globus%253A%252F%252Ffoo-project-endpoint%252Ffoo_folder%252Ffoo/'
+    )
+    cfg = mock_context.load()
+    del cfg['contexts']['test-context']['projects_portal_url']
+    mock_context.save(cfg)
+    assert pc.get_portal_url('foo') is None
