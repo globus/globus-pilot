@@ -1,3 +1,4 @@
+import re
 import logging
 from globus_sdk import AccessTokenAuthorizer, RefreshTokenAuthorizer
 from globus_sdk.base import BaseClient, slash_join
@@ -8,6 +9,9 @@ import requests
 from requests_toolbelt import multipart
 
 log = logging.getLogger(__name__)
+
+# Pattern of how ranges must be given on the command line
+RANGE = re.compile(r'^(\d+-\d+)(,\d+-\d+)*$')
 
 
 class FileContentResponse(GlobusResponse):
@@ -55,7 +59,10 @@ class HTTPFileClient(BaseClient):
             filename=None, response_class=None, retry_401=True, range=None):
         headers = headers or {}
         if range:
-            headers['Range'] = f'bytes={range}'
+            if not isinstance(range, str) or not re.match(RANGE, range):
+                raise ValueError('Ranges must be a string of the pattern: '
+                                 '"1-2,3-4" where each number is a byte range')
+            headers['Range'] = 'bytes={}'.format(range)
         response_class = response_class or self.file_content_response_class
         return self.send_custom_request(
             'GET', path, params=params,

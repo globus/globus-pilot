@@ -22,4 +22,3 @@ def test_get_diff(mock_cli):
     pprint(MOCK_PROJECTS)
     pprint(other_mock_projects)
     assert diff['changed'] == {'foo-project': {'title': 'Foo --> FOOOOOOO'}}
-
