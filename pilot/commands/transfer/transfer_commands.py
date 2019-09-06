@@ -249,11 +249,19 @@ def download(path, overwrite, range):
         click.echo('Aborted! File {} would be overwritten.'.format(fname))
         return
     try:
-        r_content = pc.download(path, range=range, yield_written=True)
-        lb = 'Downloading {}'.format(fname)
-        with click.progressbar(r_content, label=lb, show_pos=True) as rc:
-            for _ in rc:
-                pass
+        record = pc.get_search_entry(path)
+        length = 0
+        if record and record.get('files'):
+            length = record['files'][0].get('length')
+        elif not record:
+            click.secho('No record exists for {}, you may want to register it.'
+                        .format(path), fg='yellow')
+        r_content = pc.download_parts(path, range=range)
+        params = {'label': 'Downloading {}'.format(fname), 'length': length,
+                  'show_pos': True}
+        with click.progressbar(**params) as bar:
+            for bytes_written in r_content:
+                bar.update(bytes_written)
         click.echo('Saved {}'.format(fname))
     except HTTPSClientException as hce:
         log.exception(hce)
