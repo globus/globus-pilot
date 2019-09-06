@@ -1,6 +1,6 @@
 import pytest
 import globus_sdk
-from unittest.mock import Mock, call
+from unittest.mock import Mock, call, mock_open, patch
 from pilot.client import PilotClient
 from pilot import globus_clients, exc
 from tests.unit.mocks import MOCK_PROFILE, MOCK_TOKEN_SET
@@ -76,7 +76,21 @@ def test_upload_http(monkeypatch, mixed_tsv, mock_cli_basic):
     monkeypatch.setattr(globus_clients.HTTPFileClient, 'put', put)
     mock_cli_basic.upload('a.tsv', 'destination')
     assert put.called
-    assert put.call_args == call('/foo_folder/destination', filename='a.tsv')
+    assert put.call_args == call('/foo_folder/destination/a.tsv',
+                                 filename='a.tsv')
+
+
+def test_download_http(monkeypatch, mixed_tsv, mock_cli_basic):
+    response = Mock()
+    response.iter_content = ['hello', 'world']
+    get = Mock(return_value=response)
+    monkeypatch.setattr(globus_clients.HTTPFileClient, 'get', get)
+    m_open = mock_open()
+    m_open.return_value.write.return_value = 1
+    with patch("builtins.open", m_open):
+        mock_cli_basic.download('a.tsv')
+    assert get.called
+    assert get.call_args == call('/foo_folder/a.tsv', range=None)
 
 
 def test_ingest(monkeypatch, mock_cli_basic):
