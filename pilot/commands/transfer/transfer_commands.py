@@ -81,7 +81,8 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
     url = pc.get_globus_http_url(short_path)
     try:
         new_metadata = scrape_metadata(dataframe, url, pc,
-                                       skip_analysis=no_analyze)
+                                       skip_analysis=no_analyze,
+                                       mimetype=user_metadata.get('mime_type'))
     except AnalysisException as ae:
         click.secho('Error analyzing {}, skipping...'.format(dataframe),
                     fg='yellow')

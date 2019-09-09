@@ -1,13 +1,16 @@
 import logging
 import sys
 from pilot import exc
-from pilot.analysis import tsv
+from pilot.analysis import pandas as pandalyze
 
 log = logging.getLogger(__name__)
 
 ANALYZE_MAP = {
-    'text/tab-separated-values': tsv.analyze_tsv,
-    'text/csv': tsv.analyze_csv,
+    'text/tab-separated-values': pandalyze.analyze_tsv,
+    'text/csv': pandalyze.analyze_csv,
+    'application/x-hdf': pandalyze.analyze_hdf,
+    'application/x-parquet': pandalyze.analyze_parquet,
+    'application/x-feather': pandalyze.analyze_feather,
 }
 
 

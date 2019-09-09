@@ -68,8 +68,9 @@ def get_foreign_keys(filename=FOREIGN_KEYS_FILE, pilot_client=None):
     return fkeys
 
 
-def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True):
-    mimetype = mimetypes.guess_type(dataframe)[0]
+def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True,
+                    mimetype=None):
+    mimetype = mimetype or mimetypes.guess_type(dataframe)[0]
     dc_formats = []
     rfm_metadata = {}
     if mimetype:
