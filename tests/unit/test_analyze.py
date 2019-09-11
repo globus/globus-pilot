@@ -6,6 +6,53 @@ from pilot import exc
 
 from tests.unit.mocks import ANALYSIS_MIXED_FILES
 
+EXPECTED_MIXED_ANALYSIS_RESULT = {
+    'field_definitions': [
+        {'25': 25.5,
+         '50': 50.0,
+         '75': 74.5,
+         'count': 99,
+         # Tableschema field, only visible in tsvs, csvs
+         # 'format': 'default',
+         'max': 99.0,
+         'mean': 50.0,
+         'min': 1.0,
+         'name': 'Numbers',
+         'reference': None,
+         'std': 28.722813232690143,
+         'type': 'float64'},
+        {'count': 99,
+         # 'format': 'default',
+         'frequency': 50,
+         'name': 'Title',
+         'reference': None,
+         'top': 'baz',
+         'type': 'string',
+         'unique': 3}],
+    'labels': {'25': '25th Percentile',
+               '50': '50th Percentile',
+               '75': '75th Percentile',
+               'count': 'Number of non-null entries',
+               'format': 'Format',
+               'frequency': 'Frequency of Top Common Value',
+               'max': 'Maximum Value',
+               'mean': 'Mean Value',
+               'min': 'Minimum Value',
+               'name': 'Column Name',
+               'reference': 'Link to resource definition',
+               'std': 'Standard Deviation',
+               'top': 'Top Common',
+               'type': 'Data Type',
+               'unique': 'Unique Values'},
+    'name': 'Data Dictionary',
+    'numcols': 2,
+    'numrows': 99,
+    # Only viewable in text-based files -- tsvs, csvs
+    # 'previewbyptes': 75
+}
+
+EXTENDED_ANALYSIS_MIMETYPES = ['text/csv', 'text/tab-separated-values']
+
 
 @pytest.mark.parametrize("filename,mimetype", ANALYSIS_MIXED_FILES)
 def test_eval(filename, mimetype):
@@ -20,6 +67,18 @@ def test_eval(filename, mimetype):
     # The combination of rows 1 and 2 should contain all the labels
     rows_union = row1_keys.union(row2_keys)
     assert not rows_union.isdisjoint(label_set)
+    assert ana['labels'] == EXPECTED_MIXED_ANALYSIS_RESULT['labels']
+    for result, expected in zip(
+            ana['field_definitions'],
+            EXPECTED_MIXED_ANALYSIS_RESULT['field_definitions']):
+        for field in expected:
+            assert result[field] == expected[field]
+
+    # Check extended stuff
+    if mimetype in EXTENDED_ANALYSIS_MIMETYPES:
+        assert ana['previewbytes'] == 75
+        for field in ana['field_definitions']:
+            assert field['format'] == 'default'
 
 
 def test_preview_bytes(mixed_tsv):

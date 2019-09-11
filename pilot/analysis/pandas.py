@@ -2,7 +2,7 @@ import sys
 import logging
 import pandas as pd
 import numpy
-# import tableschema
+import tableschema
 from pilot import exc
 
 
@@ -30,13 +30,13 @@ TSV_LABELS = {
 
 def analyze_tsv(filename, foreign_keys=None):
     metadata = analyze(pd.read_csv(filename, sep='\t'), foreign_keys)
-    metadata['previewbytes'] = get_preview_byte_count(filename)
+    metadata = add_extended_metadata(filename, metadata)
     return metadata
 
 
 def analyze_csv(filename, foreign_keys=None):
     metadata = analyze(pd.read_csv(filename), foreign_keys)
-    metadata['previewbytes'] = get_preview_byte_count(filename)
+    metadata = add_extended_metadata(filename, metadata)
     return metadata
 
 
@@ -70,12 +70,7 @@ def analyze_hdf(filename, foreign_keys):
 
 
 def analyze(pd_dataframe, foreign_keys=None):
-
-    # Pandas analysis
-    # df = pandas.read_csv(filename, sep=separator)
     pandas_info = pd_dataframe.describe(include='all')
-    # Tableschema analysis
-    # ts_info = tableschema.Schema(tableschema.infer(filename)).descriptor
 
     column_metadata = []
     for column in pd_dataframe.columns.tolist()[:10]:
@@ -95,6 +90,22 @@ def analyze(pd_dataframe, foreign_keys=None):
         'labels': TSV_LABELS
     }
     return dataframe_metadata
+
+
+def add_extended_metadata(filename, metadata):
+    """Update the given metadata dict with additional tableschema metadata.
+    This is only available for files that can be read by tableschema, which are
+    only tsvs and csvs. Tableschema doesn't add much, but it could be handy
+    if it can detect extended types like locations."""
+    metadata['previewbytes'] = get_preview_byte_count(filename)
+    ts_info = tableschema.Schema(tableschema.infer(filename)).descriptor
+
+    new_field_definitions = []
+    for m, ts in zip(metadata['field_definitions'], ts_info['fields']):
+        m['format'] = ts['format']
+        new_field_definitions.append(m)
+    metadata['field_definitions'] = new_field_definitions
+    return metadata
 
 
 def get_preview_byte_count(filename, num_rows=11):
