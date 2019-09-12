@@ -6,6 +6,11 @@ from pilot import exc
 
 from tests.unit.mocks import ANALYSIS_MIXED_FILES
 
+ANALYZABLE_MIMETYPES = [
+    'text/csv', 'text/tab-separated-values', 'application/x-hdf',
+    'application/x-feather', 'application/x-parquet',
+]
+
 EXPECTED_MIXED_ANALYSIS_RESULT = {
     'field_definitions': [
         {'25': 25.5,
@@ -53,8 +58,11 @@ EXPECTED_MIXED_ANALYSIS_RESULT = {
 
 EXTENDED_ANALYSIS_MIMETYPES = ['text/csv', 'text/tab-separated-values']
 
+ANALYZABLE_MIXED_FILES = [(f, mtype) for f, mtype in ANALYSIS_MIXED_FILES
+                          if mtype in ANALYZABLE_MIMETYPES]
 
-@pytest.mark.parametrize("filename,mimetype", ANALYSIS_MIXED_FILES)
+
+@pytest.mark.parametrize("filename,mimetype", ANALYZABLE_MIXED_FILES)
 def test_eval(filename, mimetype):
     ana = analyze_dataframe(filename, mimetype)
     assert ana['numcols'] == 2
