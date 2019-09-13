@@ -1,6 +1,13 @@
-import pandas
+import sys
+import logging
+import pandas as pd
 import numpy
 import tableschema
+from pilot import exc
+
+
+log = logging.getLogger(__name__)
+
 
 TSV_LABELS = {
     'name': 'Column Name',
@@ -22,39 +29,83 @@ TSV_LABELS = {
 
 
 def analyze_tsv(filename, foreign_keys=None):
-    return analyze(filename, '\t', foreign_keys)
+    metadata = analyze(pd.read_csv(filename, sep='\t'), foreign_keys)
+    metadata = add_extended_metadata(filename, metadata)
+    return metadata
 
 
 def analyze_csv(filename, foreign_keys=None):
-    return analyze(filename, ',', foreign_keys)
+    metadata = analyze(pd.read_csv(filename), foreign_keys)
+    metadata = add_extended_metadata(filename, metadata)
+    return metadata
 
 
-def analyze(filename, separator, foreign_keys=None):
+def analyze_parquet(filename, foreign_keys=None):
+    return analyze(pd.read_parquet(filename), foreign_keys)
 
-    # Pandas analysis
-    df = pandas.read_csv(filename, sep=separator)
-    pandas_info = df.describe(include='all')
-    # Tableschema analysis
-    ts_info = tableschema.Schema(tableschema.infer(filename)).descriptor
+
+def analyze_feather(filename, foreign_keys=None):
+    return analyze(pd.read_feather(filename), foreign_keys)
+
+
+def analyze_hdf(filename, foreign_keys):
+    log.debug('Analyzing hdf5!')
+    store = pd.HDFStore(filename, 'r')
+    if len(store.keys()) > 1:
+        prompt = ('Which store would you like to use for analysis? {}'
+                  ''.format(store.keys()))
+        chosen_key = input(prompt)
+        while chosen_key not in store.keys():
+            print('Not valid, choose another')
+            input(prompt)
+    elif len(store.keys()) == 1:
+        chosen_key = list(store.keys())[0]
+    else:
+        raise exc.AnalysisException('No stores detected in {}, skipping...'
+                                    .format(filename),
+                                    sys.exc_info()) from None
+    analysis = analyze(store.get(chosen_key), foreign_keys)
+    store.close()
+    return analysis
+
+
+def analyze(pd_dataframe, foreign_keys=None):
+    pandas_info = pd_dataframe.describe(include='all')
 
     column_metadata = []
-    for column in ts_info['fields'][:10]:
-        df_metadata = column.copy()
-        col_name = column['name']
-        df_metadata.update(get_pandas_field_metadata(pandas_info, col_name))
+    for column in pd_dataframe.columns.tolist()[:10]:
+        # df_metadata = column.copy()
+        # col_name = column['name']
+        df_metadata = {'name': column}
+        df_metadata.update(get_pandas_field_metadata(pandas_info, column))
         df_metadata.update(get_foreign_key(foreign_keys, column))
         column_metadata.append(df_metadata)
 
     dataframe_metadata = {
         'name': 'Data Dictionary',
         # df.shape[0] seems to have issues determining rows
-        'numrows': len(df.index),
-        'numcols': df.shape[1],
-        'previewbytes': get_preview_byte_count(filename),
+        'numrows': len(pd_dataframe.index),
+        'numcols': pd_dataframe.shape[1],
         'field_definitions': column_metadata,
         'labels': TSV_LABELS
     }
     return dataframe_metadata
+
+
+def add_extended_metadata(filename, metadata):
+    """Update the given metadata dict with additional tableschema metadata.
+    This is only available for files that can be read by tableschema, which are
+    only tsvs and csvs. Tableschema doesn't add much, but it could be handy
+    if it can detect extended types like locations."""
+    metadata['previewbytes'] = get_preview_byte_count(filename)
+    ts_info = tableschema.Schema(tableschema.infer(filename)).descriptor
+
+    new_field_definitions = []
+    for m, ts in zip(metadata['field_definitions'], ts_info['fields']):
+        m['format'] = ts['format']
+        new_field_definitions.append(m)
+    metadata['field_definitions'] = new_field_definitions
+    return metadata
 
 
 def get_preview_byte_count(filename, num_rows=11):

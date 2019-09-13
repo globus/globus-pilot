@@ -6,7 +6,23 @@ BASE_FILE_DIR = os.path.join(os.path.dirname(__file__), 'files')
 COMMANDS_FILE_BASE_DIR = os.path.join(BASE_FILE_DIR, 'commands')
 CLIENT_FILE_BASE_DIR = os.path.join(BASE_FILE_DIR, 'client')
 ANALYSIS_FILE_BASE_DIR = os.path.join(BASE_FILE_DIR, 'analysis')
+MIXED_BASE = os.path.join(ANALYSIS_FILE_BASE_DIR, 'types')
+BLIND_BASE = os.path.join(ANALYSIS_FILE_BASE_DIR, 'blind_types')
 SCHEMA_FILE_BASE_DIR = os.path.join(BASE_FILE_DIR, 'schemas')
+
+MIXED_MIMETYPES = [
+    ('csv', 'text/csv'),
+    ('tsv', 'text/tab-separated-values'),
+    ('pdf', 'application/pdf'),
+    ('hdf', 'application/x-hdf'),
+    ('feather', 'application/x-feather'),
+    ('parquet', 'application/x-parquet'),
+]
+
+ANALYSIS_MIXED_FILES = [(os.path.join(MIXED_BASE, 'mixed.{}'.format(ext)), mt)
+                        for ext, mt in MIXED_MIMETYPES]
+ANALYSIS_BLIND_FILES = [(os.path.join(BLIND_BASE, ext), mt)
+                        for ext, mt in MIXED_MIMETYPES]
 
 DEFAULT_EXPIRE = int(time.time()) + 60 * 60 * 48
 
