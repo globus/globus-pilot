@@ -6,7 +6,7 @@ from pilot import commands, exc
 from pilot.version import __version__
 from pilot.commands.auth import auth_commands
 from pilot.commands.search import search_commands, delete
-from pilot.commands.transfer import transfer_commands, status_commands
+from pilot.commands.transfer import transfer_commands, status_commands, analyze
 from pilot.commands.project import project
 
 log = logging.getLogger(__name__)
@@ -70,6 +70,7 @@ cli.add_command(search_commands.describe)
 cli.add_command(delete.delete_command)
 
 cli.add_command(transfer_commands.upload)
+cli.add_command(analyze.analyze)
 cli.add_command(transfer_commands.download)
 cli.add_command(transfer_commands.mkdir)
 cli.add_command(status_commands.status)
