@@ -115,7 +115,7 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
                     'necessary.', fg='green')
         return sys.exit(ExitCodes.SUCCESS)
 
-    if prev_metadata and not update:
+    if prev_metadata and not update and not dry_run:
         last_updated = prev_metadata['dc']['dates'][-1]['date']
         dt = datetime.datetime.strptime(last_updated, '%Y-%m-%dT%H:%M:%S.%fZ')
         click.echo('Existing record found for {}, specify -u to update.\n'
