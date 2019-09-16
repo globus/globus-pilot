@@ -145,8 +145,8 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
     pc.ingest_entry(gmeta)
     click.echo('Success!')
 
-    if prev_metadata and not files_modified(new_metadata['files'],
-                                            prev_metadata['files']):
+    if prev_metadata and not files_modified(new_metadata.get('files'),
+                                            prev_metadata.get('files')):
         click.echo('Metadata updated, dataframe is already up to date.')
         return
 
