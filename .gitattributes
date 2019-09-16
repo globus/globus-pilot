@@ -1,0 +1,2 @@
+tests/unit/files/analysis/types/mixed.hdf filter=lfs diff=lfs merge=lfs -text
+tests/unit/files/analysis/blind_types/hdf filter=lfs diff=lfs merge=lfs -text
