@@ -6,7 +6,7 @@ import pandas as pd
 log = logging.getLogger(__name__)
 
 
-def detect_mimetype(url, functions=None):
+def detect_type(url, functions=None):
     """This function mimics mimetypes.guess_type, but attempts to open the
     file and read data to determine what the type is."""
     for guesser, name in functions or MIMETYPE_DETECTORS:
