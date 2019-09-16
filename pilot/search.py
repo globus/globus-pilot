@@ -16,11 +16,9 @@ DEFAULT_HASH_ALGORITHMS = ['sha256', 'md5']
 FOREIGN_KEYS_FILE = os.path.join(os.path.dirname(__file__),
                                  'foreign_keys.json')
 DEFAULT_PUBLISHER = 'Argonne National Laboratory'
-MINIMUM_USER_REQUIRED_FIELDS = [
-    'dataframe_type',
-    'data_type',
-    'mime_type',
-]
+# Previously users were required to add certain fields. If we want to add those
+# back, add them here.
+MINIMUM_USER_REQUIRED_FIELDS = []
 
 GMETA_LIST = {
     "@version": "2016-11-09",
