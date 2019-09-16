@@ -15,6 +15,9 @@ from jsonschema.exceptions import ValidationError
 
 log = logging.getLogger(__name__)
 
+# Warn people things will take a while when filesize exceeds 1GB
+BIG_SIZE_WARNING = 2 ** 30
+
 
 @click.command(help='Upload dataframe to location on Globus and categorize it '
                     'in search')
@@ -79,6 +82,11 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
     prev_metadata = pc.get_search_entry(short_path)
 
     url = pc.get_globus_http_url(short_path)
+
+    size_in_gb = os.stat(dataframe).st_size / BIG_SIZE_WARNING
+    if size_in_gb > 1:
+        click.secho('Generating hashes on {} ({:.2f}GB), this may take a '
+                    'while.'.format(dataframe, size_in_gb), fg='blue')
     try:
         new_metadata = scrape_metadata(dataframe, url, pc,
                                        skip_analysis=no_analyze,
