@@ -11,6 +11,8 @@ from pilot.commands.project import project
 
 log = logging.getLogger(__name__)
 
+INVOKABLE_WITHOUT_LOGIN = ['login', 'logout', 'version']
+
 
 @click.group(invoke_without_command=True)
 @click.pass_context
@@ -47,7 +49,12 @@ def cli(ctx):
             click.secho('No project set, use "pilot project" to list projects '
                         'and "pilot project set <myproject>" '
                         'to set your current project.', fg='yellow')
-            sys.exit()
+            sys.exit(exc.ExitCodes.INVALID_CLIENT_CONFIGURATION)
+    else:
+        if (ctx.invoked_subcommand and
+                ctx.invoked_subcommand not in INVOKABLE_WITHOUT_LOGIN):
+            click.echo('You are not logged in.')
+            sys.exit(exc.ExitCodes.NOT_LOGGED_IN)
 
     if ctx.invoked_subcommand is None:
         click.echo(ctx.get_help())
