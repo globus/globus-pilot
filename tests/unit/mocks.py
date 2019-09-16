@@ -111,6 +111,9 @@ MOCK_PROFILE = {
     'identity_provider': '41143743-f3c8-4d60-bbdb-eeecaba85bd9',
     'identity_provider_display_name': 'Globus ID',
     'sub': '102e192b-5acb-47ee-80c7-e613d86e7d6a',
+    'local_endpoint': str(uuid.uuid4()),
+    'local_endpoint_path': '/',
+    'local_endpoint_name': 'Fake Auto-Generated Endpoint',
 }
 
 

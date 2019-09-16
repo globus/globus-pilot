@@ -12,7 +12,6 @@ def test_main_no_config(monkeypatch, mock_cli, mock_config):
     monkeypatch.setattr(mock_cli.config, 'migrate', migrate)
     runner = CliRunner()
     result = runner.invoke(cli, [])
-    print(result.output)
     assert 'Usage' in result.output
     assert result.exit_code == 0
     assert not migrate.called

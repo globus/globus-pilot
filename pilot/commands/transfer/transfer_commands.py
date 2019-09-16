@@ -167,7 +167,8 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         tl.add_log(transfer_result, short_path)
         click.echo('{}. You can check the status below: \n'
                    'https://app.globus.org/activity/{}/overview\n'.format(
-                        transfer_result['message'], transfer_result['task_id'],
+                        transfer_result.get('message'),
+                        transfer_result.get('task_id'),
                         )
                    )
         click.echo('You can find your result here: {}'.format(

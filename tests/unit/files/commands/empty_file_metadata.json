@@ -1,0 +1,52 @@
+{
+  "dc": {
+    "creators": [
+      {
+        "creatorName": "Franklin, Rosalind"
+      }
+    ],
+    "dates": [
+      {
+        "date": "2019-09-16T15:30:13.960682Z",
+        "dateType": "Created"
+      }
+    ],
+    "formats": [
+      "text/plain"
+    ],
+    "publicationYear": "2019",
+    "publisher": "The French Government Central Laboratory",
+    "resourceType": {
+      "resourceType": "Dataset",
+      "resourceTypeGeneral": "Dataset"
+    },
+    "subjects": [
+      {
+        "subject": "machine learning"
+      },
+      {
+        "subject": "genomics"
+      }
+    ],
+    "titles": [
+      {
+        "title": "test_file_zero_length.txt"
+      }
+    ],
+    "version": "1"
+  },
+  "files": [
+    {
+      "field_metadata": {},
+      "filename": "test_file_zero_length.txt",
+      "length": 0,
+      "md5": "d41d8cd98f00b204e9800998ecf8427e",
+      "mime_type": "text/plain",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "url": "https://foo-project-endpoint.e.globus.org/foo_folder/test_file_zero_length.txt"
+    }
+  ],
+  "project_metadata": {
+    "project-slug": "foo-project"
+  }
+}

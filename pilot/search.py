@@ -3,13 +3,12 @@ import copy
 import hashlib
 import pytz
 import datetime
-import mimetypes
 import json
 import jsonschema
 import logging
 
 from pilot.validation import validate_dataset, validate_user_provided_metadata
-from pilot.analysis import analyze_dataframe
+from pilot import analysis
 from pilot.exc import RequiredUploadFields, InvalidField
 
 DEFAULT_HASH_ALGORITHMS = ['sha256', 'md5']
@@ -354,7 +353,7 @@ def gen_remote_file_manifest(filepath, url, pilot_client, metadata={},
     rfm.update({alg: compute_checksum(filepath, getattr(hashlib, alg)())
                 for alg in algorithms})
     fkeys = get_foreign_keys(pilot_client)
-    metadata = (analyze_dataframe(filepath, mimetype, fkeys)
+    metadata = (analysis.analyze_dataframe(filepath, mimetype, fkeys)
                 if not skip_analysis else {})
     rfm.update({
         'filename': os.path.basename(filepath),
