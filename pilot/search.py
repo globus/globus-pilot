@@ -183,6 +183,33 @@ def files_modified(manifest1, manifest2):
             return True
 
 
+def metadata_modified(new_metadata, old_metadata):
+    """Check if the new metadata passed in matches the old metadata. Returns
+    true if all fields match except for timestamps on dates, which are allowed
+    to differ between one another.
+    Both new_metadata and old_metadata should be dicts that match the output
+    from `scrape_metadata` and can pass validation
+    """
+    old_metadata = old_metadata or {}
+    general_fields_match = [new_metadata.get(field) == old_metadata.get(field)
+                            for field in ['files', 'project_metadata']]
+    dc_fields_match = [
+        new_metadata['dc'][key] == old_metadata.get('dc', {}).get(key)
+        for key in new_metadata['dc'].keys() if key != 'dates'
+    ]
+    old_dates = old_metadata.get('dc', {}).get('dates', [])
+    date_entry_lengths_eq = len(new_metadata['dc']['dates']) == len(old_dates)
+    zipped_dates = zip(new_metadata['dc']['dates'], old_dates)
+    date_types_match = [nm['dateType'] == om['dateType']
+                        for nm, om in zipped_dates]
+    return not all([
+        all(general_fields_match),
+        all(dc_fields_match),
+        date_entry_lengths_eq,
+        all(date_types_match)
+    ])
+
+
 def update_dc_version(metadata):
     version = int(metadata['dc']['version'])
     metadata['dc']['version'] = str(version + 1)

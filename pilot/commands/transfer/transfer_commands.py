@@ -110,7 +110,7 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         click.secho('Error Validating Metadata: {}'.format(e), fg='red')
         sys.exit(ExitCodes.INVALID_METADATA)
 
-    if json.dumps(new_metadata) == json.dumps(prev_metadata):
+    if not metadata_modified(new_metadata, prev_metadata):
         click.secho('Files and search entry are an exact match. No update '
                     'necessary.', fg='green')
         return sys.exit(ExitCodes.SUCCESS)
