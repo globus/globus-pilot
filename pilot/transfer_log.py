@@ -1,7 +1,10 @@
 import time
 import datetime
+import logging
 
 from pilot import config
+
+log = logging.getLogger(__name__)
 
 
 class TransferLog(config.ConfigSection):
@@ -28,6 +31,7 @@ class TransferLog(config.ConfigSection):
             str(int(time.time()))
         ]
         self._save_log(log_id, dict(zip(self.TRANSFER_LOG_FIELDS, log_data)))
+        log.debug('Log saved successfully.')
 
     def get_log(self):
         cfg = self.config.load()

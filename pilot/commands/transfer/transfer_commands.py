@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import logging
 import click
@@ -7,9 +8,9 @@ import datetime
 import pilot
 import traceback
 from pilot.search import (scrape_metadata, update_metadata, gen_gmeta,
-                          files_modified)
+                          files_modified, metadata_modified)
 from pilot.exc import (RequiredUploadFields, HTTPSClientException,
-                       InvalidField, AnalysisException)
+                       InvalidField, AnalysisException, ExitCodes)
 from pilot import transfer_log
 from jsonschema.exceptions import ValidationError
 
@@ -51,15 +52,12 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
     # TODO: Fault tolerance for interrupted or failed file uploads (rollback)
     """
     pc = pilot.commands.get_pilot_client()
-    if not pc.is_logged_in():
-        click.echo('You are not logged in.')
-        return
 
     if not destination:
         dirs = pc.ls('')
         click.echo('No Destination Provided. Please select one from the '
                    'directory or "/" for root:\n{}'.format('\t '.join(dirs)))
-        return
+        return sys.exit(ExitCodes.NO_DESTINATION_PROVIDED)
 
     try:
         pc.ls(destination)
@@ -67,10 +65,10 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         if tapie.code == 'ClientError.NotFound':
             click.secho('Directory does not exist: "{}"'.format(destination),
                         err=True, fg='yellow')
-            return 1
+            sys.exit(ExitCodes.DIRECTORY_DOES_NOT_EXIST)
         else:
             click.secho(tapie.message, err=True, bg='red')
-            return 1
+            sys.exit(ExitCodes.GLOBUS_TRANSFER_ERROR)
 
     if metadata is not None:
         with open(metadata) as mf_fh:
@@ -99,20 +97,23 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         else:
             click.secho('(Use --verbose to see full error)', fg='yellow')
         new_metadata = scrape_metadata(dataframe, url, pc, skip_analysis=True)
+    log.debug('Finished scraping metadata and gathering analytics.')
 
     try:
         new_metadata = update_metadata(new_metadata, prev_metadata,
                                        user_metadata)
         subject = pc.get_subject_url(short_path)
         gmeta = gen_gmeta(subject, [pc.get_group()], new_metadata)
+        log.debug('Metadata valid! Generated search entry. Ready to ingest!')
     except (RequiredUploadFields, ValidationError, InvalidField) as e:
+        log.exception(e)
         click.secho('Error Validating Metadata: {}'.format(e), fg='red')
-        return 1
+        sys.exit(ExitCodes.INVALID_METADATA)
 
     if json.dumps(new_metadata) == json.dumps(prev_metadata):
         click.secho('Files and search entry are an exact match. No update '
                     'necessary.', fg='green')
-        return 1
+        return sys.exit(ExitCodes.SUCCESS)
 
     if prev_metadata and not update:
         last_updated = prev_metadata['dc']['dates'][-1]['date']
@@ -120,8 +121,7 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         click.echo('Existing record found for {}, specify -u to update.\n'
                    'Last updated: {: %A, %b %d, %Y}'
                    ''.format(short_path, dt))
-        return 1
-
+        sys.exit(ExitCodes.RECORD_EXISTS)
     if dry_run:
         click.echo('Success! (Dry Run -- No changes made.)')
         click.echo('Pre-existing record: {}'.format(
@@ -133,15 +133,15 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         if verbose:
             click.echo('Ingesting the following data:')
             click.echo(json.dumps(new_metadata, indent=2))
-        return
+        return sys.exit(ExitCodes.SUCCESS)
 
     if gcp and not pc.profile.load_option('local_endpoint'):
         click.secho('No Local endpoint set, please set it with '
                     '"pilot profile --local-endpoint"', fg='red')
-        return
+        sys.exit(ExitCodes.NO_LOCAL_ENDPOINT_SET)
 
     click.echo('Ingesting record into search...')
-    log.debug(f'Ingesting {subject}')
+    log.debug('Ingesting {}'.format(subject))
     pc.ingest_entry(gmeta)
     click.echo('Success!')
 
@@ -149,6 +149,8 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
                                             prev_metadata['files']):
         click.echo('Metadata updated, dataframe is already up to date.')
         return
+
+    log.debug('Uploading Dataframe {}'.format(pc.get_path(short_path)))
     if gcp:
         tc = pc.get_transfer_client()
         tdata = globus_sdk.TransferData(
@@ -160,6 +162,7 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         tdata.add_item(dataframe, pc.get_path(short_path))
         click.echo('Starting Transfer...')
         transfer_result = tc.submit_transfer(tdata)
+        log.debug('Submitted Transfer')
         tl = transfer_log.TransferLog()
         tl.add_log(transfer_result, short_path)
         click.echo('{}. You can check the status below: \n'

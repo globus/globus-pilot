@@ -1,5 +1,19 @@
 import json
 from globus_sdk.exc import GlobusAPIError
+from enum import IntEnum
+
+
+class ExitCodes(IntEnum):
+    SUCCESS = 0
+    UNCAUGHT_EXCEPTION = 1
+    NOT_LOGGED_IN = 2
+    NO_DESTINATION_PROVIDED = 3
+    DIRECTORY_DOES_NOT_EXIST = 4
+    GLOBUS_TRANSFER_ERROR = 5
+    INVALID_METADATA = 6
+    RECORD_EXISTS = 7
+    INVALID_CLIENT_CONFIGURATION = 8
+    NO_LOCAL_ENDPOINT_SET = 9
 
 
 class PilotClientException(Exception):
