@@ -33,9 +33,8 @@ def parse_result(result):
     for name, _, processor in PARSE_FUNCS:
         try:
             data = processor(result)
-        except Exception as e:
+        except Exception:
             data = ''
-            log.exception(e)
         processed_results.append((name, data))
     return processed_results
 
