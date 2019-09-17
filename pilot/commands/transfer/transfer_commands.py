@@ -218,17 +218,11 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
 @click.option('--verbose', is_flag=True, default=False)
 @click.option('--no-analyze', is_flag=True, default=False,
               help='Analyze the field to collect additional metadata.')
-@click.pass_context
-def register(ctx, dataframe, destination, metadata, update, dry_run, verbose,
+def register(dataframe, destination, metadata, update, dry_run, verbose,
              no_analyze):
     """
     Create a search entry for a pre-existing file
     """
-    pc = pilot.commands.get_pilot_client()
-    if not pc.is_logged_in():
-        click.echo('You are not logged in.')
-        return
-
     data = click_prepare_dataframe(dataframe, destination, metadata,
                                    update, dry_run, verbose, no_analyze)
     click_ingest_dataframe(data['gmeta'])
