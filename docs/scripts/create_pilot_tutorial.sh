@@ -68,9 +68,12 @@ fi
 
 WEATHER_DIR='tabular'
 PILOT mkdir "$WEATHER_DIR"
-upload_file "$FILES_DIR/chicago_skewt.csv" "$WEATHER_DIR" -j "$FILES_DIR/skewt_tabular_metadata.json"
-upload_file "$FILES_DIR/chicago_skewt.tsv" "$WEATHER_DIR" -j "$FILES_DIR/skewt_tabular_metadata.json"
-upload_file "$FILES_DIR/chicago_skewt.png" "/" -j "$FILES_DIR/skewt_plot_metadata.json"
-upload_file "$FILES_DIR/practical_meteorology.pdf" "/" -j "$FILES_DIR/practical_meteorology_metadata.json"
+upload_file "$FILES_DIR/chicago_skewt_commas" "$WEATHER_DIR" -j "$FILES_DIR/skewt_tabular_metadata.json"
+upload_file "$FILES_DIR/chicago_skewt_tabs" "$WEATHER_DIR" -j "$FILES_DIR/skewt_tabular_metadata.json"
+upload_file "$FILES_DIR/chicago_skewt_image" "/" -j "$FILES_DIR/skewt_plot_metadata.json"
+upload_file "$FILES_DIR/ashland_skewt" "/" -j "$FILES_DIR/ashland_plot_metadata.json"
+upload_file "$FILES_DIR/san_diego_skewt" "/" -j "$FILES_DIR/san_diego_plot_metadata.json"
+upload_file "$FILES_DIR/new_york_skewt" "/" -j "$FILES_DIR/new_york_plot_metadata.json"
+upload_file "$FILES_DIR/practical_meteorology" "/" -j "$FILES_DIR/practical_meteorology_metadata.json"
 
 echo "Finished creating $SELECTED_PROJECT"

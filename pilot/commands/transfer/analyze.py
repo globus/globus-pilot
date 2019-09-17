@@ -26,7 +26,7 @@ def analyze(dataframes):
             continue
         try:
             mimetype = mimetypes.detect_type(dataframe)
-            click.secho('Analyzing {}'.format(basename))
+            click.secho('Analyzing {} ({})'.format(basename, mimetype))
             analysis = analyze_dataframe(dataframe, mimetype)
             if not analysis:
                 click.secho('Unable to analyze {}'.format(basename))

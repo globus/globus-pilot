@@ -1,0 +1,20 @@
+{
+	"description":
+	  "This is a graph of skewt data showing air above Ashland Sept 17th, from ground level to 100,000 feet. Skewt shows temperature and humidity colliding at 9K to 11K forming rain droplets. It's likely most rain will evaporate before it hits the ground, but residents are likely seeing scattered showers today.",
+	"creators": [{"creatorName": "NOAA"}],
+	"publisher": "NOAA",
+	"title": "Image plot of air above Ashland",
+	"subjects": [{"subject": "skewt"}, {"subject": "ashland"}],
+	"publicationYear": "2019",
+	"resourceType": {
+		"resourceType": "Dataset",
+		"resourceTypeGeneral": "Dataset"
+	},
+	"dates": [
+		{
+			"dateType": "Created",
+			"date": "2018-07-12T19:00:00.000000Z"
+		}
+	],
+	"data_type": "Meteorology"
+}
