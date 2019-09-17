@@ -235,9 +235,6 @@ def register(dataframe, destination, metadata, update, dry_run, verbose,
                               'Ex: bytes=0-1, 4-5')
 def download(path, overwrite, range):
     pc = pilot.commands.get_pilot_client()
-    if not pc.is_logged_in():
-        click.echo('You are not logged in.')
-        return
     fname = os.path.basename(path)
     if os.path.exists(fname) and not overwrite:
         click.echo('Aborted! File {} would be overwritten.'.format(fname))
