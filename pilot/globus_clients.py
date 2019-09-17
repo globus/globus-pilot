@@ -32,7 +32,8 @@ class FileContentResponse(GlobusResponse):
 
     @property
     def iter_content(self):
-        if 'multipart/byteranges' in self._data.headers.get('Content-Type'):
+        content_type = self._data.headers.get('Content-Type', '')
+        if 'multipart/byteranges' in content_type:
             md = multipart.decoder.MultipartDecoder.from_response(self._data)
             return [part.content for part in md.parts]
         return self._data.iter_content(chunk_size=(2**20 * 2))
