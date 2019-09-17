@@ -1,9 +1,9 @@
 {
 	"description":
-	  "This is a graph of skewt data showing air above San Diego on Sept 17th, from ground level to 100,000 feet. Data shows clouds at low levels, possibly a marine layer, and clear skies at higher elevations.",
+	  "This is tabular skewt data showing air above San Diego on Sept 17th, from ground level to 100,000 feet. Data shows clouds at low levels, possibly a marine layer, and clear skies at higher elevations.",
 	"creators": [{"creatorName": "NOAA"}],
 	"publisher": "NOAA",
-	"title": "Image plot of air above San Diego",
+	"title": "Tabular plot of air above San Diego (Feather)",
 	"subjects": [{"subject": "skewt"}, {"subject": "san diego"}],
 	"publicationYear": "2019",
 	"resourceType": {
