@@ -229,7 +229,7 @@ def delete(project):
     search_client.delete_by_query(pinfo['search_index'], search_query)
     click.echo('Removing project...')
     pc.project.delete_project(project)
-    pc.project.push()
+    pc.context.push()
     click.secho('Project {} has been deleted successfully.'.format(project),
                 fg='green')
 
