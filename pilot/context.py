@@ -77,6 +77,7 @@ class Context(config.ConfigSection):
         self.reset_cache_timer()
         sub = self.get_value('manifest_subject')
         index = index or self.get_value('manifest_index')
+        log.debug('Fetching manifest {} from index {}'.format(sub, index))
         sc = self.client.get_search_client()
         manifest = sc.get_subject(index, sub).data['content'][0]
         group = self.get_value('projects_group')
