@@ -84,12 +84,18 @@ def update(dry_run, update_groups_cache):
         if not any(output.values()):
             click.secho('Project is up to date', fg='green')
             return
-        for k, v in output.items():
-            click.echo(k)
-            for item in v:
-                click.echo(f'\t{item}')
-    except exc.HTTPSClientException as hce:
-        click.secho(str(hce), fg='red')
+        for group, changes in output.items():
+            if not changes:
+                continue
+            click.echo('{}:'.format(group))
+            for change_type, items in changes.items():
+                click.echo('\t{}:'.format(change_type))
+                for name, value in items.items():
+                    click.echo('\t\t{} -> {}'.format(name, value))
+    except globus_sdk.exc.SearchAPIError as sapie:
+        click.secho(str(sapie), fg='red')
+        click.secho('You can create the manifest for this index with `pilot '
+                    'context push`', fg='blue')
 
 
 @project_command.command(name='set', help='Set your project')

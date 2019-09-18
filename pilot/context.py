@@ -115,7 +115,12 @@ class Context(config.ConfigSection):
         }
 
     def get_diff(self, old, new):
-        """Fetch the differences between two dictionaries"""
+        """Fetch the differences between two dictionaries. Dicts can be one
+        or two levels deep, for example:
+        old: {'foo': 'bar'}, new: {'foo': 'moo'}
+        OR
+        old: {'foo': {'bar': 'baz'}, new: {'foo': {'bar': 'moo'}
+        """
         oldk, newk = set(old.keys()), set(new.keys())
         diff = dict()
         diff['removed'] = {k: old[k] for k in oldk - newk}
@@ -123,11 +128,15 @@ class Context(config.ConfigSection):
         diff['changed'] = {}
         for k in oldk.intersection(newk):
             if old[k] != new[k]:
-                changed = [pk for pk in set(old[k]).union(set(new[k]))
-                           if old[k].get(pk) != new[k].get(pk)]
-                changed_str = [f'{old[k][c]} --> {new[k][c]}'
-                               for c in changed]
-                diff['changed'][k] = dict(zip(changed, changed_str))
+                if isinstance(old[k], str):
+                    diff['changed'][k] = '"{}" changed to "{}"'.format(old[k],
+                                                                       new[k])
+                else:
+                    changed = [pk for pk in set(old[k]).union(set(new[k]))
+                               if old[k].get(pk) != new[k].get(pk)]
+                    changed_str = [f'{old[k][c]} --> {new[k][c]}'
+                                   for c in changed]
+                    diff['changed'][k] = dict(zip(changed, changed_str))
         return {k: v for k, v in diff.items() if v}
 
     def reset_cache_timer(self):
