@@ -143,8 +143,6 @@ def click_upload_dataframe(dataframe, destination, gcp=True):
                         transfer_result.get('task_id'),
                         )
                    )
-        click.echo('You can find your result here: {}'.format(
-            pc.get_portal_url(short_path)))
     else:
         url = pc.get_globus_http_url(short_path)
         click.echo('Uploading data...')
@@ -155,6 +153,9 @@ def click_upload_dataframe(dataframe, destination, gcp=True):
             click.echo('Failed with status code: {}'.format(
                 response.status_code))
             return
+    url = pc.get_portal_url(short_path)
+    if url:
+        click.echo('You can find your result here: {}'.format(url))
 
 
 @click.command(help='Upload dataframe to location on Globus and categorize it '

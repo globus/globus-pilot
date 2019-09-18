@@ -317,7 +317,11 @@ class PilotClient(NativeClient):
 
     def get_portal_url(self, path=None, project=None):
         """
-        Resolve a URL to the Globus Webapp
+        Resolve a URL to the Globus Webapp. Relies on the context setting:
+          'projects_portal_url'
+        Examples include:
+          https://myportal.com/myprojects/{{project}}/{{subject}}/'
+          https://example.com/{{project}}/foo/bar/{{subject}}/moo/
         **Parameters**
         ``path`` (*path string*)
           Path to a local resource on this project
@@ -332,6 +336,11 @@ class PilotClient(NativeClient):
             return None
         project = project or self.project.current
         subject = ''
+        if '{project}' not in portal_url or '{subject}' not in portal_url:
+            log.warning('Invalid portal url "{}", the url string requires'
+                        '"{{project}} and {{subject}}, for example:'
+                        'https://myportal/myprojects/{{project}}/{{subject}}/'
+                        .format(portal_url))
         if path:
             sub = self.get_subject_url(path, project=project)
             subject = urllib.parse.quote_plus(urllib.parse.quote_plus(sub))
