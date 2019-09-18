@@ -13,14 +13,8 @@ log = logging.getLogger(__name__)
              invoke_without_command=True)
 @click.pass_context
 def context_command(ctx):
-    click.secho('Warning: This command is new and relatively unstable. The '
-                '"push" command specifically may make your cornflakes soggy',
-                fg='yellow')
     pc = commands.get_pilot_client()
-    if not pc.is_logged_in():
-        click.echo('You are not logged in. If you switched contexts recently, '
-                   'scopes may have changed. (try login --force)')
-        return
+
     if ctx.invoked_subcommand is None:
         click.echo('Set project with "pilot project set <myproject>"')
         contexts = pc.context.load_all()
