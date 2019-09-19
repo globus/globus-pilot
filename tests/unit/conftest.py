@@ -96,6 +96,16 @@ def mock_transfer_client(monkeypatch):
 
 
 @pytest.fixture
+def mock_transfer_error(monkeypatch):
+    class MockError(Exception):
+        code = 'Error'
+        message = 'A Globus SDK Transfer Error occurred! (Mock)'
+
+    monkeypatch.setattr(globus_sdk.exc, 'TransferAPIError', MockError)
+    return MockError
+
+
+@pytest.fixture
 def mock_cli_basic(monkeypatch, mock_config, mock_projects):
     pc = client.PilotClient()
 
@@ -116,7 +126,7 @@ def mock_cli_basic(monkeypatch, mock_config, mock_projects):
 
 
 @pytest.fixture
-def mock_cli(mock_cli_basic, mock_transfer_client):
+def mock_cli(mock_cli_basic, mock_transfer_client, mock_profile):
     """
     Returns a mock logged in pilot client. Storage is mocked with a custom
     object, so this does behave slightly differently than the real client.

@@ -1,0 +1,20 @@
+{
+	"description":
+	  "This is tabular skewt data showing air above New York on Sept 17th 2019, from ground level to 100,000 feet. The data indicates a sunny day today.",
+	"creators": [{"creatorName": "NOAA"}],
+	"publisher": "NOAA",
+	"title": "Tabular plot of air above New York (HDF5)",
+	"subjects": [{"subject": "skewt"}, {"subject": "new york"}],
+	"publicationYear": "2019",
+	"resourceType": {
+		"resourceType": "Dataset",
+		"resourceTypeGeneral": "Dataset"
+	},
+	"dates": [
+		{
+			"dateType": "Created",
+			"date": "2018-07-12T19:00:00.000000Z"
+		}
+	],
+	"data_type": "Meteorology"
+}

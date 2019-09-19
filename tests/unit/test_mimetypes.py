@@ -1,6 +1,6 @@
 import pytest
 from pilot.analysis.mimetypes import (
-    detect_mimetype, detect_parquet, detect_feather, detect_hdf,
+    detect_type, detect_parquet, detect_feather, detect_hdf,
     detect_delimiter_separated_values, get_text_or_binary
 )
 
@@ -20,14 +20,14 @@ ALL_MIMETYPE_FILES = ANALYSIS_MIXED_FILES + ANALYSIS_BLIND_FILES
 
 @pytest.mark.parametrize("filename,mimetype", ANALYSIS_MIXED_FILES)
 def test_postulate_type(filename, mimetype):
-    assert detect_mimetype(filename) == mimetype
+    assert detect_type(filename) == mimetype
 
 
 @pytest.mark.parametrize("filename,mimetype", ANALYSIS_BLIND_FILES)
 def test_postulate_type_without_extensions(filename, mimetype):
     skip = []
     if mimetype not in skip:
-        assert detect_mimetype(filename) == mimetype
+        assert detect_type(filename) == mimetype
 
 
 @pytest.mark.parametrize("function,mimetypes", SPECIFIC_DETECTORS)

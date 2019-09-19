@@ -1,7 +1,7 @@
 import logging
 import sys
 from pilot import exc
-from pilot.analysis import pandas as pandalyze
+from pilot.analysis import mimetypes, pandas as pandalyze
 
 log = logging.getLogger(__name__)
 
@@ -15,7 +15,8 @@ ANALYZE_MAP = {
 
 
 def analyze_dataframe(filename, mimetype=None, foreign_keys=None):
-    analyze_function = ANALYZE_MAP.get(mimetype, None)
+    mimetype = mimetype or mimetypes.detect_type(filename)
+    analyze_function = ANALYZE_MAP.get(mimetype)
     if analyze_function is None:
         log.debug('No analyzer for mimetype {}'.format(mimetype))
         return {}

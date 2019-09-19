@@ -3,24 +3,21 @@ import copy
 import hashlib
 import pytz
 import datetime
-import mimetypes
 import json
 import jsonschema
 import logging
 
 from pilot.validation import validate_dataset, validate_user_provided_metadata
-from pilot.analysis import analyze_dataframe
+from pilot import analysis
 from pilot.exc import RequiredUploadFields, InvalidField
 
 DEFAULT_HASH_ALGORITHMS = ['sha256', 'md5']
 FOREIGN_KEYS_FILE = os.path.join(os.path.dirname(__file__),
                                  'foreign_keys.json')
 DEFAULT_PUBLISHER = 'Argonne National Laboratory'
-MINIMUM_USER_REQUIRED_FIELDS = [
-    'dataframe_type',
-    'data_type',
-    'mime_type',
-]
+# Previously users were required to add certain fields. If we want to add those
+# back, add them here.
+MINIMUM_USER_REQUIRED_FIELDS = []
 
 GMETA_LIST = {
     "@version": "2016-11-09",
@@ -70,7 +67,7 @@ def get_foreign_keys(filename=FOREIGN_KEYS_FILE, pilot_client=None):
 
 def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True,
                     mimetype=None):
-    mimetype = mimetype or mimetypes.guess_type(dataframe)[0]
+    mimetype = mimetype or analysis.mimetypes.detect_type(dataframe)
     dc_formats = []
     rfm_metadata = {}
     if mimetype:
@@ -181,6 +178,33 @@ def files_modified(manifest1, manifest2):
         man1dict, man2dict = man1.get(url_key), man2.get(url_key)
         if any([man1dict.get(f) != man2dict.get(f) for f in fields]):
             return True
+
+
+def metadata_modified(new_metadata, old_metadata):
+    """Check if the new metadata passed in matches the old metadata. Returns
+    true if all fields match except for timestamps on dates, which are allowed
+    to differ between one another.
+    Both new_metadata and old_metadata should be dicts that match the output
+    from `scrape_metadata` and can pass validation
+    """
+    old_metadata = old_metadata or {}
+    general_fields_match = [new_metadata.get(field) == old_metadata.get(field)
+                            for field in ['files', 'project_metadata']]
+    dc_fields_match = [
+        new_metadata['dc'][key] == old_metadata.get('dc', {}).get(key)
+        for key in new_metadata['dc'].keys() if key != 'dates'
+    ]
+    old_dates = old_metadata.get('dc', {}).get('dates', [])
+    date_entry_lengths_eq = len(new_metadata['dc']['dates']) == len(old_dates)
+    zipped_dates = zip(new_metadata['dc']['dates'], old_dates)
+    date_types_match = [nm['dateType'] == om['dateType']
+                        for nm, om in zipped_dates]
+    return not all([
+        all(general_fields_match),
+        all(dc_fields_match),
+        date_entry_lengths_eq,
+        all(date_types_match)
+    ])
 
 
 def update_dc_version(metadata):
@@ -329,7 +353,7 @@ def gen_remote_file_manifest(filepath, url, pilot_client, metadata={},
     rfm.update({alg: compute_checksum(filepath, getattr(hashlib, alg)())
                 for alg in algorithms})
     fkeys = get_foreign_keys(pilot_client)
-    metadata = (analyze_dataframe(filepath, mimetype, fkeys)
+    metadata = (analysis.analyze_dataframe(filepath, mimetype, fkeys)
                 if not skip_analysis else {})
     rfm.update({
         'filename': os.path.basename(filepath),

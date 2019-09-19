@@ -3,6 +3,7 @@ import logging
 import pandas as pd
 import numpy
 import tableschema
+import tabulator.exceptions
 from pilot import exc
 
 
@@ -98,13 +99,16 @@ def add_extended_metadata(filename, metadata):
     only tsvs and csvs. Tableschema doesn't add much, but it could be handy
     if it can detect extended types like locations."""
     metadata['previewbytes'] = get_preview_byte_count(filename)
-    ts_info = tableschema.Schema(tableschema.infer(filename)).descriptor
+    try:
+        ts_info = tableschema.Schema(tableschema.infer(filename)).descriptor
 
-    new_field_definitions = []
-    for m, ts in zip(metadata['field_definitions'], ts_info['fields']):
-        m['format'] = ts['format']
-        new_field_definitions.append(m)
-    metadata['field_definitions'] = new_field_definitions
+        new_field_definitions = []
+        for m, ts in zip(metadata['field_definitions'], ts_info['fields']):
+            m['format'] = ts['format']
+            new_field_definitions.append(m)
+        metadata['field_definitions'] = new_field_definitions
+    except tabulator.exceptions.FormatError:
+        pass
     return metadata
 
 
