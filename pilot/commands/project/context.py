@@ -10,7 +10,7 @@ from pilot.context import DEFAULT_PROJECTS_CACHE_TIMEOUT
 log = logging.getLogger(__name__)
 
 @click.group(name='context', help='Set or display context information',
-             invoke_without_command=True)
+             invoke_without_command=True, hidden=True)
 @click.pass_context
 def context_command(ctx):
     pc = commands.get_pilot_client()

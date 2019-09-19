@@ -205,7 +205,7 @@ def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
         click_upload_dataframe(dataframe, destination, gcp)
 
 
-@click.command(help='Register an existing dataframe in search')
+@click.command(help='Register an existing dataframe in search', hidden=True)
 @click.argument('dataframe',
                 type=click.Path(exists=True, file_okay=True, dir_okay=False,
                                 readable=True, resolve_path=True),)

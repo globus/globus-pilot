@@ -7,7 +7,7 @@ from pilot.exc import AnalysisException
 log = logging.getLogger(__name__)
 
 
-@click.command(help='Analyze a dataframe and print the output')
+@click.command(help='Analyze a dataframe and print the output', hidden=True)
 @click.argument('dataframes',
                 type=click.Path(exists=True, file_okay=True, dir_okay=True,
                                 readable=True, resolve_path=True),
