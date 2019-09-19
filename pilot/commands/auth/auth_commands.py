@@ -30,13 +30,15 @@ def login(refresh_tokens, force, local_server, browser):
         pc.logout()
 
     prev_info = pc.profile.load_user_info()
+    scopes = pc.context.get_value('scopes') or pc.DEFAULT_SCOPES
     pc.login(refresh_tokens=refresh_tokens,
              no_local_server=not local_server,
              no_browser=not browser,
-             force=force)
+             force=force,
+             requested_scopes=scopes)
     if not pc.project.load_all():
         log.debug('NO project info saved, updating...')
-        pc.project.update_with_diff()
+        pc.context.update_with_diff()
     click.secho('You have been logged in.', fg='green')
 
     local_ep = (pc.profile.load_option('local_endpoint') or

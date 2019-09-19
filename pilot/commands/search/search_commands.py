@@ -7,8 +7,6 @@ from pilot.search_parse import (
     parse_result, get_titles, get_field_metadata, get_field_metadata_titles
 )
 
-PORTAL_DETAIL_PAGE_PREFIX = 'https://petreldata.net/nci-pilot1/detail/'
-
 log = logging.getLogger(__name__)
 
 
@@ -27,7 +25,7 @@ def search_by_project(project=None, custom_params=None):
             'field_name': 'project_metadata.project-slug',
             'type': 'match_all',
             'values': [project or pc.project.current]
-        }
+        },
     }
     custom_params = custom_params or {}
     search_data.update(custom_params)
@@ -43,23 +41,24 @@ def search_by_project(project=None, custom_params=None):
 def list_command(output_json, limit):
     # Should require login if there are publicly visible records
     pc = commands.get_pilot_client()
-    if not pc.is_logged_in():
-        click.echo('You are not logged in.')
-        return
-
-    search_results = search_by_project()
+    project = pc.project.current
+    search_results = search_by_project(project=project,
+                                       custom_params={'limit': limit})
     if output_json:
         click.echo(json.dumps(search_results.data, indent=4))
         return
 
+    results = 'Showing {}/{} of total results for "{}"'.format(
+        search_results['count'], search_results['total'], project)
     items = ['title', 'data', 'dataframe', 'rows', 'columns', 'size']
     titles = get_titles(items) + ['Path']
     fmt = '{:21.20}{:11.10}{:10.9}{:7.6}{:7.6}{:7.6}{}'
-    output = [fmt.format(*titles)]
+    output = [results, fmt.format(*titles)]
     for result in search_results['gmeta']:
         # If this path refers to a result in a different base location, skip
         # it, it isn't part of this project
         if pc.get_path('') not in result['subject']:
+            log.debug('Skipping result {}'.format(result['subject']))
             continue
 
         data = dict(parse_result(result['content'][0]))
@@ -76,12 +75,7 @@ def list_command(output_json, limit):
               help='Output as JSON.')
 def describe(path, output_json):
     pc = commands.get_pilot_client()
-    if not pc.is_logged_in():
-        click.echo('You are not logged in.')
-        return
-
     entry = pc.get_search_entry(path)
-
     if not entry:
         click.echo('Unable to find entry')
         return
@@ -122,11 +116,8 @@ def describe(path, output_json):
         output.append(fmt.format(*[str(i) for i in fm_data]))
 
     # print other useful data
-    sub = pc.get_subject_url(path)
-    qsub = urllib.parse.quote_plus(urllib.parse.quote_plus(sub))
-    portal_url = '{}{}'.format(PORTAL_DETAIL_PAGE_PREFIX, qsub)
-    other_data = [general_fmt.format('Subject', sub),
-                  general_fmt.format('Portal', portal_url)]
+    other_data = [general_fmt.format('Subject', pc.get_subject_url(path)),
+                  general_fmt.format('Portal', pc.get_portal_url(path))]
     output = '\n'.join(output)
     output = '{}\n\nOther Data\n{}'.format(output, '\n'.join(other_data))
     click.echo(output)

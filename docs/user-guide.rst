@@ -377,3 +377,21 @@ with the ``pilot status`` command.
 (pilot1-env) $ pilot status
 ID  Dataframe                     Status    Start Time        Task ID
 0   /chicago_skewt.csv                   SUCCEEDED 2019-07-01 09:04  da1ffbdc-9c19-11e9-8219-02b7a92d8e58
+
+
+Scripting with the SDK
+----------------------
+
+In addition to the CLI, Pilot1 Tools also provide an SDK you can use for python
+scripts.
+
+.. code-block:: python
+
+   from pilot.client import PilotClient
+   pc = PilotClient()
+   # Show in code docs on all methods
+   help(pc)
+
+The SDK relies on the same credentials as the CLI. As long as a user has been
+authenticated (You have run ``pilot login``), methods in the SDK will work
+without any additional parameters.

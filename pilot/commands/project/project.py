@@ -18,7 +18,8 @@ PROJECT_QUERIES = {
         'validation': [input_validation.validate_project_title_unique],
     },
     'short_name': {
-        'prompt': 'Pick a short name',
+        'prompt': 'Pick a short name, this will create a directory on "{}" to '
+                  'store your files.',
         'default': lambda v, q: slugify(v.answers['title']),
         'help': 'The short name will be used in URLs and will be the name '
                 'users select this new project',
@@ -36,7 +37,7 @@ PROJECT_QUERIES = {
     'group': {
         'prompt': '',
         'groups': [],
-        'default': 'NCI Users',
+        'default': '',
         'help': 'The group determines who has read/write access to files, '
                 'and who can view records in search',
         'validation': [input_validation.validate_project_group],
@@ -54,7 +55,7 @@ def project_command(ctx):
         return
     invalid_with_pending_update = ['delete', 'add']
     if ctx.invoked_subcommand in invalid_with_pending_update:
-        if any(pc.project.update_with_diff(dry_run=True).values()):
+        if any(pc.context.update_with_diff(dry_run=True).values()):
             click.secho('There is an update for projects, please update '
                         '("pilot project update") before adding a new project',
                         fg='red')
@@ -73,19 +74,28 @@ def project_command(ctx):
 
 @project_command.command(help='Update stored list of projects.')
 @click.option('--dry-run', is_flag=True, default=False)
-def update(dry_run):
+@click.option('--update-groups-cache/--no-update-groups-cache', default=True,
+              help='Fetch the latest subgroups from Globus')
+def update(dry_run, update_groups_cache):
     pc = commands.get_pilot_client()
     try:
-        output = pc.project.update_with_diff(dry_run=dry_run)
+        output = pc.context.update_with_diff(
+            dry_run=dry_run, update_groups_cache=update_groups_cache)
         if not any(output.values()):
             click.secho('Project is up to date', fg='green')
             return
-        for k, v in output.items():
-            click.echo(k)
-            for item in v:
-                click.echo(f'\t{item}')
-    except exc.HTTPSClientException as hce:
-        click.secho(str(hce), fg='red')
+        for group, changes in output.items():
+            if not changes:
+                continue
+            click.echo('{}:'.format(group))
+            for change_type, items in changes.items():
+                click.echo('\t{}:'.format(change_type))
+                for name, value in items.items():
+                    click.echo('\t\t{} -> {}'.format(name, value))
+    except globus_sdk.exc.SearchAPIError as sapie:
+        click.secho(str(sapie), fg='red')
+        click.secho('You can create the manifest for this index with `pilot '
+                    'context push`', fg='blue')
 
 
 @project_command.command(name='set', help='Set your project')
@@ -104,31 +114,39 @@ def add():
     pc = commands.get_pilot_client()
     order = ['title', 'short_name', 'description', 'group']
 
-    PROJECT_QUERIES['group']['groups'] = list(pc.project.load_groups())
-    PROJECT_QUERIES['group']['prompt'] = (
-        'Available Groups: {}\nSet your group'
-        ''.format(', '.join(PROJECT_QUERIES['group']['groups']))
-    )
+    if pc.project.load_groups():
+        PROJECT_QUERIES['group']['groups'] = list(pc.project.load_groups())
+        PROJECT_QUERIES['group']['prompt'] = (
+            'Available Groups: {}\nSet your group'
+            ''.format(', '.join(PROJECT_QUERIES['group']['groups']))
+        )
+    else:
+        PROJECT_QUERIES['group']['validation'] = (
+            input_validation.validate_is_uuid
+        )
+    base_path = pc.context.get_value('projects_base_path')
+    PROJECT_QUERIES['short_name']['prompt'] = \
+        PROJECT_QUERIES['short_name']['prompt'].format(base_path)
     titles = [p['title'] for p in pc.project.load_all().values()]
     PROJECT_QUERIES['title']['current'] = titles
 
     iv = input_validation.InputValidator(queries=PROJECT_QUERIES, order=order)
     project = iv.ask_all()
-    project.update({'search_index': pc.project.DEFAULT_SEARCH_INDEX,
-                    'resource_server': pc.project.DEFAULT_RESOURCE_SERVER})
-    project['endpoint'] = pc.project.PROJECTS_ENDPOINT
+    project.update(
+        {'search_index': pc.context.get_value('projects_default_search_index'),
+         'resource_server':
+            pc.context.get_value('projects_default_resource_server')}
+    )
+    project['endpoint'] = pc.context.get_value('projects_endpoint')
     project['group'] = pc.project.load_groups().get(project['group'], 'public')
     short_name = project.pop('short_name')
-    project['base_path'] = os.path.join(
-        pc.project.PROJECTS_PATH,
-        short_name
-    )
+    project['base_path'] = os.path.join(base_path, short_name)
 
     click.secho('Updating global project list... ', nl=False)
     pc.project.set_project(short_name, project)
     tc = pc.get_transfer_client()
     tc.operation_mkdir(project['endpoint'], project['base_path'])
-    pc.project.push()
+    pc.context.push()
     click.secho('Success', fg='green')
     pc.project.current = short_name
     click.secho('Switched to project {}'.format(short_name))
@@ -153,9 +171,18 @@ def info(project=None):
         click.secho(str(pip), fg='red')
         return
 
+    ep_name = info['endpoint']
+    try:
+        tc = pc.get_transfer_client()
+        ep = tc.get_endpoint(info['endpoint']).data
+        ep_name = ep['display_name'] or ep['canonical_name'] or ep_name
+    except globus_sdk.exc.TransferAPIError:
+        click.echo('Failed to lookup endpoint {}, please ensure it is active.'
+                   .format(info['endpoint']))
+
     dinfo = [
         (info['title'], ''),
-        ('Endpoint', pc.project.lookup_endpoint(info['endpoint'])),
+        ('Endpoint', ep_name),
         ('Group', pc.project.lookup_group(info['group'])),
         ('Base Path', info['base_path']),
     ]
@@ -208,7 +235,7 @@ def delete(project):
     search_client.delete_by_query(pinfo['search_index'], search_query)
     click.echo('Removing project...')
     pc.project.delete_project(project)
-    pc.project.push()
+    pc.context.push()
     click.secho('Project {} has been deleted successfully.'.format(project),
                 fg='green')
 

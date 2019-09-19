@@ -26,6 +26,23 @@ ANALYSIS_BLIND_FILES = [(os.path.join(BLIND_BASE, ext), mt)
 
 DEFAULT_EXPIRE = int(time.time()) + 60 * 60 * 48
 
+MOCK_CONTEXT = {'test-context': {
+    'app_name': 'my app',
+    'client_id': 'e6a8d7ab-9087-4f5f-99f1-974446a64a10',
+    'manifest_index': '195a17c1-37cc-45b4-9b72-f0f7a154b143',
+    'manifest_subject': 'globus://project-manifest.json',
+    'projects_portal_url': 'https://myportal/{project}/{subject}/',
+    'projects_base_path': '/myroot',
+    'projects_cache_timeout': '86400',
+    'projects_default_resource_server': 'petrel_https_server',
+    'projects_default_search_index': '195a17c1-37cc-45b4-9b72-f0f7a154b143',
+    'projects_endpoint': 'cc852eda-d60b-4e3d-afbe-1f3a61688082',
+    'projects_group': '',
+    'scopes': ['profile', 'openid',
+               'urn:globus:auth:scope:search.api.globus.org:all',
+               'urn:globus:auth:scope:transfer.api.globus.org:all']
+    }
+}
 
 MOCK_PROJECTS = {
     'foo-project': {

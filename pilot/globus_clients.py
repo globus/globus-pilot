@@ -1,3 +1,4 @@
+import re
 import logging
 from globus_sdk import AccessTokenAuthorizer, RefreshTokenAuthorizer
 from globus_sdk.base import BaseClient, slash_join
@@ -8,6 +9,9 @@ import requests
 from requests_toolbelt import multipart
 
 log = logging.getLogger(__name__)
+
+# Pattern of how ranges must be given on the command line
+RANGE = re.compile(r'^(\d+-\d+)(,\d+-\d+)*$')
 
 
 class FileContentResponse(GlobusResponse):
@@ -28,7 +32,8 @@ class FileContentResponse(GlobusResponse):
 
     @property
     def iter_content(self):
-        if 'multipart/byteranges' in self._data.headers.get('Content-Type'):
+        content_type = self._data.headers.get('Content-Type', '')
+        if 'multipart/byteranges' in content_type:
             md = multipart.decoder.MultipartDecoder.from_response(self._data)
             return [part.content for part in md.parts]
         return self._data.iter_content(chunk_size=(2**20 * 2))
@@ -55,7 +60,10 @@ class HTTPFileClient(BaseClient):
             filename=None, response_class=None, retry_401=True, range=None):
         headers = headers or {}
         if range:
-            headers['Range'] = f'bytes={range}'
+            if not isinstance(range, str) or not re.match(RANGE, range):
+                raise ValueError('Ranges must be a string of the pattern: '
+                                 '"1-2,3-4" where each number is a byte range')
+            headers['Range'] = 'bytes={}'.format(range)
         response_class = response_class or self.file_content_response_class
         return self.send_custom_request(
             'GET', path, params=params,
@@ -157,3 +165,29 @@ class HTTPFileClient(BaseClient):
                 response.status_code)
         )
         raise self.error_class(response)
+
+
+class NexusClient(BaseClient):
+    """This is a custom nexus client for fetching groups. It is not available
+    outside of this client."""
+    allowed_authorizer_types = (AccessTokenAuthorizer, RefreshTokenAuthorizer)
+    error_class = HTTPSClientException
+    default_response_class = GlobusResponse
+    file_content_response_class = FileContentResponse
+
+    def __init__(self, authorizer=None, base_url='', **kwargs):
+        base_url = base_url or 'https://nexus.api.globusonline.org/groups/'
+        super().__init__(
+            self, "custom_pilot_nexus_client", base_url=base_url,
+            authorizer=authorizer, **kwargs
+        )
+
+    def get_subgroups(self, group, **params):
+        """
+        Get a list of Globus Sub-Groups for a given group. Max depth is by
+        default 100.
+        """
+        log.debug('Nexus GET for subgroups in "{}"'.format(group))
+        request_params = {'root': group, 'depth': 100}
+        request_params.update(params)
+        return self.get('list', params=request_params)

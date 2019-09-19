@@ -1,4 +1,5 @@
 import sys
+import uuid
 import logging
 import click
 import globus_sdk
@@ -78,8 +79,10 @@ def validate_slug_to_path_unique(v, slug):
     pc = commands.get_pilot_client()
     tc = pc.get_transfer_client()
     try:
-        response = tc.operation_ls(pc.project.PROJECTS_ENDPOINT,
-                                   path=pc.project.PROJECTS_PATH)
+        ctx = pc.context.get_context()
+        ep, path = ctx.get('projects_endpoint'), ctx.get('projects_base_path')
+        log.debug('Checking ep: {} path: {}'.format(ep, path))
+        response = tc.operation_ls(ep, path=path)
         existing = [f['name'] for f in response.data['DATA']]
         if slug in existing:
             raise exc.PilotValidator('"{}" is not available, please choose '
@@ -88,6 +91,10 @@ def validate_slug_to_path_unique(v, slug):
         log.exception(tapie.message)
         raise exc.PilotValidator('An error occurred, please try a different '
                                  'value or notify a system administrator.')
+
+
+def validate_is_uuid(v, entity):
+    uuid.UUID(entity)
 
 
 def validate_project_endpoint(v, ep):
