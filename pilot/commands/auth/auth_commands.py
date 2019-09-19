@@ -88,12 +88,6 @@ def logout(purge):
                     fg='green')
 
 
-@click.command(help='Output Globus Identity used to login', deprecated=True)
-@click.pass_context
-def whoami(ctx):
-    ctx.invoke(profile_command)
-
-
 @click.command(name='profile', help='Output Globus Identity used to login')
 @click.option('-i', '--interactive', default=False, is_flag=True,
               help='Interactively set all profile options')
