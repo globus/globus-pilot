@@ -6,7 +6,8 @@ import logging
 from globus_sdk import AuthClient, SearchClient, TransferClient
 from fair_research_login import NativeClient, LoadError, ScopesMismatch
 from pilot import (
-    project, profile, config, globus_clients, exc, logging_cfg, context
+    profile, config, globus_clients, exc, logging_cfg, context, search,
+    transfer_log, project as project_module,
 )
 
 logging_cfg.setup_logging()
@@ -90,7 +91,7 @@ class PilotClient(NativeClient):
                          token_storage=self.config,
                          default_scopes=default_scopes,
                          app_name=self.context.get_value('app_name'))
-        self.project = project.Project()
+        self.project = project_module.Project()
         self.profile = profile.Profile()
 
     def login(self, *args, **kwargs):
@@ -492,7 +493,56 @@ class PilotClient(NativeClient):
         else:
             return search_cli.delete_entry(index, subject, entry_id=entry_id)
 
-    def upload(self, dataframe, destination, project=None):
+    def upload(self, dataframe, destination, metadata=None, globus=True,
+               update=False, dry_run=False, skip_analysis=False, project=None):
+
+        if globus and not self.profile.load_option('local_endpoint'):
+            raise exc.NoLocalEndpointSet()
+        log.debug('Checking Destination')
+        if not destination:
+            raise exc.NoDestinationProvided(fmt=[self.ls('')])
+
+        try:
+            self.ls(destination)
+        except globus_sdk.exc.TransferAPIError as tapie:
+            if tapie.code == 'ClientError.NotFound':
+                raise exc.DirectoryDoesNotExist(destination) from None
+            else:
+                raise exc.GlobusTransferError(tapie.message) from None
+
+        metadata = metadata or {}
+        short_path = os.path.join(destination, os.path.basename(dataframe))
+        prev_metadata = self.get_search_entry(short_path)
+        if prev_metadata and not update and not dry_run:
+            raise exc.RecordExists(prev_metadata)
+        url = self.get_globus_http_url(short_path)
+        log.debug('Scraping metadata')
+        new_metadata = search.scrape_metadata(
+            dataframe, url, self, skip_analysis=skip_analysis,
+            mimetype=metadata.get('mime_type')
+        )
+        log.debug('Combining all metadata')
+        new_metadata = search.update_metadata(new_metadata, prev_metadata,
+                                              metadata)
+        if not search.metadata_modified(new_metadata, prev_metadata):
+            raise exc.NoChangesNeeded(fmt=[short_path])
+        subject = self.get_subject_url(short_path)
+        log.debug('Generating metadata...')
+        gmeta = search.gen_gmeta(subject, [self.get_group()], new_metadata)
+        if dry_run:
+            log.debug('Dry Run')
+            raise exc.DryRun(prev_metadata, new_metadata)
+
+        log.debug('Ingesting...')
+        self.ingest_entry(gmeta)
+        log.debug('Uploading...')
+        self.upload_dataframe(dataframe, destination, project=project,
+                              globus=globus)
+        log.debug('Finished!')
+        return True
+
+    def upload_dataframe(self, dataframe, destination, project=None,
+                         globus=True):
         """
         Upload a dataframe to a destination on a project
         **Parameters**
@@ -503,11 +553,51 @@ class PilotClient(NativeClient):
         ``project`` (*string*)
           The project to fetch info for. Defaults to current project
         **Examples**
-
         """
+        up = self.upload_globus if globus else self.upload_http
+        log.debug('Uploading using {}'.format(up))
+        return up(dataframe, destination, project=project)
+
+    def upload_http(self, dataframe, destination, project=None):
+        log.debug('Starting HTTP Upload...')
         short_path = os.path.join(destination, os.path.basename(dataframe))
         path = self.get_path(short_path, project=project)
         return self.get_http_client(project).put(path, filename=dataframe)
+
+    def upload_globus(self, dataframe, destination, project=None,
+                      globus_args=None):
+        log.debug('Starting Globus Upload...')
+        short_path = os.path.join(destination, os.path.basename(dataframe))
+        result = self.transfer_file(self.profile.load_option('local_endpoint'),
+                                    self.get_endpoint(),
+                                    dataframe,
+                                    self.get_path(short_path, project=project),
+                                    **(globus_args or {}))
+        log.debug('Logging...')
+        tl = transfer_log.TransferLog()
+        tl.add_log(result, short_path)
+        return result
+
+    def transfer_file(self, src_ep, dest_ep, src_path, dest_path,
+                      globus_args=None):
+        tc = self.get_transfer_client()
+        g_defaults = {
+            'label': '{} Transfer'.format(self.context.get_value('app_name')),
+            'notify_on_succeeded': False,
+            'sync_level': 'checksum',
+            'encrypt_data': True,
+        }
+        g_defaults.update(globus_args or {})
+        tdata = globus_sdk.TransferData(tc, src_ep, dest_ep, **g_defaults)
+        tdata.add_item(src_path, dest_path)
+        log.debug('Starting Transfer...')
+        transfer_result = tc.submit_transfer(tdata)
+        log.debug('Submitted Transfer')
+        return transfer_result
+
+    def download(self, path, project=None, relative=True, globus=False):
+        downloader = self.download_globus if globus else self.download_http
+        return downloader(path, project=project, relative=relative)
 
     def download_parts(self, path, project=None, relative=True, range=None):
         """Download a file in parts over HTTP and yield the number of bytes
@@ -523,7 +613,7 @@ class PilotClient(NativeClient):
         log.debug('Fetch Successful')
         return 0
 
-    def download(self, path, project=None, relative=True, range=None):
+    def download_http(self, path, project=None, relative=True, range=None):
         """
         Download a file to the local system using HTTPS to the local filesystem
         using the 'path' basename. Returns the total number of bytes written
@@ -544,11 +634,16 @@ class PilotClient(NativeClient):
         >>> pc.download('foo.txt', project='bar', range='0-100')
         >>> pc.download('bar/moo.txt', range='0-100,150-200')
         """
-        parts = self.download_parts(path, project, relative, range)
-        parts = [p for p in parts]
-        print(parts)
-        return sum(parts)
         return sum(self.download_parts(path, project, relative, range))
+
+    def download_globus(self, path, globus_args=None):
+        result = self.transfer_file(
+            self.profile.load_option('local_endpoint'),
+            self.get_endpoint(),
+            path,
+            os.path.basename(path),
+            **globus_args)
+        return result
 
     def delete(self, path, project=None, relative=True, recursive=False):
         """

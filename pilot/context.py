@@ -12,7 +12,7 @@ DEFAULT_PROJECTS_CACHE_TIMEOUT = 60 * 60 * 24
 DEFAULT_PILOT_CONTEXT = {
     'client_id': 'e4d82438-00df-4dbd-ab90-b6258933c335',
     'app_name': 'NCI Pilot 1 Dataframe Manager',
-    'manifest_subject': 'globus://pilot1-tools-project-manifest-v2.json',
+    'manifest_subject': 'globus://project-manifest.json',
     'manifest_index': '889729e8-d101-417d-9817-fa9d964fdbc9',
     'scopes': [
         'profile',

@@ -74,7 +74,7 @@ def test_ls(monkeypatch, mock_cli_basic):
 def test_upload_http(monkeypatch, mixed_tsv, mock_cli_basic):
     put = Mock()
     monkeypatch.setattr(globus_clients.HTTPFileClient, 'put', put)
-    mock_cli_basic.upload('a.tsv', 'destination')
+    mock_cli_basic.upload_http('a.tsv', 'destination')
     assert put.called
     assert put.call_args == call('/foo_folder/destination/a.tsv',
                                  filename='a.tsv')

@@ -98,7 +98,7 @@ def test_upload_dry_run(mock_cli):
     assert 'text/plain' in result.output
 
 
-def test_dataframe_up_to_date(mock_cli):
+def test_dataframe_up_to_date(mock_cli, mock_transfer_log):
     with open(EMTPY_TEST_FILE_META) as f:
         meta = json.load(f)
     mock_cli.get_search_entry.return_value = meta
@@ -116,11 +116,9 @@ def test_upload_local_endpoint_not_set(mock_cli, mock_profile):
     assert result.exit_code == ExitCodes.NO_LOCAL_ENDPOINT_SET
 
 
-def test_upload_gcp_log(mock_cli, monkeypatch):
-    add_log = Mock()
-    monkeypatch.setattr(transfer_log.TransferLog, 'add_log', add_log)
+def test_upload_gcp_log(mock_cli, mock_transfer_log):
     mock_cli.get_search_entry.return_value = {}
     mock_cli.get_transfer_client().submit_transfer.return_value = {}
     result = CliRunner().invoke(upload, [EMPTY_TEST_FILE, 'my_folder'])
     assert result.exit_code == 0
-    assert add_log.called
+    assert mock_transfer_log.called
