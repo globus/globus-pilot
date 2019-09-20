@@ -42,6 +42,8 @@ class Context(config.ConfigSection):
         super().__init__(*args, **kwargs)
         if not self.load_option('current'):
             if not self.get_context(self.DEFAULT_CONTEXT):
+                log.debug('No context set and no default context!')
+                log.debug('Setting context default.')
                 self.set_context(self.DEFAULT_CONTEXT, DEFAULT_PILOT_CONTEXT)
             self.current = self.DEFAULT_CONTEXT
 
