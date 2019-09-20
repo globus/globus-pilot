@@ -4,6 +4,50 @@
 Below are major changes for each version Release. For detailed information,
 see the list of commits from the last version or use `git log`.
 
+### 0.4.1 - 2019-09-20
+
+ - Fixed conda git lfs build error by switching to local builds
+ - Fixed puremagic and fair-research-login build dependencies
+ - Fixed diff not working for changes in context information on update
+ - Fixed bug in pushing project/context info to Globus Search
+ - Fixed bug with portal URL silently being not generated
+ - Fixed non-ranged download exception
+ - Fixed bug in `list` command not displaying more than 10 results
+ - Fixed passing context to transfer command
+ - Fixed portal url for 'pilot describe' command
+ - Fixed 2 bugs in download command not working/displaying correctly
+ - Fixed bug with login not requesting correct tokens for context
+ - Fixed hardcoded nature of get_portal_url
+ - Fixed up project add command to work with contexts
+ - Fixed some text in docs and added types for tutorial project files
+ - Fixed analyze to skip directories, can now analyze multiple files
+ - Fixed bug if previous search entry was missing files metadata
+ - Fixed '-u' flag being possibly needed for '--dry-run'
+ - Fixed upload exit codes to return unique values for various errors
+ - Fixed extended mimetype detection not working for file uploads
+ - Fixed backwards compatibility for old table schema fields on text files
+
+ - Added debugging when pliot falls back to default context
+ - Added puremagic dependency for detecting mimetypes
+ - Added doc to show how to call into the pilot client
+ - Added debug logs to list which manifest is being pulled on update
+ - Added dependency fair-research-login 0.1.5 (bumped from 0.1.1)
+ - Added docs for client, fixed download, added check for ranges
+ - Added 'context' switching so pilot can be used anywhere on other indices
+ - Added nexus client to fetch groups on project update
+ - Added parquet, feather, and h5 to pilot-tutorial. Removed extensions.
+ - Added note to upload if files are > 1GB
+ - Added an Analyze command separate from 'upload'
+ - Added 'blind' mimetype detection without extension for several types
+ - Added analysis for hdf, feather, and parquet plus tests for all.
+
+ - Silenced normal debug errors when listing
+ - Silenced Tableschema error when files have no extension
+
+ - Removed deprecated `whoami` command
+ - Removed old required fields (or fixed bug if mimetype was undetermined)
+
+
 ### 0.3.0 - 2019-07-17
 
  - Fixed bug where project 'info' subcommand would not show 'public' group
