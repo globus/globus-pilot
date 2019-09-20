@@ -2,7 +2,7 @@ import os
 from unittest.mock import Mock
 from click.testing import CliRunner
 from pilot.commands.auth.auth_commands import (
-    login, logout, whoami, profile_command)
+    login, logout, profile_command)
 
 
 def test_auth_login(monkeypatch, mock_cli, mock_config):
@@ -32,13 +32,6 @@ def test_auth_logout_purge(monkeypatch, mock_cli):
     assert result.exit_code == 0
     assert mock_cli.logout.called
     assert os.unlink.called
-
-
-def test_auth_whoami(mock_cli, mock_profile):
-    runner = CliRunner()
-    result = runner.invoke(whoami, [])
-    assert 'franklinr@globusid.org' in result.output
-    assert result.exit_code == 0
 
 
 def test_auth_profile(mock_cli, mock_config):

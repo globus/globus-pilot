@@ -6,7 +6,9 @@ package:
   version: {{ data.get('version') }}
 
 source:
-  git_url: https://github.com/globusonline/{{ name }}
+  path: .
+  # Disabled due to https://github.com/conda/conda-build/issues/1462
+  # git_url: https://github.com/globusonline/{{ name }}
 
 build:
   number: 0
@@ -29,6 +31,7 @@ requirements:
     - configobj
     - python-slugify
     - requests-toolbelt
+    - puremagic
 
 test:
   imports:

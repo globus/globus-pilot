@@ -73,7 +73,6 @@ to list all of the available commands:
       status    Check status of transfers
       upload    Upload dataframe to location on Globus and categorize it in...
       version   Show version and exit
-      whoami    Output Globus Identity used to login
 
 All commands support the ``--help`` argument for more information. Some commands,
 such as ``status``, can be run without arguments. Other commands, such as ``project``
