@@ -17,15 +17,6 @@ log = logging.getLogger(__name__)
 BIG_SIZE_WARNING = 2 ** 30
 
 
-def click_ingest_dataframe(gmeta):
-    pc = pilot.commands.get_pilot_client()
-    click.echo('Ingesting record into search...')
-    subject = gmeta['ingest_data']['gmeta'][0]['subject']
-    log.debug('Uploading Dataframe {}'.format(subject))
-    pc.ingest_entry(gmeta)
-    click.echo('Success!')
-
-
 @click.command(help='Upload dataframe to location on Globus and categorize it '
                     'in search')
 @click.argument('dataframe',
