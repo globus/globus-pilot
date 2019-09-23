@@ -200,12 +200,15 @@ def metadata_modified(new_metadata, old_metadata):
     zipped_dates = zip(new_metadata['dc']['dates'], old_dates)
     date_types_match = [nm['dateType'] == om['dateType']
                         for nm, om in zipped_dates]
-    return not all([
+    matches = [
         all(general_fields_match),
         all(dc_fields_match),
         date_entry_lengths_eq,
         all(date_types_match)
-    ])
+    ]
+    log.debug('Metadata comparison: files/metadata: {}, dc: {}, '
+              'date entries: {}, date types: {}'.format(*matches))
+    return not all(matches)
 
 
 def update_dc_version(metadata):
