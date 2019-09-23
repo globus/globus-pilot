@@ -178,6 +178,7 @@ def files_modified(manifest1, manifest2):
         man1dict, man2dict = man1.get(url_key), man2.get(url_key)
         if any([man1dict.get(f) != man2dict.get(f) for f in fields]):
             return True
+    return False
 
 
 def metadata_modified(new_metadata, old_metadata):
