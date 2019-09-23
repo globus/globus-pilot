@@ -211,24 +211,27 @@ def metadata_modified(new_metadata, old_metadata):
     return not all(matches)
 
 
-def update_dc_version(metadata):
-    version = int(metadata['dc']['version'])
-    metadata['dc']['version'] = str(version + 1)
-    metadata['dc']['dates'].append({
+def update_dc_version(new_metadata, old_metadata):
+    version = int(old_metadata['dc']['version'])
+    new_metadata['dc']['version'] = str(version + 1)
+    new_metadata['dc']['dates'].append({
         'dateType': 'Updated',
         'date': get_formatted_date()
     })
+    return new_metadata['dc']['version']
 
 
 def update_metadata(scraped_metadata, prev_metadata, user_metadata):
     if prev_metadata:
+        log.debug('Previous metadata detected!')
         metadata = copy.deepcopy(scraped_metadata or {})
 
         files_updated = files_modified(scraped_metadata.get('files'),
-                                       metadata.get('files'))
+                                       prev_metadata.get('files'))
         if files_updated:
             # If files have been modified, don't carryover metadata fields
-            update_dc_version(metadata)
+            v = update_dc_version(metadata, prev_metadata)
+            log.debug('Updated version to {}'.format(v))
         metadata['files'] = carryover_old_file_metadata(
             scraped_metadata.get('files'),
             prev_metadata.get('files')
