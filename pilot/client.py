@@ -493,14 +493,41 @@ class PilotClient(NativeClient):
         else:
             return search_cli.delete_entry(index, subject, entry_id=entry_id)
 
-    def upload(self, dataframe, destination, metadata=None, globus=True,
-               update=False, dry_run=False, skip_analysis=False, project=None):
+    def register(self, dataframe, destination, metadata=None,
+                 update=False, dry_run=False, skip_analysis=False):
+        """
+        Gather metadata on a local search record and register metadata in
+        Globus Search. This method assumes either the dataframe already exists
+        on a remote endpoint, or that the user will handle uploading the result
+        manually. Returns the new metadata for the dataframe.
+        This method follows the same behavior as the CLI, raising exceptions
+        for several different edge cases, all of which derive from
+        pilot.exc.PilotCodeException:
+        * pilot.exc.DirectoryDoesNotExist - destination not found
+        * pilot.exc.GlobusTransferError - unexpected transfer error
+        * pilot.exc.RecordExists - Record exists and update flag was false
+        * pilot.exc.NoChangesNeeded - Record was an exact match
+        * pilot.exc.DryRun - Everything succeeded, but ingest was aborted
 
-        if globus and not self.profile.load_option('local_endpoint'):
-            raise exc.NoLocalEndpointSet()
-        log.debug('Checking Destination')
-        if not destination:
-            raise exc.NoDestinationProvided(fmt=[self.ls('')])
+        **Parameters**
+        ``dataframe`` (*path-to-file*)
+          Path to a file on the local system
+        ``destination`` (*path-string*)
+          Path to upload on the remote endpoint, relative to the base path set
+          by both the context and project.
+        ``metadata`` (*dict*)
+          A dictionary of metadata to include with this upload. Metadata gets
+          registered into search to describe this dataframe
+        ``update`` (*bool*) Update an existing dataframe. An exception will be
+          raised if this is false and a dataframe exists to prevent an existing
+          dataframe from being overwritten.
+        ``skip_analysis`` (*bool*) If true, will attempt to open the file and
+          analyze the contents before uploading. This generates extra metadata
+          which will be included in search.
+        ``project`` (*string*)
+          The project to use as the base path. Defaults to current project
+        **Examples**
+        """
 
         try:
             self.ls(destination)
@@ -514,7 +541,7 @@ class PilotClient(NativeClient):
         short_path = os.path.join(destination, os.path.basename(dataframe))
         prev_metadata = self.get_search_entry(short_path)
         if prev_metadata and not update and not dry_run:
-            raise exc.RecordExists(prev_metadata)
+            raise exc.RecordExists(prev_metadata, fmt=[short_path])
         url = self.get_globus_http_url(short_path)
         log.debug('Scraping metadata')
         new_metadata = search.scrape_metadata(
@@ -535,30 +562,76 @@ class PilotClient(NativeClient):
 
         log.debug('Ingesting...')
         self.ingest_entry(gmeta)
-        log.debug('Uploading...')
-        self.upload_dataframe(dataframe, destination, project=project,
-                              globus=globus)
-        log.debug('Finished!')
-        return True
+        return new_metadata
 
-    def upload_dataframe(self, dataframe, destination, project=None,
-                         globus=True):
+    def upload(self, dataframe, destination, metadata=None, globus=True,
+               update=False, dry_run=False, skip_analysis=False, project=None):
         """
-        Upload a dataframe to a destination on a project
+        Register a dataframe in Globus Search then upload it to a relative
+        project directory on the configured Globus endpoint.
+        Raises all of the exceptions that `register` may raise, plus the
+        following (All exceptions derive from pilot.exc.PilotCodeException):
+        * pilot.exc.NoLocalEndpointSet - No Endpoint configured in profile
+        * pilot.exc.NoDestinationProvided - Bad Destination
         **Parameters**
         ``dataframe`` (*path-to-file*)
           Path to a file on the local system
         ``destination`` (*path-string*)
-          Path to upload on the remote endpoint
+          Path to upload on the remote endpoint, relative to the base path set
+          by both the context and project.
+        ``metadata`` (*dict*)
+          A dictionary of metadata to include with this upload. Metadata gets
+          registered into search to describe this dataframe
+        ``globus`` (*bool*) Use globus to upload the dataframe. Requires that
+          a local endpoint is set in the current user's profile. If false, an
+          http put to the configured Globus endpoint will be done instead.
+        ``update`` (*bool*) Update an existing dataframe. An exception will be
+          raised if this is false and a dataframe exists to prevent an existing
+          dataframe from being overwritten.
+        ``skip_analysis`` (*bool*) If true, will attempt to open the file and
+          analyze the contents before uploading. This generates extra metadata
+          which will be included in search.
         ``project`` (*string*)
-          The project to fetch info for. Defaults to current project
+          The project to use as the base path. Defaults to current project
         **Examples**
+        # With context `base_path` set to '/projects/'
+        # With project `base_path` set to 'my-project'
+        # Uploads to /projects/my-project/foo.txt
+        upload('foo.txt', '/')
+        # Uploads to /projects/my-project/my/subdir/foo.txt
+        upload('local/dir/foo.txt', 'my/subdir/')
+        # Raise an exception before uploading to projects/your-project/foo.txt
+        upload('foo.txt',
+               '/',
+               metadata={'my-meta': 'fooiness'},
+               globus=True,
+               update=True,
+               dry_run=True,
+               skip_analysis=True,
+               project='your-project'
+               )
         """
+        if globus and not self.profile.load_option('local_endpoint'):
+            raise exc.NoLocalEndpointSet()
+        if not destination:
+            raise exc.NoDestinationProvided(fmt=[self.ls('')])
+
+        metadata = self.register(
+            dataframe, destination, metadata=metadata, update=update,
+            dry_run=dry_run, skip_analysis=skip_analysis
+        )
         up = self.upload_globus if globus else self.upload_http
         log.debug('Uploading using {}'.format(up))
-        return up(dataframe, destination, project=project)
+        upload_result = up(dataframe, destination, project=project)
+        log.debug(upload_result)
+        return metadata
 
     def upload_http(self, dataframe, destination, project=None):
+        """Upload to the configured HTTP endpoint for this context/project.
+        Executes a simple upload without any metadata or checking the
+        destination for existing files. Overwrites any existing dataframe.
+        The project must have a configured http endpoint on petrel
+        """
         log.debug('Starting HTTP Upload...')
         short_path = os.path.join(destination, os.path.basename(dataframe))
         path = self.get_path(short_path, project=project)
@@ -566,11 +639,26 @@ class PilotClient(NativeClient):
 
     def upload_globus(self, dataframe, destination, project=None,
                       globus_args=None):
+        """Upload a dataframe to a project using a Globus Transfer. A local
+        endpoint must be configured.
+        ** parameters **
+        ``dataframe`` (*path-to-file*)
+          Path to a file on the local system
+        ``destination`` (*path-string*)
+          Path to upload on the remote endpoint, relative to the base path set
+          by both the context and project.
+        ``project`` (*string*)
+          The project to use as the base path. Defaults to current project
+        ``globus_args`` (*dict*)
+          Other arguments to pass to Globus Transfer. Overwrites any defaults.
+          See ``transfer_file`` for more info.
+          https://globus-sdk-python.readthedocs.io/en/stable/clients/transfer/#globus_sdk.TransferClient.submit_transfer  # noqa
+        """
         log.debug('Starting Globus Upload...')
         short_path = os.path.join(destination, os.path.basename(dataframe))
         result = self.transfer_file(self.profile.load_option('local_endpoint'),
                                     self.get_endpoint(),
-                                    dataframe,
+                                    os.path.abspath(dataframe),
                                     self.get_path(short_path, project=project),
                                     **(globus_args or {}))
         log.debug('Logging...')
@@ -580,6 +668,28 @@ class PilotClient(NativeClient):
 
     def transfer_file(self, src_ep, dest_ep, src_path, dest_path,
                       globus_args=None):
+        """Low level utility for transferring a single file using Globus.
+        Does not account for context/project basepaths.
+        ** parameters **
+        ``src_ep`` (*uuid*)
+          Source Globus Endpoint
+        ``destination`` (*uuid*)
+          Destination Globus Endpoint
+        ``src_path`` (*path-string*)
+          Source path to file to-be-transferred
+        ``dest_path`` (*path-string*)
+          Destination path to transfer file.
+        ``globus_args`` (*dict*)
+          Globus Transfer options. Defaults include:
+          {
+            'label': 'MyApp Transfer',
+            'notify_on_succeeded': False,
+            'sync_level': 'checksum',
+            'encrypt_data': True,
+          }
+          See more options at:
+          https://globus-sdk-python.readthedocs.io/en/stable/clients/transfer/#globus_sdk.TransferClient.submit_transfer  # noqa
+        """
         tc = self.get_transfer_client()
         g_defaults = {
             'label': '{} Transfer'.format(self.context.get_value('app_name')),
