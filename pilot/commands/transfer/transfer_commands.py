@@ -53,8 +53,14 @@ def upload(ctx, dataframe, destination, metadata, gcp, update, dry_run,
             user_metadata = json.load(mf_fh)
     try:
         pc = pilot.commands.get_pilot_client()
+        transport = 'globus' if gcp else 'http'
+        click.secho('Uploading {} using {}... '.format(dataframe, transport))
         pc.upload(dataframe, destination, metadata=user_metadata, globus=gcp,
                   update=update, dry_run=dry_run, skip_analysis=no_analyze)
+        click.secho('Success!', fg='green')
+        short_path = os.path.join(destination, os.path.basename(dataframe))
+        url = pc.get_portal_url(short_path)
+        click.echo('You can view your new record here: \n{}'.format(url))
     except pilot.exc.AnalysisException as ae:
         click.secho('Error analyzing {}, skipping...'.format(dataframe),
                     fg='yellow')
