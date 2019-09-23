@@ -57,7 +57,7 @@ class PilotCodeException(PilotClientException):
         self.message = message or self.MESSAGE
         self.fmt = fmt
         if fmt:
-            self.message = self.message.format(fmt)
+            self.message = self.message.format(*fmt)
         self.verbose = verbose
         self.verbose_output = ''
 
@@ -96,8 +96,8 @@ class RecordExists(PilotCodeException):
     MESSAGE = '"{}": Record Exists, extra confirmation needed to overwrite.'
     CODE = ExitCodes.RECORD_EXISTS
 
-    def __init__(self, previous_metadata, verbose=False):
-        super().__init__(verbose=verbose)
+    def __init__(self, previous_metadata, fmt=None, verbose=False):
+        super().__init__(verbose=verbose, fmt=fmt)
         self.previous_metadata = previous_metadata
 
 
