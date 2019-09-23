@@ -38,7 +38,6 @@ class PilotClient(NativeClient):
     *  :py:meth:`.get_globus_url`
     *  :py:meth:`.get_globus_app_url`
     *  :py:meth:`.get_portal_url`
-    *  :py:meth:`.get_globus_app_url`
     *  :py:meth:`.get_subject_url`
     *  :py:meth:`.ls`
     *  :py:meth:`.mkdir`
@@ -51,27 +50,28 @@ class PilotClient(NativeClient):
     ** Example **
     Login, upload, show various access methods, then delete.
 
-    from pilot.search import scrape_metadata, gen_gmeta
     pc = PilotClient()
+
+    # Setup the client (You can also do this with the CLI, both use the same
+    #                   credentials)
     pc.login()
     pc.project.current = 'foo'
-    pc.mkdir('bar')
-    pc.ls('bar')
 
-    metadata = scrape_metadata('moo.txt')
-    gmeta = gen_gmeta(pc.get_subject_url('bar/moo.txt'), ['public'], metadata)
-    pc.ingest_entry(gmeta)
+    # Create a directory, Upload a file to it
+    pc.mkdir('bar')
     pc.upload('moo.txt', 'bar')
 
+    # Get resources associated with the file
+    pc.ls('bar')
     pc.get_path('bar/moo.txt')
     pc.get_portal_url('bar/moo.txt')
     pc.get_globus_app_url('bar/moo.txt')
     pc.get_globus_http_url('bar/moo.txt')
     pc.download('bar/moo.txt')
 
+    # Delete the file
     pc.delete_entry('bar/moo.txt')
     pc.delete('bar/moo.txt')
-
     """
     DEFAULT_SCOPES = [
         'profile',
