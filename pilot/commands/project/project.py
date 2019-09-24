@@ -264,7 +264,7 @@ def edit(project=None):
     new_info = iv.ask_all()
     info.update(new_info)
     pc.project.set_project(project, info)
-    pc.project.push()
+    pc.context.push()
     click.secho('Project "{}" has been updated'.format(project), fg='green')
 
 
@@ -272,6 +272,6 @@ def edit(project=None):
                          hidden=True)
 def push():
     pc = commands.get_pilot_client()
-    pc.project.push()
+    pc.context.push()
     click.secho('Global projects have been updated. Users will be notified '
                 'within 24 hours.', fg='green')
