@@ -7,6 +7,7 @@ import globus_sdk
 import datetime
 import pilot
 import traceback
+import contextlib
 from pilot.exc import (RequiredUploadFields, HTTPSClientException,
                        InvalidField, ExitCodes)
 from jsonschema.exceptions import ValidationError
@@ -52,15 +53,19 @@ def upload(ctx, dataframe, destination, metadata, gcp, update, dry_run,
         with open(metadata) as mf_fh:
             user_metadata = json.load(mf_fh)
     try:
-        pc = pilot.commands.get_pilot_client()
-        transport = 'globus' if gcp else 'http'
-        click.secho('Uploading {} using {}... '.format(dataframe, transport))
-        pc.upload(dataframe, destination, metadata=user_metadata, globus=gcp,
-                  update=update, dry_run=dry_run, skip_analysis=no_analyze)
-        click.secho('Success!', fg='green')
-        short_path = os.path.join(destination, os.path.basename(dataframe))
-        url = pc.get_portal_url(short_path)
-        click.echo('You can view your new record here: \n{}'.format(url))
+        with pilot_code_handler(dataframe, destination, verbose):
+            pc = pilot.commands.get_pilot_client()
+
+            transport = 'globus' if gcp else 'http'
+            click.secho('Uploading {} using {}... '.format(dataframe,
+                                                           transport))
+            pc.upload(dataframe, destination, metadata=user_metadata,
+                      globus=gcp, update=update, dry_run=dry_run,
+                      skip_analysis=no_analyze)
+            click.secho('Success!', fg='green')
+            short_path = os.path.join(destination, os.path.basename(dataframe))
+            url = pc.get_portal_url(short_path)
+            click.echo('You can view your new record here: \n{}'.format(url))
     except pilot.exc.AnalysisException as ae:
         click.secho('Error analyzing {}, skipping...'.format(dataframe),
                     fg='yellow')
@@ -71,23 +76,6 @@ def upload(ctx, dataframe, destination, metadata, gcp, update, dry_run,
         ctx.invoke(upload, dataframe=dataframe, destination=destination,
                    metadata=metadata, gcp=gcp, update=update, dry_run=dry_run,
                    verbose=verbose, no_analyze=True)
-    except (RequiredUploadFields, ValidationError, InvalidField) as e:
-        log.exception(e)
-        click.secho('Error Validating Metadata: {}'.format(e), fg='red')
-        sys.exit(ExitCodes.INVALID_METADATA)
-    except pilot.exc.RecordExists as re:
-        last_updated = re.previous_metadata['dc']['dates'][-1]['date']
-        dt = datetime.datetime.strptime(last_updated, '%Y-%m-%dT%H:%M:%S.%fZ')
-        click.echo('Existing record found for {}, specify -u to update.\n'
-                   'Last updated: {: %A, %b %d, %Y}'
-                   ''.format(os.path.basename(dataframe), dt))
-        sys.exit(re.CODE)
-    except pilot.exc.PilotCodeException as pce:
-        if verbose:
-            click.echo(pce.verbose_output)
-        fg = 'green' if pce.CODE == ExitCodes.SUCCESS else 'yellow'
-        click.secho(str(pce), err=True, fg=fg)
-        sys.exit(pce.CODE)
 
 
 @click.command(help='Register an existing dataframe in search', hidden=True)
@@ -109,7 +97,76 @@ def register(dataframe, destination, metadata, update, dry_run, verbose,
     """
     Create a search entry for a pre-existing file
     """
-    raise NotImplemented('Refactoring in progress!')
+    user_metadata = {}
+    if metadata is not None:
+        with open(metadata) as mf_fh:
+            user_metadata = json.load(mf_fh)
+    short_path = os.path.join(destination, os.path.basename(dataframe))
+    with pilot_code_handler(short_path, verbose):
+        pc = pilot.commands.get_pilot_client()
+        click.secho('Registering {}... '.format(dataframe))
+        pc.register(dataframe, destination, metadata=user_metadata,
+                    update=update, dry_run=dry_run, skip_analysis=no_analyze)
+        click.secho('Success!', fg='green')
+        url = pc.get_portal_url(short_path)
+        click.echo('You can view your new record here: \n{}'.format(url))
+
+
+@contextlib.contextmanager
+def pilot_code_handler(dataframe, destination, verbose):
+    """
+    Handle exceptions for a `pc.register` or `pc.upload` call. If exceptions
+    happen, this handler will cleanly catch the exception and print click
+    output for the result. Only code exceptions are caught, all other
+    exceptions fall through.
+    ** parameters **
+      ``short_name`` (*string*) the short-hard representation of the relative
+      path on the remote endpoint
+      ``verbose`` (*bool*) print verbose output
+    """
+    try:
+        pc = pilot.commands.get_pilot_client()
+        if not destination:
+            dirs = [n for n, d in pc.ls('', extended=True).items()
+                    if d['type'] == 'dir']
+            raise pilot.exc.NoDestinationProvided(fmt=[dirs])
+        yield
+    except (RequiredUploadFields, ValidationError, InvalidField) as e:
+        log.exception(e)
+        click.secho('Error Validating Metadata: {}'.format(e), fg='red')
+        sys.exit(ExitCodes.INVALID_METADATA)
+    except pilot.exc.RecordExists as re:
+        last_updated = re.previous_metadata['dc']['dates'][-1]['date']
+        dt = datetime.datetime.strptime(last_updated, '%Y-%m-%dT%H:%M:%S.%fZ')
+        short_path = os.path.join(destination, os.path.basename(dataframe))
+        click.echo('Existing record found for {}, specify -u to update.\n'
+                   'Last updated: {: %A, %b %d, %Y}'
+                   ''.format(short_path, dt))
+        sys.exit(re.CODE)
+    except pilot.exc.DryRun as dr:
+        pc = pilot.commands.get_pilot_client()
+        short_path = os.path.join(destination, os.path.basename(dataframe))
+        stats = dr.stats
+        stats.update({'subject': pc.get_subject_url(short_path),
+                      'url': pc.get_globus_http_url(short_path)})
+        click.secho('Success! (Dry Run -- No changes made.)', fg='green')
+        click.echo('Pre-existing record: {record_exists}\n'
+                   'Files Modified: {files_modified}\n'
+                   'Metadata Modified: {metadata_modified}\n'
+                   'Version: {version} (Would be updated to {new_version})\n'
+                   'Search Subject: {subject}\n'
+                   'URL: {url}\n'
+                   .format(**stats)
+                   )
+        if verbose:
+            _, metadata = dr.verbose_output
+            click.echo(json.dumps(metadata, indent=2))
+    except pilot.exc.PilotCodeException as pce:
+        if verbose:
+            click.echo(pce.verbose_output)
+        fg = 'green' if pce.CODE == ExitCodes.SUCCESS else 'yellow'
+        click.secho(str(pce), err=True, fg=fg)
+        sys.exit(pce.CODE)
 
 
 @click.command(help='Download a file to your local directory.')

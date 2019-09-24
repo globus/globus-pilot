@@ -27,10 +27,13 @@ def test_upload(mock_cli, monkeypatch):
 
 
 def test_upload_without_destination(mock_cli):
-    mock_cli.ls.return_value = ['foo', 'bar']
+    mock_cli.ls.return_value = {'foo': {'type': 'dir'},
+                                'bar': {'type': 'file'}}
     result = CliRunner().invoke(upload, [EMPTY_TEST_FILE])
     assert result.exit_code == ExitCodes.NO_DESTINATION_PROVIDED
     assert 'No Destination Provided' in result.output
+    assert 'foo' in result.output
+    assert 'bar' not in result.output
 
 
 def test_upload_to_nonexistant_dir(mock_cli, mock_transfer_error):
