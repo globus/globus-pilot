@@ -212,26 +212,31 @@ def metadata_modified(new_metadata, old_metadata):
 
 
 def update_dc_version(new_metadata, old_metadata):
+    """
+    Compare new metadata with old metadata, and derive a new version number.
+    If files have changed in the old metadata, returns new metadata with
+    bumped version. Otherwise, simply carries over the old metadata version
+    number.
+    """
+    files_updated = files_modified(new_metadata.get('files'),
+                                   old_metadata.get('files'))
     version = int(old_metadata['dc']['version'])
-    new_metadata['dc']['version'] = str(version + 1)
-    new_metadata['dc']['dates'].append({
-        'dateType': 'Updated',
-        'date': get_formatted_date()
-    })
-    return new_metadata['dc']['version']
+    if files_updated:
+        new_metadata['dc']['version'] = str(version + 1)
+        new_metadata['dc']['dates'].append({
+            'dateType': 'Updated',
+            'date': get_formatted_date()
+        })
+    else:
+        new_metadata['dc']['version'] = old_metadata['dc']['version']
+    return new_metadata
 
 
 def update_metadata(scraped_metadata, prev_metadata, user_metadata):
     if prev_metadata:
         log.debug('Previous metadata detected!')
         metadata = copy.deepcopy(scraped_metadata or {})
-
-        files_updated = files_modified(scraped_metadata.get('files'),
-                                       prev_metadata.get('files'))
-        if files_updated:
-            # If files have been modified, don't carryover metadata fields
-            v = update_dc_version(metadata, prev_metadata)
-            log.debug('Updated version to {}'.format(v))
+        metadata = update_dc_version(metadata, prev_metadata)
         metadata['files'] = carryover_old_file_metadata(
             scraped_metadata.get('files'),
             prev_metadata.get('files')
