@@ -1,5 +1,6 @@
 import json
 from globus_sdk.exc import GlobusAPIError
+import pilot
 from enum import IntEnum
 
 
@@ -102,15 +103,26 @@ class RecordExists(PilotCodeException):
 
 
 class DryRun(PilotCodeException):
-    MESSAGE = 'Dry run: No changes applied'
+    MESSAGE = 'Success! (Dry Run -- No changes applied.)'
     CODE = ExitCodes.SUCCESS
 
     def __init__(self, previous_metadata, new_metadata, verbose=False):
         super().__init__(verbose=verbose)
         self.message = self.MESSAGE
-        self.previous_metadata = previous_metadata
+        self.previous_metadata = previous_metadata or {}
+        ver = previous_metadata['dc']['version'] if previous_metadata else 0
         self.new_metadata = new_metadata
-        self.verbose_output = self.new_metadata
+        self.stats = {
+            'record_exists': True if self.previous_metadata else False,
+            'files_modified': pilot.search.files_modified(
+                self.new_metadata.get('files'),
+                self.previous_metadata.get('files')),
+            'metadata_modified': pilot.search.metadata_modified(
+                self.new_metadata, self.previous_metadata),
+            'version': ver,
+            'new_version': new_metadata['dc']['version'],
+        }
+        self.verbose_output = self.stats, self.new_metadata
 
 
 class NoLocalEndpointSet(PilotCodeException):
