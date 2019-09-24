@@ -4,8 +4,14 @@
 Below are major changes for each version Release. For detailed information,
 see the list of commits from the last version or use `git log`.
 
-### 0.4.1 - 2019-09-20
+### 0.4.2 - 2019-09-24
 
+ - Fixed exception in `project push` and `project edit` commands
+ - Fixed regression, added test for improper file versioning
+ - Fixed bug with version being reset when metadata changed but file didn't
+ - Fixed Dry-run to properly generate change stats
+ - Fixed search.files_modified returning None instead of False
+ - Fixed string formatting on some exceptions
  - Fixed conda git lfs build error by switching to local builds
  - Fixed puremagic and fair-research-login build dependencies
  - Fixed diff not working for changes in context information on update
@@ -27,6 +33,9 @@ see the list of commits from the last version or use `git log`.
  - Fixed extended mimetype detection not working for file uploads
  - Fixed backwards compatibility for old table schema fields on text files
 
+ - Added new docs for new client usage
+ - Added new pilot.upload SDK call which automatically registers/uploads file
+ - Added new pilot.register SDK call for analyzing/ingesting metadata
  - Added debugging when pliot falls back to default context
  - Added puremagic dependency for detecting mimetypes
  - Added doc to show how to call into the pilot client
@@ -46,6 +55,8 @@ see the list of commits from the last version or use `git log`.
 
  - Removed deprecated `whoami` command
  - Removed old required fields (or fixed bug if mimetype was undetermined)
+
+ - Renamed low level pilot.upload call to upload_globus()
 
 
 ### 0.3.0 - 2019-07-17
