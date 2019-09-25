@@ -21,9 +21,9 @@ BIG_SIZE_WARNING = 2 ** 30
 @click.command(help='Upload dataframe to location on Globus and categorize it '
                     'in search')
 @click.argument('dataframe',
-                type=click.Path(exists=True, file_okay=True, dir_okay=False,
-                                readable=True, resolve_path=True),)
-@click.argument('destination', type=click.Path(), required=False)
+                type=click.Path(exists=True, file_okay=True, dir_okay=True,
+                                readable=True, resolve_path=True), nargs=1)
+@click.argument('destination', type=click.Path(), required=True)
 @click.option('-j', '--json', 'metadata', type=click.Path(),
               help='Metadata in JSON format')
 @click.option('-u', '--update/--no-update', default=False,
@@ -40,8 +40,7 @@ BIG_SIZE_WARNING = 2 ** 30
 #               help='Path to x label file')
 # @click.option('--y-labels', type=click.Path(),
 #               help='Path to y label file')
-@click.pass_context
-def upload(ctx, dataframe, destination, metadata, gcp, update, dry_run,
+def upload(dataframe, destination, metadata, gcp, update, dry_run,
            verbose, no_analyze):
     """
     Create a search entry and upload this file to the GCS Endpoint.
@@ -52,30 +51,18 @@ def upload(ctx, dataframe, destination, metadata, gcp, update, dry_run,
     if metadata is not None:
         with open(metadata) as mf_fh:
             user_metadata = json.load(mf_fh)
-    try:
-        with pilot_code_handler(dataframe, destination, verbose):
-            pc = pilot.commands.get_pilot_client()
-
-            transport = 'globus' if gcp else 'http'
-            click.secho('Uploading {} using {}... '.format(dataframe,
-                                                           transport))
-            pc.upload(dataframe, destination, metadata=user_metadata,
-                      globus=gcp, update=update, dry_run=dry_run,
-                      skip_analysis=no_analyze)
-            click.secho('Success!', fg='green')
-            short_path = os.path.join(destination, os.path.basename(dataframe))
-            url = pc.get_portal_url(short_path)
-            click.echo('You can view your new record here: \n{}'.format(url))
-    except pilot.exc.AnalysisException as ae:
-        click.secho('Error analyzing {}, skipping...'.format(dataframe),
-                    fg='yellow')
-        if verbose:
-            traceback.print_exception(*ae.original_exc_info)
-        else:
-            click.secho('(Use --verbose to see full error)', fg='yellow')
-        ctx.invoke(upload, dataframe=dataframe, destination=destination,
-                   metadata=metadata, gcp=gcp, update=update, dry_run=dry_run,
-                   verbose=verbose, no_analyze=True)
+    with pilot_code_handler(dataframe, destination, verbose):
+        pc = pilot.commands.get_pilot_client()
+        transport = 'globus' if gcp else 'http'
+        click.secho('Uploading {} using {}... '.format(dataframe,
+                                                       transport))
+        pc.upload(dataframe, destination, metadata=user_metadata,
+                  globus=gcp, update=update, dry_run=dry_run,
+                  skip_analysis=no_analyze)
+        click.secho('Success!', fg='green')
+        short_path = os.path.join(destination, os.path.basename(dataframe))
+        url = pc.get_portal_url(short_path)
+        click.echo('You can view your new record here: \n{}'.format(url))
 
 
 @click.command(help='Register an existing dataframe in search', hidden=True)
@@ -167,6 +154,13 @@ def pilot_code_handler(dataframe, destination, verbose):
         fg = 'green' if pce.CODE == ExitCodes.SUCCESS else 'yellow'
         click.secho(str(pce), err=True, fg=fg)
         sys.exit(pce.CODE)
+    except pilot.exc.AnalysisException as ae:
+        click.secho('Error analyzing {}, skipping...'.format(dataframe),
+                    fg='yellow')
+        if verbose:
+            traceback.print_exception(*ae.original_exc_info)
+        else:
+            click.secho('(Use --verbose to see full error)', fg='yellow')
 
 
 @click.command(help='Download a file to your local directory.')

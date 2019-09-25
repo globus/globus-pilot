@@ -361,20 +361,39 @@ def gen_remote_file_manifest(filepath, url, pilot_client, metadata={},
                              algorithms=DEFAULT_HASH_ALGORITHMS,
                              mimetype=None,
                              skip_analysis=True):
-    rfm = metadata.copy()
-    rfm.update({alg: compute_checksum(filepath, getattr(hashlib, alg)())
-                for alg in algorithms})
-    fkeys = get_foreign_keys(pilot_client)
-    metadata = (analysis.analyze_dataframe(filepath, mimetype, fkeys)
-                if not skip_analysis else {})
-    rfm.update({
-        'filename': os.path.basename(filepath),
-        'url': url,
-        'field_metadata': metadata,
-    })
-    if os.path.exists(filepath):
-        rfm['length'] = os.stat(filepath).st_size
-    return [rfm]
+    base_url = os.path.dirname(url)
+    manifest_entries = []
+    log.debug(filepath)
+    log.debug(get_files(filepath))
+    for subfile in get_files(filepath):
+        log.debug(subfile)
+        rfm = metadata.copy()
+        rfm.update({alg: compute_checksum(subfile, getattr(hashlib, alg)())
+                    for alg in algorithms})
+        fkeys = get_foreign_keys(pilot_client)
+        mimetype = mimetype or analysis.mimetypes.detect_type(subfile)
+        metadata = (analysis.analyze_dataframe(subfile, mimetype, fkeys)
+                    if not skip_analysis else {})
+        rfm.update({
+            'filename': os.path.basename(subfile),
+            'url': os.path.join(base_url, subfile),
+            'field_metadata': metadata,
+            'mime_type': mimetype
+        })
+        if os.path.exists(subfile):
+            rfm['length'] = os.stat(subfile).st_size
+        manifest_entries.append(rfm)
+    return manifest_entries
+
+
+def get_files(path):
+    if os.path.isfile(path):
+        return [os.path.basename(path)]
+    else:
+        file_lists = [[os.path.join(dirpath, f) for f in files]
+                      for dirpath, _, files in os.walk(path)]
+        # Flatten list of lists into a single list
+        return [item for sublist in file_lists for item in sublist]
 
 
 def compute_checksum(file_path, algorithm, block_size=65536):

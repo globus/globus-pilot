@@ -632,6 +632,7 @@ class PilotClient(NativeClient):
         destination for existing files. Overwrites any existing dataframe.
         The project must have a configured http endpoint on petrel
         """
+        raise NotImplemented('This is broken for now!')
         log.debug('Starting HTTP Upload...')
         short_path = os.path.join(destination, os.path.basename(dataframe))
         path = self.get_path(short_path, project=project)
@@ -655,7 +656,8 @@ class PilotClient(NativeClient):
           https://globus-sdk-python.readthedocs.io/en/stable/clients/transfer/#globus_sdk.TransferClient.submit_transfer  # noqa
         """
         log.debug('Starting Globus Upload...')
-        short_path = os.path.join(destination, os.path.basename(dataframe))
+        relative_path = os.path.basename(dataframe).replace(os.getcwd(), '')
+        short_path = os.path.join(destination, relative_path)
         result = self.transfer_file(self.profile.load_option('local_endpoint'),
                                     self.get_endpoint(),
                                     os.path.abspath(dataframe),
@@ -699,7 +701,10 @@ class PilotClient(NativeClient):
         }
         g_defaults.update(globus_args or {})
         tdata = globus_sdk.TransferData(tc, src_ep, dest_ep, **g_defaults)
-        tdata.add_item(src_path, dest_path)
+        for file_path in search.get_files(src_path):
+            _, relativep = file_path.split(os.path.basename(dest_path))
+            log.debug((file_path, os.path.join(dest_path, relativep.lstrip('/'))))
+            tdata.add_item(file_path, os.path.join(dest_path, relativep.lstrip('/')))
         log.debug('Starting Transfer...')
         transfer_result = tc.submit_transfer(tdata)
         log.debug('Submitted Transfer')
