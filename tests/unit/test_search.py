@@ -45,3 +45,20 @@ def test_update_metadata_prev_record(mock_cli, mock_profile):
     meta = update_metadata(new, old, {})
     assert meta['dc']['creators'][0]['creatorName'] == 'Curie, Marie'
     assert meta['files'] == new['files'] == old['files']
+
+
+def test_update_file_version(mock_cli, mock_profile):
+
+    ver_one = scrape_metadata(MIXED_FILE, 'globus://foo.com', mock_cli)
+    ver_two = scrape_metadata(NUMBERS_FILE, 'globus://foo.com', mock_cli)
+    assert ver_one['dc']['version'] == '1'
+    assert ver_two['dc']['version'] == '1'
+    # Pretend 'NUMBERS_FILE' is an updated version of MIXED_FILE
+    updated = update_metadata(ver_two, ver_one, {})
+    assert updated['dc']['version'] == '2'
+    # Pretend we switched back
+    updated_3 = update_metadata(ver_one, updated, {})
+    assert updated_3['dc']['version'] == '3'
+    # Check re-updating does not bump version
+    updated_3 = update_metadata(ver_one, updated, {})
+    assert updated_3['dc']['version'] == '3'

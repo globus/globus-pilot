@@ -9,7 +9,7 @@ from .mocks import (MemoryStorage, MOCK_TOKEN_SET, GlobusTransferTaskResponse,
                     ANALYSIS_FILE_BASE_DIR, SCHEMA_FILE_BASE_DIR,
                     MOCK_PROFILE, MOCK_PROJECTS, MOCK_CONTEXT)
 
-from pilot import client, config, commands
+from pilot import client, config, commands, transfer_log
 
 
 @pytest.fixture
@@ -135,6 +135,13 @@ def mock_cli_basic(monkeypatch, mock_config, mock_projects):
 
 
 @pytest.fixture
+def mock_transfer_log(monkeypatch):
+    add_log = Mock()
+    monkeypatch.setattr(transfer_log.TransferLog, 'add_log', add_log)
+    return add_log
+
+
+@pytest.fixture
 def mock_cli(mock_cli_basic, mock_transfer_client, mock_profile):
     """
     Returns a mock logged in pilot client. Storage is mocked with a custom
@@ -142,7 +149,11 @@ def mock_cli(mock_cli_basic, mock_transfer_client, mock_profile):
     All methods that reach out to remote resources are mocked, you need to
     re-mock them to return the test data you want.
     """
-    mock_cli_basic.upload = Mock()
+    # mock_cli_basic.upload_http = Mock()
+    # mock_cli_basic.upload_globus = Mock()
+    # mock_cli_basic.download_http = Mock()
+    # mock_cli_basic.download_globus = Mock()
+    mock_cli_basic.transfer_file = Mock()
     mock_cli_basic.login = Mock()
     mock_cli_basic.logout = Mock()
     mock_cli_basic.ingest_entry = Mock()
@@ -154,4 +165,5 @@ def mock_cli(mock_cli_basic, mock_transfer_client, mock_profile):
     mock_cli_basic.get_search_client = Mock()
     mock_cli_basic.get_transfer_client = Mock()
     mock_cli_basic.get_auth_client = Mock()
+    mock_cli_basic.get_http_client = Mock()
     return mock_cli_basic

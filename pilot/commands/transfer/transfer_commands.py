@@ -7,155 +7,15 @@ import globus_sdk
 import datetime
 import pilot
 import traceback
-from pilot.search import (scrape_metadata, update_metadata, gen_gmeta,
-                          files_modified, metadata_modified)
+import contextlib
 from pilot.exc import (RequiredUploadFields, HTTPSClientException,
-                       InvalidField, AnalysisException, ExitCodes)
-from pilot import transfer_log
+                       InvalidField, ExitCodes)
 from jsonschema.exceptions import ValidationError
 
 log = logging.getLogger(__name__)
 
 # Warn people things will take a while when filesize exceeds 1GB
 BIG_SIZE_WARNING = 2 ** 30
-
-
-def click_prepare_dataframe(dataframe, destination, metadata, update,
-                            dry_run, verbose, no_analyze):
-    pc = pilot.commands.get_pilot_client()
-
-    if not destination:
-        dirs = pc.ls('')
-        click.echo('No Destination Provided. Please select one from the '
-                   'directory or "/" for root:\n{}'.format('\t '.join(dirs)))
-        return sys.exit(ExitCodes.NO_DESTINATION_PROVIDED)
-
-    try:
-        pc.ls(destination)
-    except globus_sdk.exc.TransferAPIError as tapie:
-        if tapie.code == 'ClientError.NotFound':
-            click.secho('Directory does not exist: "{}"'.format(destination),
-                        err=True, fg='yellow')
-            sys.exit(ExitCodes.DIRECTORY_DOES_NOT_EXIST)
-        else:
-            click.secho(tapie.message, err=True, bg='red')
-            sys.exit(ExitCodes.GLOBUS_TRANSFER_ERROR)
-
-    if metadata is not None:
-        with open(metadata) as mf_fh:
-            user_metadata = json.load(mf_fh)
-    else:
-        user_metadata = {}
-
-    short_path = os.path.join(destination, os.path.basename(dataframe))
-    prev_metadata = pc.get_search_entry(short_path)
-
-    url = pc.get_globus_http_url(short_path)
-
-    size_in_gb = os.stat(dataframe).st_size / BIG_SIZE_WARNING
-    if size_in_gb > 1:
-        click.secho('Generating hashes on {} ({:.2f}GB), this may take a '
-                    'while.'.format(dataframe, size_in_gb), fg='blue')
-    try:
-        new_metadata = scrape_metadata(dataframe, url, pc,
-                                       skip_analysis=no_analyze,
-                                       mimetype=user_metadata.get('mime_type'))
-    except AnalysisException as ae:
-        click.secho('Error analyzing {}, skipping...'.format(dataframe),
-                    fg='yellow')
-        if verbose:
-            traceback.print_exception(*ae.original_exc_info)
-        else:
-            click.secho('(Use --verbose to see full error)', fg='yellow')
-        new_metadata = scrape_metadata(dataframe, url, pc, skip_analysis=True)
-    log.debug('Finished scraping metadata and gathering analytics.')
-
-    try:
-        new_metadata = update_metadata(new_metadata, prev_metadata,
-                                       user_metadata)
-        subject = pc.get_subject_url(short_path)
-        gmeta = gen_gmeta(subject, [pc.get_group()], new_metadata)
-        log.debug('Metadata valid! Generated search entry. Ready to ingest!')
-    except (RequiredUploadFields, ValidationError, InvalidField) as e:
-        log.exception(e)
-        click.secho('Error Validating Metadata: {}'.format(e), fg='red')
-        sys.exit(ExitCodes.INVALID_METADATA)
-
-    if not metadata_modified(new_metadata, prev_metadata):
-        click.secho('Files and search entry are an exact match. No update '
-                    'necessary.', fg='green')
-        sys.exit(ExitCodes.SUCCESS)
-
-    if prev_metadata and not update and not dry_run:
-        last_updated = prev_metadata['dc']['dates'][-1]['date']
-        dt = datetime.datetime.strptime(last_updated, '%Y-%m-%dT%H:%M:%S.%fZ')
-        click.echo('Existing record found for {}, specify -u to update.\n'
-                   'Last updated: {: %A, %b %d, %Y}'
-                   ''.format(short_path, dt))
-        sys.exit(ExitCodes.RECORD_EXISTS)
-    if dry_run:
-        click.echo('Success! (Dry Run -- No changes made.)')
-        click.echo('Pre-existing record: {}'.format(
-            'yes' if prev_metadata else 'no'))
-        click.echo('Version: {}'.format(new_metadata['dc']['version']))
-        click.echo('Search Subject: {}\nURL: {}'.format(
-            subject, url
-        ))
-        if verbose:
-            click.echo('Ingesting the following data:')
-            click.echo(json.dumps(new_metadata, indent=2))
-        sys.exit(ExitCodes.SUCCESS)
-
-    nun = prev_metadata and not files_modified(new_metadata['files'],
-                                               prev_metadata['files'])
-    return {'gmeta': gmeta, 'no_update_needed': nun}
-
-
-def click_ingest_dataframe(gmeta):
-    pc = pilot.commands.get_pilot_client()
-    click.echo('Ingesting record into search...')
-    subject = gmeta['ingest_data']['gmeta'][0]['subject']
-    log.debug('Uploading Dataframe {}'.format(subject))
-    pc.ingest_entry(gmeta)
-    click.echo('Success!')
-
-
-def click_upload_dataframe(dataframe, destination, gcp=True):
-    pc = pilot.commands.get_pilot_client()
-    short_path = os.path.join(destination, os.path.basename(dataframe))
-    if gcp:
-        tc = pc.get_transfer_client()
-        tdata = globus_sdk.TransferData(
-            tc, pc.profile.load_option('local_endpoint'), pc.get_endpoint(),
-            label='{} Transfer'.format(pc.context.get_value('app_name')),
-            notify_on_succeeded=False,
-            sync_level='checksum',
-            encrypt_data=True)
-        tdata.add_item(dataframe, pc.get_path(short_path))
-        click.echo('Starting Transfer...')
-        transfer_result = tc.submit_transfer(tdata)
-        log.debug('Submitted Transfer')
-        tl = transfer_log.TransferLog()
-        tl.add_log(transfer_result, short_path)
-        click.echo('{}. You can check the status below: \n'
-                   'https://app.globus.org/activity/{}/overview\n'.format(
-                        transfer_result.get('message'),
-                        transfer_result.get('task_id'),
-                        )
-                   )
-    else:
-        url = pc.get_globus_http_url(short_path)
-        click.echo('Uploading data...')
-        response = pc.upload(dataframe, destination)
-        if response.status_code == 200:
-            click.echo('Upload Successful! URL is \n{}'.format(url))
-        else:
-            click.echo('Failed with status code: {}'.format(
-                response.status_code))
-            return
-    url = pc.get_portal_url(short_path)
-    if url:
-        click.echo('You can find your result here: {}'.format(url))
 
 
 @click.command(help='Upload dataframe to location on Globus and categorize it '
@@ -171,8 +31,6 @@ def click_upload_dataframe(dataframe, destination, gcp=True):
 @click.option('--gcp/--no-gcp', default=True,
               help='Use Globus Connect Personal to start a transfer instead '
                    'of uploading using direct HTTP')
-@click.option('--test', is_flag=True, default=False,
-              help='upload/ingest to test locations')
 @click.option('--dry-run', is_flag=True, default=False,
               help='Do checks and validation but do not upload/ingest. ')
 @click.option('--verbose', is_flag=True, default=False)
@@ -182,27 +40,42 @@ def click_upload_dataframe(dataframe, destination, gcp=True):
 #               help='Path to x label file')
 # @click.option('--y-labels', type=click.Path(),
 #               help='Path to y label file')
-def upload(dataframe, destination, metadata, gcp, update, test, dry_run,
+@click.pass_context
+def upload(ctx, dataframe, destination, metadata, gcp, update, dry_run,
            verbose, no_analyze):
     """
     Create a search entry and upload this file to the GCS Endpoint.
 
     # TODO: Fault tolerance for interrupted or failed file uploads (rollback)
     """
-    pc = pilot.commands.get_pilot_client()
+    user_metadata = {}
+    if metadata is not None:
+        with open(metadata) as mf_fh:
+            user_metadata = json.load(mf_fh)
+    try:
+        with pilot_code_handler(dataframe, destination, verbose):
+            pc = pilot.commands.get_pilot_client()
 
-    if gcp and not pc.profile.load_option('local_endpoint'):
-        click.secho('No Local endpoint set, please set it with '
-                    '"pilot profile --local-endpoint"', fg='red')
-        sys.exit(ExitCodes.NO_LOCAL_ENDPOINT_SET)
-
-    data = click_prepare_dataframe(dataframe, destination, metadata,
-                                   update, dry_run, verbose, no_analyze)
-    click_ingest_dataframe(data['gmeta'])
-    if data['no_update_needed']:
-        click.echo('Dataframe is up-to-date, no upload needed')
-    else:
-        click_upload_dataframe(dataframe, destination, gcp)
+            transport = 'globus' if gcp else 'http'
+            click.secho('Uploading {} using {}... '.format(dataframe,
+                                                           transport))
+            pc.upload(dataframe, destination, metadata=user_metadata,
+                      globus=gcp, update=update, dry_run=dry_run,
+                      skip_analysis=no_analyze)
+            click.secho('Success!', fg='green')
+            short_path = os.path.join(destination, os.path.basename(dataframe))
+            url = pc.get_portal_url(short_path)
+            click.echo('You can view your new record here: \n{}'.format(url))
+    except pilot.exc.AnalysisException as ae:
+        click.secho('Error analyzing {}, skipping...'.format(dataframe),
+                    fg='yellow')
+        if verbose:
+            traceback.print_exception(*ae.original_exc_info)
+        else:
+            click.secho('(Use --verbose to see full error)', fg='yellow')
+        ctx.invoke(upload, dataframe=dataframe, destination=destination,
+                   metadata=metadata, gcp=gcp, update=update, dry_run=dry_run,
+                   verbose=verbose, no_analyze=True)
 
 
 @click.command(help='Register an existing dataframe in search', hidden=True)
@@ -224,9 +97,76 @@ def register(dataframe, destination, metadata, update, dry_run, verbose,
     """
     Create a search entry for a pre-existing file
     """
-    data = click_prepare_dataframe(dataframe, destination, metadata,
-                                   update, dry_run, verbose, no_analyze)
-    click_ingest_dataframe(data['gmeta'])
+    user_metadata = {}
+    if metadata is not None:
+        with open(metadata) as mf_fh:
+            user_metadata = json.load(mf_fh)
+    short_path = os.path.join(destination, os.path.basename(dataframe))
+    with pilot_code_handler(short_path, verbose):
+        pc = pilot.commands.get_pilot_client()
+        click.secho('Registering {}... '.format(dataframe))
+        pc.register(dataframe, destination, metadata=user_metadata,
+                    update=update, dry_run=dry_run, skip_analysis=no_analyze)
+        click.secho('Success!', fg='green')
+        url = pc.get_portal_url(short_path)
+        click.echo('You can view your new record here: \n{}'.format(url))
+
+
+@contextlib.contextmanager
+def pilot_code_handler(dataframe, destination, verbose):
+    """
+    Handle exceptions for a `pc.register` or `pc.upload` call. If exceptions
+    happen, this handler will cleanly catch the exception and print click
+    output for the result. Only code exceptions are caught, all other
+    exceptions fall through.
+    ** parameters **
+      ``short_name`` (*string*) the short-hard representation of the relative
+      path on the remote endpoint
+      ``verbose`` (*bool*) print verbose output
+    """
+    try:
+        pc = pilot.commands.get_pilot_client()
+        if not destination:
+            dirs = [n for n, d in pc.ls('', extended=True).items()
+                    if d['type'] == 'dir']
+            raise pilot.exc.NoDestinationProvided(fmt=[dirs])
+        yield
+    except (RequiredUploadFields, ValidationError, InvalidField) as e:
+        log.exception(e)
+        click.secho('Error Validating Metadata: {}'.format(e), fg='red')
+        sys.exit(ExitCodes.INVALID_METADATA)
+    except pilot.exc.RecordExists as re:
+        last_updated = re.previous_metadata['dc']['dates'][-1]['date']
+        dt = datetime.datetime.strptime(last_updated, '%Y-%m-%dT%H:%M:%S.%fZ')
+        short_path = os.path.join(destination, os.path.basename(dataframe))
+        click.echo('Existing record found for {}, specify -u to update.\n'
+                   'Last updated: {: %A, %b %d, %Y}'
+                   ''.format(short_path, dt))
+        sys.exit(re.CODE)
+    except pilot.exc.DryRun as dr:
+        pc = pilot.commands.get_pilot_client()
+        short_path = os.path.join(destination, os.path.basename(dataframe))
+        stats = dr.stats
+        stats.update({'subject': pc.get_subject_url(short_path),
+                      'url': pc.get_globus_http_url(short_path)})
+        click.secho('Success! (Dry Run -- No changes made.)', fg='green')
+        click.echo('Pre-existing record: {record_exists}\n'
+                   'Files Modified: {files_modified}\n'
+                   'Metadata Modified: {metadata_modified}\n'
+                   'Version: {version} (Would be updated to {new_version})\n'
+                   'Search Subject: {subject}\n'
+                   'URL: {url}\n'
+                   .format(**stats)
+                   )
+        if verbose:
+            _, metadata = dr.verbose_output
+            click.echo(json.dumps(metadata, indent=2))
+    except pilot.exc.PilotCodeException as pce:
+        if verbose:
+            click.echo(pce.verbose_output)
+        fg = 'green' if pce.CODE == ExitCodes.SUCCESS else 'yellow'
+        click.secho(str(pce), err=True, fg=fg)
+        sys.exit(pce.CODE)
 
 
 @click.command(help='Download a file to your local directory.')
