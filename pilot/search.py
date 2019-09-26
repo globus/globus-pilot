@@ -371,12 +371,13 @@ def gen_remote_file_manifest(filepath, url, pilot_client, metadata={},
         rfm.update({alg: compute_checksum(subfile, getattr(hashlib, alg)())
                     for alg in algorithms})
         fkeys = get_foreign_keys(pilot_client)
-        mimetype = mimetype or analysis.mimetypes.detect_type(subfile)
+        mimetype = analysis.mimetypes.detect_type(subfile)
         metadata = (analysis.analyze_dataframe(subfile, mimetype, fkeys)
                     if not skip_analysis else {})
+        _, relativep = subfile.split(os.path.basename(url))
         rfm.update({
             'filename': os.path.basename(subfile),
-            'url': os.path.join(base_url, subfile),
+            'url': os.path.join(url, relativep.lstrip('/')),
             'field_metadata': metadata,
             'mime_type': mimetype
         })
