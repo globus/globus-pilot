@@ -119,7 +119,6 @@ def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True,
         },
         'files': gen_remote_file_manifest(dataframe, url, pilot_client,
                                           metadata=rfm_metadata,
-                                          mimetype=mimetype,
                                           skip_analysis=skip_analysis),
         'project_metadata': {
             'project-slug': pilot_client.project.current
@@ -357,16 +356,12 @@ def gen_dc_formats(metadata, formats):
     metadata['dc']['formats'] = formats
 
 
-def gen_remote_file_manifest(filepath, url, pilot_client, metadata={},
+def gen_remote_file_manifest(filepath, url, pilot_client, metadata=None,
                              algorithms=DEFAULT_HASH_ALGORITHMS,
-                             mimetype=None,
                              skip_analysis=True):
-    base_url = os.path.dirname(url)
+    metadata = metadata or {}
     manifest_entries = []
-    log.debug(filepath)
-    log.debug(get_files(filepath))
-    for subfile in get_files(filepath):
-        log.debug(subfile)
+    for subfile, remote_short_path in get_subdir_paths(filepath):
         rfm = metadata.copy()
         rfm.update({alg: compute_checksum(subfile, getattr(hashlib, alg)())
                     for alg in algorithms})
@@ -374,10 +369,9 @@ def gen_remote_file_manifest(filepath, url, pilot_client, metadata={},
         mimetype = analysis.mimetypes.detect_type(subfile)
         metadata = (analysis.analyze_dataframe(subfile, mimetype, fkeys)
                     if not skip_analysis else {})
-        _, relativep = subfile.split(os.path.basename(url))
         rfm.update({
             'filename': os.path.basename(subfile),
-            'url': os.path.join(url, relativep.lstrip('/')),
+            'url': os.path.join(os.path.dirname(url), remote_short_path),
             'field_metadata': metadata,
             'mime_type': mimetype
         })
@@ -388,13 +382,23 @@ def gen_remote_file_manifest(filepath, url, pilot_client, metadata={},
 
 
 def get_files(path):
+    """Walk a directory to get all files in a directory. """
     if os.path.isfile(path):
-        return [os.path.basename(path)]
+        return [path]
     else:
         file_lists = [[os.path.join(dirpath, f) for f in files]
                       for dirpath, _, files in os.walk(path)]
         # Flatten list of lists into a single list
         return [item for sublist in file_lists for item in sublist]
+
+
+def get_subdir_paths(path):
+    """Walk a directory to get all files, but return both the real path and
+    the relative short_path. the short_path can be passed to the pilot client
+    path methods to get the fully resolved remote path of the file."""
+    local_path = os.path.dirname(path)
+    return [(local_abspath, local_abspath.replace(local_path, '').lstrip('/'))
+            for local_abspath in get_files(path)]
 
 
 def compute_checksum(file_path, algorithm, block_size=65536):
