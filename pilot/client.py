@@ -460,7 +460,7 @@ class PilotClient(NativeClient):
         index = index or self.get_index()
         result = sc.ingest(index, gmeta_entry)
         pending_states = ['PENDING', 'PROGRESS']
-        log.debug('Ingesting to {}'.format(index))
+        log.info('Ingesting to {}'.format(index))
         task_status = sc.get_task(result['task_id'])['state']
         while task_status in pending_states:
             log.debug(f'Search task still {task_status}')
@@ -566,36 +566,27 @@ class PilotClient(NativeClient):
             self.ls(destination)
         except globus_sdk.exc.TransferAPIError as tapie:
             if tapie.code == 'ClientError.NotFound':
-                raise exc.DirectoryDoesNotExist(destination) from None
+                raise exc.DirectoryDoesNotExist(fmt=[destination]) from None
             else:
                 raise exc.GlobusTransferError(tapie.message) from None
-
-        metadata = metadata or {}
         short_path = os.path.join(destination, os.path.basename(dataframe))
         prev_metadata = self.get_search_entry(short_path)
         if prev_metadata and not update and not dry_run:
             raise exc.RecordExists(prev_metadata, fmt=[short_path])
-        url = self.get_globus_http_url(short_path)
-        log.debug('Scraping metadata')
-        new_metadata = search.scrape_metadata(
-            dataframe, url, self, skip_analysis=skip_analysis,
-            mimetype=metadata.get('mime_type')
+        new_metadata = self.gather_metadata(
+            dataframe, destination, previous_metadata=prev_metadata,
+            custom_metadata=metadata or {}, skip_analysis=skip_analysis
         )
-        log.debug('Combining all metadata')
-        new_metadata = search.update_metadata(new_metadata, prev_metadata,
-                                              metadata)
-        if not search.metadata_modified(new_metadata, prev_metadata):
-            raise exc.NoChangesNeeded(fmt=[short_path])
-        subject = self.get_subject_url(short_path)
-        log.debug('Generating metadata...')
-        gmeta = search.gen_gmeta(subject, [self.get_group()], new_metadata)
+        stats = search.gather_metadata_stats(new_metadata, prev_metadata or {})
+        stats['ingest'] = {}
+        if stats['metadata_modified'] is False:
+            return stats
+        gmeta = search.gen_gmeta(self.get_subject_url(short_path),
+                                 [self.get_group()], new_metadata)
         if dry_run:
-            log.debug('Dry Run')
-            raise exc.DryRun(prev_metadata, new_metadata)
-
-        log.debug('Ingesting...')
-        self.ingest_entry(gmeta)
-        return new_metadata
+            return stats
+        stats['ingest'] = self.ingest_entry(gmeta)
+        return stats
 
     def upload(self, dataframe, destination, metadata=None, globus=True,
                update=False, dry_run=False, skip_analysis=False, project=None):
@@ -649,15 +640,17 @@ class PilotClient(NativeClient):
         if not destination:
             raise exc.NoDestinationProvided(fmt=[self.ls('')])
 
-        metadata = self.register(
+        stats = self.register(
             dataframe, destination, metadata=metadata, update=update,
             dry_run=dry_run, skip_analysis=skip_analysis
         )
+        stats['protocol'] = 'globus' if globus else 'http'
+        stats['upload'] = {}
         up = self.upload_globus if globus else self.upload_http
-        log.debug('Uploading using {}'.format(up))
-        upload_result = up(dataframe, destination, project=project)
-        log.debug(upload_result)
-        return metadata
+        if not dry_run and stats['files_modified'] is True:
+            log.debug('Uploading using {}'.format(up))
+            stats['upload'] = up(dataframe, destination, project=project)
+        return stats
 
     def upload_http(self, dataframe, destination, project=None):
         """Upload to the configured HTTP endpoint for this context/project.

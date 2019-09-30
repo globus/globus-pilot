@@ -22,8 +22,8 @@ BIG_SIZE_WARNING = 2 ** 30
                     'in search')
 @click.argument('dataframe',
                 type=click.Path(exists=True, file_okay=True, dir_okay=True,
-                                readable=True, resolve_path=True), nargs=1)
-@click.argument('destination', type=click.Path(), required=True)
+                                readable=True, resolve_path=True))
+@click.argument('destination', type=click.Path(), required=False)
 @click.option('-j', '--json', 'metadata', type=click.Path(),
               help='Metadata in JSON format')
 @click.option('-u', '--update/--no-update', default=False,
@@ -54,20 +54,25 @@ def upload(dataframe, destination, metadata, gcp, update, dry_run,
     with pilot_code_handler(dataframe, destination, verbose):
         pc = pilot.commands.get_pilot_client()
         transport = 'globus' if gcp else 'http'
-        click.secho('Uploading {} using {}... '.format(dataframe,
+        basename = os.path.basename(dataframe)
+        click.secho('Uploading {} using {}... '.format(basename,
                                                        transport))
-        pc.upload(dataframe, destination, metadata=user_metadata,
-                  globus=gcp, update=update, dry_run=dry_run,
-                  skip_analysis=no_analyze)
+        stats = pc.upload(dataframe, destination, metadata=user_metadata,
+                          globus=gcp, update=update, dry_run=dry_run,
+                          skip_analysis=no_analyze)
+        if dry_run:
+            raise pilot.exc.DryRun(stats=stats, verbose=verbose)
+        elif not stats['metadata_modified']:
+            raise pilot.exc.NoChangesNeeded()
         click.secho('Success!', fg='green')
-        short_path = os.path.join(destination, os.path.basename(dataframe))
+        short_path = os.path.join(destination, basename)
         url = pc.get_portal_url(short_path)
         click.echo('You can view your new record here: \n{}'.format(url))
 
 
 @click.command(help='Register an existing dataframe in search', hidden=True)
 @click.argument('dataframe',
-                type=click.Path(exists=True, file_okay=True, dir_okay=False,
+                type=click.Path(exists=True, file_okay=True, dir_okay=True,
                                 readable=True, resolve_path=True),)
 @click.argument('destination', type=click.Path(), required=False)
 @click.option('-j', '--json', 'metadata', type=click.Path(),
@@ -88,12 +93,17 @@ def register(dataframe, destination, metadata, update, dry_run, verbose,
     if metadata is not None:
         with open(metadata) as mf_fh:
             user_metadata = json.load(mf_fh)
-    short_path = os.path.join(destination, os.path.basename(dataframe))
-    with pilot_code_handler(short_path, verbose):
+    with pilot_code_handler(dataframe, destination, verbose):
         pc = pilot.commands.get_pilot_client()
         click.secho('Registering {}... '.format(dataframe))
-        pc.register(dataframe, destination, metadata=user_metadata,
-                    update=update, dry_run=dry_run, skip_analysis=no_analyze)
+        short_path = os.path.join(destination, os.path.basename(dataframe))
+        stats = pc.register(dataframe, destination, metadata=user_metadata,
+                            update=update, dry_run=dry_run,
+                            skip_analysis=no_analyze)
+        if dry_run:
+            raise pilot.exc.DryRun(stats=stats, verbose=verbose)
+        elif not stats['metadata_modified']:
+            raise pilot.exc.NoChangesNeeded()
         click.secho('Success!', fg='green')
         url = pc.get_portal_url(short_path)
         click.echo('You can view your new record here: \n{}'.format(url))
