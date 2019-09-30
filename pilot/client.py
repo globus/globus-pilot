@@ -665,11 +665,12 @@ class PilotClient(NativeClient):
         destination for existing files. Overwrites any existing dataframe.
         The project must have a configured http endpoint on petrel
         """
-        raise NotImplemented('This is broken for now!')
-        log.debug('Starting HTTP Upload...')
-        short_path = os.path.join(destination, os.path.basename(dataframe))
-        path = self.get_path(short_path, project=project)
-        return self.get_http_client(project).put(path, filename=dataframe)
+        return_values = []
+        for local_path, remote_path in search.get_subdir_paths(dataframe):
+            path = self.get_path(os.path.join(destination, remote_path))
+            rv = self.get_http_client(project).put(path, filename=local_path)
+            return_values.append(rv)
+        return return_values
 
     def upload_globus(self, dataframe, destination, project=None,
                       globus_args=None):
@@ -688,17 +689,20 @@ class PilotClient(NativeClient):
           See ``transfer_file`` for more info.
           https://globus-sdk-python.readthedocs.io/en/stable/clients/transfer/#globus_sdk.TransferClient.submit_transfer  # noqa
         """
-        log.debug('Starting Globus Upload...')
-        relative_path = os.path.basename(dataframe).replace(os.getcwd(), '')
-        short_path = os.path.join(destination, relative_path)
-        result = self.transfer_file(self.profile.load_option('local_endpoint'),
-                                    self.get_endpoint(),
-                                    os.path.abspath(dataframe),
-                                    self.get_path(short_path, project=project),
-                                    **(globus_args or {}))
-        log.debug('Logging...')
+        log.info('Uploading (Globus) {} to {}'.format(dataframe, destination))
+        paths = []
+        for file_path, remote_short_path in search.get_subdir_paths(dataframe):
+            rel_dest = os.path.join(destination, remote_short_path)
+            paths.append((file_path, self.get_path(rel_dest, project=project)))
+        result = self.transfer_files(
+            self.profile.load_option('local_endpoint'),
+            self.get_endpoint(),
+            paths,
+            **(globus_args or {})
+        )
         tl = transfer_log.TransferLog()
-        tl.add_log(result, short_path)
+        dest = os.path.join(destination, os.path.basename(dataframe))
+        tl.add_log(result, dest)
         return result
 
     def transfer_file(self, src_ep, dest_ep, src_path, dest_path,
@@ -725,6 +729,35 @@ class PilotClient(NativeClient):
           See more options at:
           https://globus-sdk-python.readthedocs.io/en/stable/clients/transfer/#globus_sdk.TransferClient.submit_transfer  # noqa
         """
+        return self.transfer_files(src_ep, dest_ep, [(src_path, dest_path)],
+                                   globus_args=globus_args)
+
+    def transfer_files(self, src_ep, dest_ep, paths, globus_args=None):
+        """Low level utility for transferring a multiple files using Globus.
+        Does not account for context/project basepaths. All files are expected
+        to originate from the same src_ep, to be transferred to the same
+        destination.
+        ** parameters **
+        ``src_ep`` (*uuid*)
+          Source Globus Endpoint
+        ``destination`` (*uuid*)
+          Destination Globus Endpoint
+        ``paths`` (*list of two item tuples*)
+          A list of items to transfer. Each item must be a tuple with two
+          entries, the first the path to the source file, and the second
+          the path of the destination. For example:
+          [('/users/foo/bar.txt', '~/bar.txt'), ('a.json', '~/a.json')]
+        ``globus_args`` (*dict*)
+          Globus Transfer options. Defaults include:
+          {
+            'label': 'MyApp Transfer',
+            'notify_on_succeeded': False,
+            'sync_level': 'checksum',
+            'encrypt_data': True,
+          }
+          See more options at:
+          https://globus-sdk-python.readthedocs.io/en/stable/clients/transfer/#globus_sdk.TransferClient.submit_transfer  # noqa
+        """
         tc = self.get_transfer_client()
         g_defaults = {
             'label': '{} Transfer'.format(self.context.get_value('app_name')),
@@ -734,11 +767,9 @@ class PilotClient(NativeClient):
         }
         g_defaults.update(globus_args or {})
         tdata = globus_sdk.TransferData(tc, src_ep, dest_ep, **g_defaults)
-        for file_path in search.get_files(src_path):
-            _, relativep = file_path.split(os.path.basename(dest_path))
-            log.debug((file_path, os.path.join(dest_path, relativep.lstrip('/'))))
-            tdata.add_item(file_path, os.path.join(dest_path, relativep.lstrip('/')))
-        log.debug('Starting Transfer...')
+        for src_path, dest_path in paths:
+            log.debug('Transferring {} to {}'.format(src_path, dest_path))
+            tdata.add_item(src_path, dest_path)
         transfer_result = tc.submit_transfer(tdata)
         log.debug('Submitted Transfer')
         return transfer_result
@@ -820,5 +851,4 @@ class PilotClient(NativeClient):
             label='File Deletion with {}'.format(app_name))
         ddata.add_item(full_path)
         delete_result = tc.submit_delete(ddata)
-        tc.task_wait(delete_result.data['task_id'])
-        log.debug('Success!')
+        log.debug(delete_result)
