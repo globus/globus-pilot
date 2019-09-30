@@ -31,11 +31,13 @@ def cli(ctx):
                         f'again.', fg='red')
     if pc.is_logged_in():
         if pc.context.is_cache_stale():
+            log.debug('Cache is stale! Updating...')
             try:
-                if pc.context.update_with_diff(dry_run=True):
+                if any(pc.context.update_with_diff(dry_run=True).values()):
                     click.secho('Projects have updated. Use '
                                 '"pilot project update"'
                                 ' to get the newest changes.', fg='yellow')
+                log.debug('Update was successful.')
             except exc.HTTPSClientException as hce:
                 log.exception(hce)
                 click.secho(
