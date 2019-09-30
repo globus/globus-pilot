@@ -470,7 +470,7 @@ class PilotClient(NativeClient):
             raise exc.PilotClientException('Failed to ingest search subject')
         return True
 
-    def delete_entry(self, path, entry_id=None, full_subject=False):
+    def delete_entry(self, path, entry_id='metadata', full_subject=False):
         """
         Delete a search entry in Globus Search.
         **Parameters**
