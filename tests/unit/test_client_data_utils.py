@@ -1,10 +1,14 @@
+import os
 import pytest
 import globus_sdk
 from unittest.mock import Mock, call, mock_open, patch
 from pilot.client import PilotClient
 from pilot import globus_clients, exc
-from tests.unit.mocks import MOCK_PROFILE, MOCK_TOKEN_SET
+from tests.unit.mocks import (MOCK_PROFILE, MOCK_TOKEN_SET,
+                              CLIENT_FILE_BASE_DIR)
 from fair_research_login.exc import LoadError
+
+TINY_DATAFRAME = os.path.join(CLIENT_FILE_BASE_DIR, 'tiny_dataframe.tsv')
 
 
 @pytest.mark.skip
@@ -74,10 +78,10 @@ def test_ls(monkeypatch, mock_cli_basic):
 def test_upload_http(monkeypatch, mixed_tsv, mock_cli_basic):
     put = Mock()
     monkeypatch.setattr(globus_clients.HTTPFileClient, 'put', put)
-    mock_cli_basic.upload_http('a.tsv', 'destination')
+    mock_cli_basic.upload_http(TINY_DATAFRAME, 'destination')
     assert put.called
-    assert put.call_args == call('/foo_folder/destination/a.tsv',
-                                 filename='a.tsv')
+    assert put.call_args == call('/foo_folder/destination/tiny_dataframe.tsv',
+                                 filename=TINY_DATAFRAME)
 
 
 def test_download_http(monkeypatch, mixed_tsv, mock_cli_basic):

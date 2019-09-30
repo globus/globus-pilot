@@ -9,6 +9,7 @@ ANALYSIS_FILE_BASE_DIR = os.path.join(BASE_FILE_DIR, 'analysis')
 MIXED_BASE = os.path.join(ANALYSIS_FILE_BASE_DIR, 'types')
 BLIND_BASE = os.path.join(ANALYSIS_FILE_BASE_DIR, 'blind_types')
 SCHEMA_FILE_BASE_DIR = os.path.join(BASE_FILE_DIR, 'schemas')
+MULTI_FILE_DIR = os.path.join(BASE_FILE_DIR, 'multi_file')
 
 MIXED_MIMETYPES = [
     ('csv', 'text/csv'),

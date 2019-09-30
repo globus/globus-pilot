@@ -1,6 +1,7 @@
 import os
-from pilot.search import update_metadata, scrape_metadata
-from tests.unit.mocks import ANALYSIS_FILE_BASE_DIR
+from pilot.search import (update_metadata, scrape_metadata,
+                          get_files, get_subdir_paths)
+from tests.unit.mocks import ANALYSIS_FILE_BASE_DIR, MULTI_FILE_DIR
 
 MIXED_FILE = os.path.join(ANALYSIS_FILE_BASE_DIR, 'mixed.tsv')
 NUMBERS_FILE = os.path.join(ANALYSIS_FILE_BASE_DIR, 'numbers.tsv')
@@ -62,3 +63,22 @@ def test_update_file_version(mock_cli, mock_profile):
     # Check re-updating does not bump version
     updated_3 = update_metadata(ver_one, updated, {})
     assert updated_3['dc']['version'] == '3'
+
+
+def test_get_files():
+    files = get_files(MULTI_FILE_DIR)
+    assert len(files) == 4
+    one_file = get_files(MIXED_FILE)
+    assert len(one_file) == 1
+
+
+def test_get_subdir_paths_on_dir():
+    for local_path, remote_path in get_subdir_paths(MULTI_FILE_DIR):
+        assert MULTI_FILE_DIR in local_path
+        folder_name = os.path.basename(MULTI_FILE_DIR)
+        assert remote_path.startswith(folder_name)
+
+
+def test_get_subdir_paths_on_file():
+    for local_path, remote_path in get_subdir_paths(MIXED_FILE):
+        assert os.path.basename(local_path) == remote_path

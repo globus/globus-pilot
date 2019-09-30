@@ -1,0 +1,9 @@
+human	elf	dwarf	kobold	wyvern	dragon
+hit	critical miss	miss	critical hit	critical miss	critical miss
+miss	miss	miss	critical hit	miss	critical miss
+critical miss	miss	hit	critical hit	critical miss	critical miss
+miss	critical miss	critical miss	critical hit	miss	critical hit
+critical miss	critical hit	critical miss	miss	miss	critical hit
+critical miss	critical miss	hit	critical hit	critical hit	critical miss
+critical miss	miss	critical miss	critical miss	miss	critical hit
+miss	hit	miss	critical miss	miss	hit
