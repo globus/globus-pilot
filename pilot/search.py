@@ -263,6 +263,34 @@ def update_metadata(scraped_metadata, prev_metadata, user_metadata):
     return metadata
 
 
+def gather_metadata_stats(new_metadata, previous_metadata):
+    """
+    Gather general differences between new_metadata and previous metadata.
+    Both arguments must be valid search data, either returned from
+    PilotClient.get_search_entry() or search.scrape_metadata().
+    Returns the following info:
+    * record_exists: True if previous metadata is not empty
+    * previous_metadata: The previous metadata
+    * new_metadata: The new metadata
+    * metadata_modified: True if metadata was modified, false otherwise
+    * files_modified: True if file content has changed, false otherwise.
+    * version: The version listed on the previous metadata, if it exists
+    * new_version: The version listed on the new metadata
+    """
+    return {
+        'record_exists': True if previous_metadata else False,
+        'previous_metadata': previous_metadata,
+        'new_metadata': new_metadata,
+        'metadata_modified': metadata_modified(new_metadata,
+                                               previous_metadata),
+        'files_modified': files_modified(
+            new_metadata.get('files'), previous_metadata.get('files')),
+        'version': (previous_metadata.get('dc', {}).get('version')
+                    if previous_metadata else None),
+        'new_version': new_metadata.get('dc', {}).get('version'),
+    }
+
+
 def gen_gmeta(subject, visible_to, content):
     try:
         validate_dataset(content)
