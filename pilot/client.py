@@ -493,6 +493,39 @@ class PilotClient(NativeClient):
         else:
             return search_cli.delete_entry(index, subject, entry_id=entry_id)
 
+    def gather_metadata(self, dataframe, destination, previous_metadata=None,
+                        custom_metadata=None, skip_analysis=False, project=None
+                        ):
+        """Gather metadata on a local file or directory. Returns a new dict
+        which combines previous metadata and custom metadata. If skip_analysis
+        is True, new analytics won't be attempted and old analytics will be
+        carried over.
+        **Parameters**
+        ``dataframe`` (*path-to-file*)
+          Path to a file on the local system
+        ``destination`` (*path-string*)
+          Path to upload on the remote endpoint, relative to the base path set
+          by both the context and project.
+        ``previous_metadata`` (*dict*)
+          Previous metadata to be combined with the new metadata. This should
+          be metadata collected with self.get_search_entry()
+        ``custom_metadata`` (*dict*) Custom user provided metadata. Will be
+          added to scraped metadata after collection.
+        ``skip_analysis`` (*bool*) If true, will attempt to open the file and
+          analyze the contents before uploading. This generates extra metadata
+          which will be included in search.
+        ``project`` (*string*)
+          The project to use as the base path. Defaults to current project
+        **Examples**
+        """
+        log.info('Gathering metadata on file {}'.format(dataframe))
+        short_path = os.path.join(destination, os.path.basename(dataframe))
+        url = self.get_globus_http_url(short_path, project=project)
+        new_metadata = search.scrape_metadata(
+            dataframe, url, self, skip_analysis=skip_analysis)
+        return search.update_metadata(new_metadata, previous_metadata or {},
+                                      custom_metadata or {})
+
     def register(self, dataframe, destination, metadata=None,
                  update=False, dry_run=False, skip_analysis=False):
         """
