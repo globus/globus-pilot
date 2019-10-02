@@ -114,8 +114,8 @@ def test_ingest(monkeypatch, mock_cli_basic):
 def test_get_search_entry(monkeypatch, mock_cli_basic):
     search_cli = Mock()
     search_cli.get_subject.return_value = {'content': ['myresult']}
-    monkeypatch.setattr(mock_cli_basic, 'get_search_client',
-                        Mock(return_value=search_cli))
+    mock_cli_basic.get_search_client = Mock(return_value=search_cli)
+
     assert mock_cli_basic.get_search_entry('foo') == 'myresult'
     search_cli.get_subject.assert_called_with(
         'foo-search-index',
@@ -123,11 +123,49 @@ def test_get_search_entry(monkeypatch, mock_cli_basic):
     )
 
     class MockException(Exception):
-        pass
+        code = 'random_exception.generic'
 
     monkeypatch.setattr(globus_sdk.exc, 'SearchAPIError', MockException)
     search_cli.get_subject.side_effect = globus_sdk.exc.SearchAPIError
     assert mock_cli_basic.get_search_entry('foo') is None
+
+
+def test_list_entries(mock_multi_file_result, mock_cli_basic):
+    results = mock_multi_file_result.copy()
+    mfr = mock_multi_file_result['gmeta'][0]
+    ent2 = mfr.copy()
+    ent2['subject'] = 'globus://foo-project-endpoint/foo_folder/foo/bar/moo'
+    ent3 = mfr.copy()
+    ent3['subject'] = 'globus://foo-project-endpoint/foo_folder/foo/bar/baz'
+    results['gmeta'] = [mfr, ent2, ent3]
+    ps_response = Mock()
+    ps_response.data = results
+    search_cli = Mock()
+    mock_cli_basic.get_search_client = Mock(return_value=search_cli)
+    search_cli.post_search.return_value = ps_response
+
+    assert len(mock_cli_basic.list_entries('')) == 3
+    assert len(mock_cli_basic.list_entries('foo/bar')) == 2
+    assert len(mock_cli_basic.list_entries('foo/bar/moo')) == 1
+    assert len(mock_cli_basic.list_entries('foo/bar/baz')) == 1
+    assert len(mock_cli_basic.list_entries('foo/foo/foo')) == 0
+
+
+def test_get_search_entry_dir(monkeypatch, mock_cli_basic,
+                              mock_multi_file_result):
+    search_cli = Mock()
+    mock_cli_basic.get_search_client = Mock(return_value=search_cli)
+
+    class MockException(Exception):
+        code = 'NotFound.Generic'
+
+    monkeypatch.setattr(globus_sdk.exc, 'SearchAPIError', MockException)
+    search_cli.get_subject.side_effect = globus_sdk.exc.SearchAPIError
+    ps_response = Mock()
+    ps_response.data = mock_multi_file_result
+    search_cli.post_search.return_value = ps_response
+    entry = mock_cli_basic.get_search_entry('multi_file/text_metadata.txt')
+    assert entry == mock_multi_file_result['gmeta'][0]['content'][0]
 
 
 def test_delete_entry(monkeypatch, mock_cli_basic):
