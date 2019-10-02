@@ -7,7 +7,7 @@ from globus_sdk import AuthClient, SearchClient, TransferClient
 from fair_research_login import NativeClient, LoadError, ScopesMismatch
 from pilot import (
     profile, config, globus_clients, exc, logging_cfg, context, search,
-    transfer_log, project as project_module,
+    transfer_log, search_discovery, project as project_module,
 )
 
 logging_cfg.setup_logging()
@@ -403,7 +403,64 @@ class PilotClient(NativeClient):
         tc = self.get_transfer_client()
         tc.operation_mkdir(self.get_endpoint(project), rpath)
 
-    def get_search_entry(self, path, project=None, relative=True):
+    def list_entries(self, path='', project=None, relative=True,
+                     custom_params=None):
+        """Search for files in the given project that match the given path.
+        Returns a list of Globus Search GMetaEntries for any matches it finds.
+        Paths for files in multi-file collections will return no results,
+        use 'pc.get_search_entry' instead to find files in multi-file results.
+        Paths matching specific entries will return only that entry.
+        **Parameters**
+        ``path`` (*path string*)
+          Path to a local resource on this project. An empty path will return
+          all entries in this project
+        ``project`` (*string*)
+          The project to fetch info for. Defaults to current project
+        ``relative`` (*bool*)
+          If True, prepends the path to the project. If False,
+          does not prepend path but ensures it's in the project's directory
+        ``custom_params`` (*dict*)
+          Allows setting custom parameters for modifying results returned.
+          Standard params include the following:
+          search_data = {
+            'q': '*',
+            'filters': {
+                'field_name': 'project_metadata.project-slug',
+                'type': 'match_all',
+                'values': [project],
+            },
+            'limit': 100,
+            'offset': 0,
+          }
+          Custom params will override these params (this may result in
+          unexpected results from other projects if 'filters' is overrided).
+        **Examples**
+        Fetch all results in this project:
+        >>> pc.list_entries('')
+        Fetch results in the 'foo' directory:
+        >>> pc.list_entries('foo')
+        """
+        sc = self.get_search_client()
+        project = project or self.project.current
+        search_data = {
+            'q': '*',
+            'filters': {
+                'field_name': 'project_metadata.project-slug',
+                'type': 'match_all',
+                'values': [project],
+            },
+            'limit': 100,
+            'offset': 0,
+        }
+        search_data.update(custom_params or {})
+        raw = sc.post_search(self.get_index(project=project), search_data).data
+        log.info('Fetching entry list for project {} path {}'.format(project,
+                                                                     path))
+        path = self.get_path(path, project=project, relative=relative)
+        return [ent for ent in raw['gmeta'] if path in ent.get('subject')]
+
+    def get_search_entry(self, path, project=None, relative=True,
+                         resolve_collections=True):
         """
         Get a search entry for a given resource
         **Parameters**
