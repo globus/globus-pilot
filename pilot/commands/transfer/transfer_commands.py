@@ -186,12 +186,19 @@ def download(path, overwrite, range):
         return
     try:
         record = pc.get_search_entry(path)
-        length = 0
-        if record and record.get('files'):
-            length = record['files'][0].get('length')
-        elif not record:
-            click.secho('No record exists for {}, you may want to register it.'
-                        .format(path), fg='yellow')
+        url = pc.get_globus_http_url(path)
+        match = pilot.search_discovery.get_matching_file(url, record)
+        if not match:
+            cands = pilot.search_discovery.get_relative_filenames(url, record)
+            if cands:
+                click.secho('{} contains {} files, pick one to download:\n{}'
+                            .format(path, len(cands), cands), fg='yellow')
+            else:
+                click.secho(
+                    'No record exists for {}, you may want to register it.'
+                    .format(path), fg='yellow')
+            return 1
+        length = match.get('length', 0)
         r_content = pc.download_parts(path, range=range)
         params = {'label': 'Downloading {}'.format(fname), 'length': length,
                   'show_pos': True}
