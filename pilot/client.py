@@ -471,6 +471,9 @@ class PilotClient(NativeClient):
         ``relative`` (*bool*)
           If True, prepends the path to the project. If False,
           does not prepend path but ensures it's in the project's directory
+        ``resolve_collections`` (*bool*)
+          If the path given points to what might be a multi-file directory
+          entry, attempt to resolve the entry.
         **Examples**
         >>> pc.get_search_entry('foo.txt')
           {'dc': {'creators': [{'creatorName': 'NOAA'}],
@@ -480,12 +483,15 @@ class PilotClient(NativeClient):
           }
         """
         sc = self.get_search_client()
+        project = project or self.project.current
         subject = self.get_subject_url(path, project, relative)
         try:
             entry = sc.get_subject(self.get_index(project), subject)
             return entry['content'][0]
-        except globus_sdk.exc.SearchAPIError:
-            return None
+        except globus_sdk.exc.SearchAPIError as sapie:
+            if sapie.code == 'NotFound.Generic' and resolve_collections:
+                return search_discovery.get_sub_in_collection(
+                    subject, self.list_entries())
 
     def ingest_entry(self, gmeta_entry, index=None):
         """
