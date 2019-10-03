@@ -403,20 +403,15 @@ class PilotClient(NativeClient):
         tc = self.get_transfer_client()
         tc.operation_mkdir(self.get_endpoint(project), rpath)
 
-    def list_entries(self, path='', project=None, relative=True,
-                     custom_params=None):
-        """Search for files in the given project that match the given path.
-        Returns a list of Globus Search GMetaEntries for any matches it finds.
-        Paths for files in multi-file collections will return no results,
-        use 'pc.get_search_entry' instead to find files in multi-file results.
-        Paths matching specific entries will return only that entry.
+    def search(self, project=None, index=None, custom_params=None):
+        """
+        Perform a search for records in a given project and index, optionally
+        with custom_parameters. Returns the raw response from the Globus SDK
+        SearchClient.post_search().
         **Parameters**
-        ``path`` (*path string*)
-          Path to a local resource on this project. An empty path will return
-          all entries in this project
         ``project`` (*string*)
           The project to fetch info for. Defaults to current project
-        ``relative`` (*bool*)
+        ``index`` (*bool*)
           If True, prepends the path to the project. If False,
           does not prepend path but ensures it's in the project's directory
         ``custom_params`` (*dict*)
@@ -436,12 +431,13 @@ class PilotClient(NativeClient):
           unexpected results from other projects if 'filters' is overrided).
         **Examples**
         Fetch all results in this project:
-        >>> pc.list_entries('')
+        >>> pc.list_entries()
         Fetch results in the 'foo' directory:
         >>> pc.list_entries('foo')
         """
         sc = self.get_search_client()
         project = project or self.project.current
+        index = index or self.get_index(project=project)
         search_data = {
             'q': '*',
             'filters': {
@@ -453,7 +449,31 @@ class PilotClient(NativeClient):
             'offset': 0,
         }
         search_data.update(custom_params or {})
-        raw = sc.post_search(self.get_index(project=project), search_data).data
+        return sc.post_search(index, search_data).data
+
+    def list_entries(self, path='', project=None, relative=True):
+        """Search for files in the given project that match the given path.
+        Returns a list of Globus Search GMetaEntries for any matches it finds.
+        Paths for files in multi-file collections will return no results,
+        use 'pc.get_search_entry' instead to find files in multi-file results.
+        Paths matching specific entries will return only that entry.
+        **Parameters**
+        ``path`` (*path string*)
+          Path to a local resource on this project. An empty path will return
+          all entries in this project
+        ``project`` (*string*)
+          The project to fetch info for. Defaults to current project
+        ``relative`` (*bool*)
+          If True, prepends the path to the project. If False,
+          does not prepend path but ensures it's in the project's directory
+        **Examples**
+        Fetch all results in this project:
+        >>> pc.list_entries('')
+        Fetch results in the 'foo' directory:
+        >>> pc.list_entries('foo')
+        """
+        project = project or self.project.current
+        raw = self.search(project=project)
         log.info('Fetching entry list for project {} path {}'.format(project,
                                                                      path))
         path = self.get_path(path, project=project, relative=relative)
