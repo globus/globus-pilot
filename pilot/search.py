@@ -65,15 +65,7 @@ def get_foreign_keys(filename=FOREIGN_KEYS_FILE, pilot_client=None):
     return fkeys
 
 
-def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True,
-                    mimetype=None):
-    mimetype = mimetype or analysis.mimetypes.detect_type(dataframe)
-    dc_formats = []
-    rfm_metadata = {}
-    if mimetype:
-        dc_formats.append(mimetype)
-        rfm_metadata['mime_type'] = mimetype
-
+def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True):
     name = pilot_client.profile.name.split(' ')
     if len(name) > 1 and ',' not in pilot_client.profile.name:
         # If the persons name is ['Samuel', 'L.', 'Jackson'], produces:
@@ -387,15 +379,13 @@ def gen_dc_formats(metadata, formats):
     metadata['dc']['formats'] = formats
 
 
-def gen_remote_file_manifest(filepath, url, pilot_client, metadata=None,
+def gen_remote_file_manifest(filepath, url, pilot_client,
                              algorithms=DEFAULT_HASH_ALGORITHMS,
                              skip_analysis=True):
-    metadata = metadata or {}
     manifest_entries = []
     for subfile, remote_short_path in get_subdir_paths(filepath):
-        rfm = metadata.copy()
-        rfm.update({alg: compute_checksum(subfile, getattr(hashlib, alg)())
-                    for alg in algorithms})
+        rfm = {alg: compute_checksum(subfile, getattr(hashlib, alg)())
+               for alg in algorithms}
         fkeys = get_foreign_keys(pilot_client)
         mimetype = analysis.mimetypes.detect_type(subfile)
         metadata = (analysis.analyze_dataframe(subfile, mimetype, fkeys)
