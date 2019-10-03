@@ -81,6 +81,9 @@ def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True,
         formal_name = '{}, {}'.format(name[-1:][0], ' '.join(name[:-1]))
     else:
         formal_name = pilot_client.profile.name
+    remote_file_manifest = gen_remote_file_manifest(
+        dataframe, url, pilot_client, skip_analysis=skip_analysis
+    )
     return {
         'dc': {
             'titles': [
@@ -114,12 +117,12 @@ def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True,
                     'date': get_formatted_date()
                 }
             ],
-            'formats': dc_formats,
+            'formats': sorted(list({f['mime_type']
+                                    for f in remote_file_manifest
+                                    if f.get('mime_type')})),
             'version': '1'
         },
-        'files': gen_remote_file_manifest(dataframe, url, pilot_client,
-                                          metadata=rfm_metadata,
-                                          skip_analysis=skip_analysis),
+        'files': remote_file_manifest,
         'project_metadata': {
             'project-slug': pilot_client.project.current
         },
