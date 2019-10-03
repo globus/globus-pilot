@@ -4,8 +4,10 @@ import logging
 import click
 from pilot import commands
 from pilot.search_parse import (
-    parse_result, get_titles, get_field_metadata, get_field_metadata_titles
+    parse_result, get_titles, get_formatted_fields,
+    get_formatted_field_metadata,
 )
+from pilot.search_discovery import get_matching_file
 
 log = logging.getLogger(__name__)
 
@@ -17,20 +19,11 @@ def get_short_path(result):
     return sub.path.replace(base_path, '').lstrip('/')
 
 
-def search_by_project(project=None, custom_params=None):
+def get_location_info(short_path):
     pc = commands.get_pilot_client()
-    search_data = {
-        'q': '*',
-        'filters': {
-            'field_name': 'project_metadata.project-slug',
-            'type': 'match_all',
-            'values': [project or pc.project.current]
-        },
-    }
-    custom_params = custom_params or {}
-    search_data.update(custom_params)
-    sc = pc.get_search_client()
-    return sc.post_search(pc.get_index(project=project), search_data).data
+    return ['Location Information',
+            '{:21.20}{}'.format('Subject', pc.get_subject_url(short_path)),
+            '{:21.20}{}'.format('Portal', pc.get_portal_url(short_path))]
 
 
 @click.command(name='list', help='List known records in Globus Search')
@@ -42,10 +35,9 @@ def list_command(output_json, limit):
     # Should require login if there are publicly visible records
     pc = commands.get_pilot_client()
     project = pc.project.current
-    search_results = search_by_project(project=project,
-                                       custom_params={'limit': limit})
+    search_results = pc.search(project=project, custom_params={'limit': limit})
     if output_json:
-        click.echo(json.dumps(search_results.data, indent=4))
+        click.echo(json.dumps(search_results, indent=4))
         return
 
     results = 'Showing {}/{} of total results for "{}"'.format(
@@ -84,40 +76,27 @@ def describe(path, output_json):
         click.echo(json.dumps(entry, indent=4))
         return
 
-    # lines of output which will be printed to console
-    output = []
+    single_file_entry = get_matching_file(pc.get_globus_http_url(path), entry)
 
-    # print general data
-    general_fmt = '{:21.20}{}'
-    general_columns = ['title', 'authors', 'publisher', 'subjects', 'dates',
-                       'data', 'dataframe', 'rows', 'columns', 'formats',
-                       'version', 'size', 'description']
-    raw_data = dict(parse_result(entry))
+    if single_file_entry:
+        cols = ['title', 'authors', 'publisher', 'subjects', 'dates',
+                'data', 'dataframe', 'rows', 'columns',
+                'formats', 'version', 'size', 'description']
+        output = '\n'.join(
+            get_formatted_fields(entry, cols) +
+            [''] +
+            get_formatted_field_metadata(entry, single_file_entry.get('url')) +
+            ['', ''] +
+            get_location_info(path)
+        )
+    else:
+        cols = ['title', 'authors', 'publisher', 'subjects', 'dates',
+                'formats', 'version', 'combined_size', 'description',
+                'files']
+        output = '\n'.join(
+            get_formatted_fields(entry, cols) +
+            [''] +
+            get_location_info(path)
+        )
 
-    tdata = zip(get_titles(general_columns),
-                [raw_data[name] for name in general_columns])
-    for title, data in tdata:
-        if isinstance(data, list):
-            output += [general_fmt.format(title, line) for line in data[:1]]
-            output += [general_fmt.format('', line) for line in data[1:]]
-        else:
-            output.append(general_fmt.format(title, data))
-    output += ['', '']
-
-    # print field metadata
-    fmt = ('{:21.20}'
-           '{:8.7}{:7.6}{:5.4}{:12.11}{:7.6}'
-           '{:7.6}{:7.6}{:7.6}{:7.6}'
-           '{:8.7}{:8.7}{:8.7}'
-           )
-    output.append(fmt.format(*get_field_metadata_titles()))
-    for entry in get_field_metadata(entry):
-        fm_names, fm_data = zip(*entry)
-        output.append(fmt.format(*[str(i) for i in fm_data]))
-
-    # print other useful data
-    other_data = [general_fmt.format('Subject', pc.get_subject_url(path)),
-                  general_fmt.format('Portal', pc.get_portal_url(path))]
-    output = '\n'.join(output)
-    output = '{}\n\nOther Data\n{}'.format(output, '\n'.join(other_data))
     click.echo(output)
