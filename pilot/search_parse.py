@@ -104,13 +104,22 @@ def get_dates(result):
     return fdates
 
 
-def get_relative_paths(result):
-    paths = [urllib.parse.urlparse(f.get('url')).path
-             for f in result.get('files')]
+def get_paths(result):
+    return [urllib.parse.urlparse(f.get('url')).path
+            for f in result.get('files')]
+
+
+def get_common_path(result):
+    paths = get_paths(result)
     common_path = paths[0]
     while common_path and not all([common_path in p for p in paths]):
         common_path = os.path.dirname(common_path)
-    return [path.replace(common_path, '').lstrip('/') for path in paths]
+    return common_path
+
+
+def get_relative_paths(result):
+    return [path.replace(get_common_path(result), '').lstrip('/')
+            for path in get_paths(result)]
 
 
 GENERAL_PARSE_FUNCS = [

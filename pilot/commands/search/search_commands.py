@@ -20,7 +20,17 @@ def get_short_path(result):
     return sub.path.replace(base_path, '').lstrip('/')
 
 
-def get_location_info(short_path):
+def get_single_file_info(entry, file_info):
+    relative_path = ''
+    for path in get_relative_paths(entry):
+        if path in file_info['url']:
+            relative_path = path
+    return ['{} ({})'.format(relative_path or file_info.get('filename', ''),
+                             file_info.get('mime_type', ''))]
+
+
+def get_location_info(entry):
+    short_path = os.path.basename(get_common_path(entry))
     pc = commands.get_pilot_client()
     return ['Location Information',
             '{:21.20}{}'.format('Subject', pc.get_subject_url(short_path)),
@@ -83,12 +93,18 @@ def describe(path, output_json):
         cols = ['title', 'authors', 'publisher', 'subjects', 'dates',
                 'data', 'dataframe', 'rows', 'columns',
                 'formats', 'version', 'size', 'description']
+
+        single_file_info = []
+        ffm = get_formatted_field_metadata(entry, single_file_entry.get('url'))
+        if ffm:
+            single_file_info = (
+                [''] + get_single_file_info(entry, single_file_entry) + ffm
+            )
         output = '\n'.join(
             get_formatted_fields(entry, cols) +
-            [''] +
-            get_formatted_field_metadata(entry, single_file_entry.get('url')) +
+            single_file_info +
             ['', ''] +
-            get_location_info(path)
+            get_location_info(entry)
         )
     else:
         cols = ['title', 'authors', 'publisher', 'subjects', 'dates',
@@ -97,7 +113,7 @@ def describe(path, output_json):
         output = '\n'.join(
             get_formatted_fields(entry, cols) +
             [''] +
-            get_location_info(path)
+            get_location_info(entry)
         )
 
     click.echo(output)
