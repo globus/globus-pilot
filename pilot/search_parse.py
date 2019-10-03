@@ -22,7 +22,7 @@ FIELD_METADATA_TITLES = [
 
 def get_formatted_fields(entry, columns, formatting='{:21.20}{}'):
     output = []
-    raw_data = dict(parse_result(entry))
+    raw_data = dict(parse_result(entry, columns))
     tdata = zip(get_titles(columns),
                 [raw_data[name] for name in columns])
     for title, data in tdata:
@@ -55,9 +55,11 @@ def get_titles(list_of_names):
     return [title_map.get(name) for name in list_of_names]
 
 
-def parse_result(result):
+def parse_result(result, fields=None):
     processed_results = []
-    for name, _, processor in GENERAL_PARSE_FUNCS:
+    fields = fields or GENERAL_PARSE_FUNCS
+    funcs_subset = [func for func in GENERAL_PARSE_FUNCS if func[0] in fields]
+    for name, _, processor in funcs_subset:
         try:
             data = processor(result)
         except Exception:

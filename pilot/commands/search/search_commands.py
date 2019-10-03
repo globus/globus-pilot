@@ -1,11 +1,12 @@
+import os
 import urllib
 import json
 import logging
 import click
 from pilot import commands
 from pilot.search_parse import (
-    parse_result, get_titles, get_formatted_fields,
-    get_formatted_field_metadata,
+    parse_result, get_titles, get_common_path, get_relative_paths,
+    get_formatted_field_metadata, get_formatted_fields
 )
 from pilot.search_discovery import get_matching_file
 
@@ -53,7 +54,7 @@ def list_command(output_json, limit):
             log.debug('Skipping result {}'.format(result['subject']))
             continue
 
-        data = dict(parse_result(result['content'][0]))
+        data = dict(parse_result(result['content'][0], items))
         parsed = [data.get(name) for name in items] + [get_short_path(result)]
         parsed = [str(p) for p in parsed]
 
