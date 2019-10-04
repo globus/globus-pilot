@@ -7,7 +7,7 @@ from pilot import exc
 from tests.unit.mocks import ANALYSIS_MIXED_FILES
 
 ANALYZABLE_MIMETYPES = [
-    'text/csv', 'text/tab-separated-values', 'application/x-hdf',
+    'text/csv', 'text/tab-separated-values',
     'application/x-feather', 'application/x-parquet',
 ]
 

@@ -1,10 +1,8 @@
-import sys
 import logging
 import pandas as pd
 import numpy
 import tableschema
 import tabulator.exceptions
-from pilot import exc
 
 
 log = logging.getLogger(__name__)
@@ -52,22 +50,21 @@ def analyze_feather(filename, foreign_keys=None):
 def analyze_hdf(filename, foreign_keys):
     log.debug('Analyzing hdf5!')
     store = pd.HDFStore(filename, 'r')
-    if len(store.keys()) > 1:
-        prompt = ('Which store would you like to use for analysis? {}'
-                  ''.format(store.keys()))
-        chosen_key = input(prompt)
-        while chosen_key not in store.keys():
-            print('Not valid, choose another')
-            input(prompt)
-    elif len(store.keys()) == 1:
-        chosen_key = list(store.keys())[0]
-    else:
-        raise exc.AnalysisException('No stores detected in {}, skipping...'
-                                    .format(filename),
-                                    sys.exc_info()) from None
-    analysis = analyze(store.get(chosen_key), foreign_keys)
+    analyses = []
+    for key in store.keys():
+        try:
+            log.info('Analyzing HDF key: {}'.format(key))
+            dataframe = store.get(key)
+            if isinstance(dataframe, pd.Series):
+                dataframe = pd.DataFrame({key.lstrip('/'): dataframe})
+            analysis = analyze(dataframe, None)
+            analysis['store_key'] = key
+            analyses.append(analysis)
+        except Exception as e:
+            log.exception(e)
+            log.error('Error processing key {}'.format(key))
     store.close()
-    return analysis
+    return analyses
 
 
 def analyze(pd_dataframe, foreign_keys=None):
@@ -134,7 +131,7 @@ def get_pandas_field_metadata(pandas_col_metadata, field_name):
         'name': field_name,
         'type': 'string' if str(pmeta.dtype) == 'object' else str(pmeta.dtype),
         'count': int(pmeta['count']),
-        'top': pmeta['top'],
+        'top': pmeta.get('top', numpy.nan),
 
         # string statistics
         'unique': pmeta.get('unique', numpy.nan),

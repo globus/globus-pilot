@@ -20,13 +20,38 @@ def get_short_path(result):
     return sub.path.replace(base_path, '').lstrip('/')
 
 
-def get_single_file_info(entry, file_info):
+def get_relative_path_from_entries(entry, file_info):
     relative_path = ''
     for path in get_relative_paths(entry):
         if path in file_info['url']:
             relative_path = path
-    return ['{} ({})'.format(relative_path or file_info.get('filename', ''),
-                             file_info.get('mime_type', ''))]
+            break
+    return relative_path
+
+
+def get_single_file_info(entry, file_info):
+    rp = get_relative_path_from_entries(entry, file_info)
+    name = rp or file_info.get('filename', '')
+    mimetype = file_info.get('mime_type', '')
+    field_metadata = file_info.get('field_metadata')
+    info = []
+    if not field_metadata:
+        return []
+    elif isinstance(field_metadata, list):
+        for store in field_metadata:
+            keystore = store.get('store_key', '')
+            info += (
+                ['{} ({}) Keystore: {}'.format(name, mimetype, keystore)] +
+                get_formatted_field_metadata(store) +
+                ['']
+            )
+    else:
+        info = (
+            ['{} ({})'.format(name, mimetype)] +
+            get_formatted_field_metadata(field_metadata) +
+            ['']
+        )
+    return info
 
 
 def get_location_info(entry):
@@ -93,16 +118,10 @@ def describe(path, output_json):
         cols = ['title', 'authors', 'publisher', 'subjects', 'dates',
                 'data', 'dataframe', 'rows', 'columns',
                 'formats', 'version', 'size', 'description']
-
-        single_file_info = []
-        ffm = get_formatted_field_metadata(entry, single_file_entry.get('url'))
-        if ffm:
-            single_file_info = (
-                [''] + get_single_file_info(entry, single_file_entry) + ffm
-            )
         output = '\n'.join(
             get_formatted_fields(entry, cols) +
-            single_file_info +
+            [''] +
+            get_single_file_info(entry, single_file_entry) +
             ['', ''] +
             get_location_info(entry)
         )

@@ -34,7 +34,7 @@ def get_formatted_fields(entry, columns, formatting='{:21.20}{}'):
     return output
 
 
-def get_formatted_field_metadata(entry, url):
+def get_formatted_field_metadata(field_metadata):
     fmt = ('{:21.20}'
            '{:8.7}{:7.6}{:5.4}{:12.11}{:7.6}'
            '{:7.6}{:8.7}{:8.7}{:8.7}')
@@ -42,7 +42,7 @@ def get_formatted_field_metadata(entry, url):
     formatted_titles = [fmt.format(*titles)]
 
     data = []
-    for row in get_field_metadata(entry, url):
+    for row in get_field_metadata(field_metadata):
         _, fm_data = zip(*row)
         data.append(fmt.format(*[str(i) for i in fm_data]))
     if data:
@@ -68,15 +68,10 @@ def parse_result(result, fields=None):
     return processed_results
 
 
-def get_field_metadata(result, url):
-    rfm_files = [f for f in result.get('files', []) if f.get('url') == url]
-    if len(rfm_files) != 1:
-        return []
-    rfm_file = rfm_files[0].get('field_metadata', {})
-
+def get_field_metadata(field_metadata):
     ret = []
     metadata_names = [n for n, _ in FIELD_METADATA_TITLES]
-    for field_metadata_item in rfm_file.get('field_definitions', []):
+    for field_metadata_item in field_metadata.get('field_definitions', []):
         ret.append([(name, field_metadata_item.get(name, ''))
                     for name in metadata_names])
     return ret
