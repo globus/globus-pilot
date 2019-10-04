@@ -53,6 +53,10 @@ def analyze_hdf(filename, foreign_keys):
     analyses = []
     for key in store.keys():
         try:
+            if len(key.lstrip('/').split('/')) > 1:
+                # Ignore any nested items in the store
+                log.debug('Skipping {}'.format(key))
+                continue
             log.info('Analyzing HDF key: {}'.format(key))
             dataframe = store.get(key)
             if isinstance(dataframe, pd.Series):
