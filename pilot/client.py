@@ -7,7 +7,7 @@ from globus_sdk import AuthClient, SearchClient, TransferClient
 from fair_research_login import NativeClient, LoadError, ScopesMismatch
 from pilot import (
     profile, config, globus_clients, exc, logging_cfg, context, search,
-    transfer_log, project as project_module,
+    transfer_log, search_discovery, project as project_module,
 )
 
 logging_cfg.setup_logging()
@@ -403,7 +403,84 @@ class PilotClient(NativeClient):
         tc = self.get_transfer_client()
         tc.operation_mkdir(self.get_endpoint(project), rpath)
 
-    def get_search_entry(self, path, project=None, relative=True):
+    def search(self, project=None, index=None, custom_params=None):
+        """
+        Perform a search for records in a given project and index, optionally
+        with custom_parameters. Returns the raw response from the Globus SDK
+        SearchClient.post_search().
+        **Parameters**
+        ``project`` (*string*)
+          The project to fetch info for. Defaults to current project
+        ``index`` (*bool*)
+          If True, prepends the path to the project. If False,
+          does not prepend path but ensures it's in the project's directory
+        ``custom_params`` (*dict*)
+          Allows setting custom parameters for modifying results returned.
+          Standard params include the following:
+          search_data = {
+            'q': '*',
+            'filters': {
+                'field_name': 'project_metadata.project-slug',
+                'type': 'match_all',
+                'values': [project],
+            },
+            'limit': 100,
+            'offset': 0,
+          }
+          Custom params will override these params (this may result in
+          unexpected results from other projects if 'filters' is overrided).
+        **Examples**
+        Fetch all results in this project:
+        >>> pc.list_entries()
+        Fetch results in the 'foo' directory:
+        >>> pc.list_entries('foo')
+        """
+        sc = self.get_search_client()
+        project = project or self.project.current
+        index = index or self.get_index(project=project)
+        search_data = {
+            'q': '*',
+            'filters': {
+                'field_name': 'project_metadata.project-slug',
+                'type': 'match_all',
+                'values': [project],
+            },
+            'limit': 100,
+            'offset': 0,
+        }
+        search_data.update(custom_params or {})
+        return sc.post_search(index, search_data).data
+
+    def list_entries(self, path='', project=None, relative=True):
+        """Search for files in the given project that match the given path.
+        Returns a list of Globus Search GMetaEntries for any matches it finds.
+        Paths for files in multi-file collections will return no results,
+        use 'pc.get_search_entry' instead to find files in multi-file results.
+        Paths matching specific entries will return only that entry.
+        **Parameters**
+        ``path`` (*path string*)
+          Path to a local resource on this project. An empty path will return
+          all entries in this project
+        ``project`` (*string*)
+          The project to fetch info for. Defaults to current project
+        ``relative`` (*bool*)
+          If True, prepends the path to the project. If False,
+          does not prepend path but ensures it's in the project's directory
+        **Examples**
+        Fetch all results in this project:
+        >>> pc.list_entries('')
+        Fetch results in the 'foo' directory:
+        >>> pc.list_entries('foo')
+        """
+        project = project or self.project.current
+        raw = self.search(project=project)
+        log.info('Fetching entry list for project {} path {}'.format(project,
+                                                                     path))
+        path = self.get_path(path, project=project, relative=relative)
+        return [ent for ent in raw['gmeta'] if path in ent.get('subject')]
+
+    def get_search_entry(self, path, project=None, relative=True,
+                         resolve_collections=True):
         """
         Get a search entry for a given resource
         **Parameters**
@@ -414,6 +491,9 @@ class PilotClient(NativeClient):
         ``relative`` (*bool*)
           If True, prepends the path to the project. If False,
           does not prepend path but ensures it's in the project's directory
+        ``resolve_collections`` (*bool*)
+          If the path given points to what might be a multi-file directory
+          entry, attempt to resolve the entry.
         **Examples**
         >>> pc.get_search_entry('foo.txt')
           {'dc': {'creators': [{'creatorName': 'NOAA'}],
@@ -423,12 +503,15 @@ class PilotClient(NativeClient):
           }
         """
         sc = self.get_search_client()
+        project = project or self.project.current
         subject = self.get_subject_url(path, project, relative)
         try:
             entry = sc.get_subject(self.get_index(project), subject)
             return entry['content'][0]
-        except globus_sdk.exc.SearchAPIError:
-            return None
+        except globus_sdk.exc.SearchAPIError as sapie:
+            if sapie.code == 'NotFound.Generic' and resolve_collections:
+                return search_discovery.get_sub_in_collection(
+                    subject, self.list_entries())
 
     def ingest_entry(self, gmeta_entry, index=None):
         """
@@ -460,7 +543,7 @@ class PilotClient(NativeClient):
         index = index or self.get_index()
         result = sc.ingest(index, gmeta_entry)
         pending_states = ['PENDING', 'PROGRESS']
-        log.debug('Ingesting to {}'.format(index))
+        log.info('Ingesting to {}'.format(index))
         task_status = sc.get_task(result['task_id'])['state']
         while task_status in pending_states:
             log.debug(f'Search task still {task_status}')
@@ -470,7 +553,7 @@ class PilotClient(NativeClient):
             raise exc.PilotClientException('Failed to ingest search subject')
         return True
 
-    def delete_entry(self, path, entry_id=None, full_subject=False):
+    def delete_entry(self, path, entry_id='metadata', full_subject=False):
         """
         Delete a search entry in Globus Search.
         **Parameters**
@@ -492,6 +575,39 @@ class PilotClient(NativeClient):
             return search_cli.delete_subject(index, subject)
         else:
             return search_cli.delete_entry(index, subject, entry_id=entry_id)
+
+    def gather_metadata(self, dataframe, destination, previous_metadata=None,
+                        custom_metadata=None, skip_analysis=False, project=None
+                        ):
+        """Gather metadata on a local file or directory. Returns a new dict
+        which combines previous metadata and custom metadata. If skip_analysis
+        is True, new analytics won't be attempted and old analytics will be
+        carried over.
+        **Parameters**
+        ``dataframe`` (*path-to-file*)
+          Path to a file on the local system
+        ``destination`` (*path-string*)
+          Path to upload on the remote endpoint, relative to the base path set
+          by both the context and project.
+        ``previous_metadata`` (*dict*)
+          Previous metadata to be combined with the new metadata. This should
+          be metadata collected with self.get_search_entry()
+        ``custom_metadata`` (*dict*) Custom user provided metadata. Will be
+          added to scraped metadata after collection.
+        ``skip_analysis`` (*bool*) If true, will attempt to open the file and
+          analyze the contents before uploading. This generates extra metadata
+          which will be included in search.
+        ``project`` (*string*)
+          The project to use as the base path. Defaults to current project
+        **Examples**
+        """
+        log.info('Gathering metadata on file {}'.format(dataframe))
+        short_path = os.path.join(destination, os.path.basename(dataframe))
+        url = self.get_globus_http_url(short_path, project=project)
+        new_metadata = search.scrape_metadata(
+            dataframe, url, self, skip_analysis=skip_analysis)
+        return search.update_metadata(new_metadata, previous_metadata or {},
+                                      custom_metadata or {})
 
     def register(self, dataframe, destination, metadata=None,
                  update=False, dry_run=False, skip_analysis=False):
@@ -533,36 +649,27 @@ class PilotClient(NativeClient):
             self.ls(destination)
         except globus_sdk.exc.TransferAPIError as tapie:
             if tapie.code == 'ClientError.NotFound':
-                raise exc.DirectoryDoesNotExist(destination) from None
+                raise exc.DirectoryDoesNotExist(fmt=[destination]) from None
             else:
                 raise exc.GlobusTransferError(tapie.message) from None
-
-        metadata = metadata or {}
         short_path = os.path.join(destination, os.path.basename(dataframe))
         prev_metadata = self.get_search_entry(short_path)
         if prev_metadata and not update and not dry_run:
             raise exc.RecordExists(prev_metadata, fmt=[short_path])
-        url = self.get_globus_http_url(short_path)
-        log.debug('Scraping metadata')
-        new_metadata = search.scrape_metadata(
-            dataframe, url, self, skip_analysis=skip_analysis,
-            mimetype=metadata.get('mime_type')
+        new_metadata = self.gather_metadata(
+            dataframe, destination, previous_metadata=prev_metadata,
+            custom_metadata=metadata or {}, skip_analysis=skip_analysis
         )
-        log.debug('Combining all metadata')
-        new_metadata = search.update_metadata(new_metadata, prev_metadata,
-                                              metadata)
-        if not search.metadata_modified(new_metadata, prev_metadata):
-            raise exc.NoChangesNeeded(fmt=[short_path])
-        subject = self.get_subject_url(short_path)
-        log.debug('Generating metadata...')
-        gmeta = search.gen_gmeta(subject, [self.get_group()], new_metadata)
+        stats = search.gather_metadata_stats(new_metadata, prev_metadata or {})
+        stats['ingest'] = {}
+        if stats['metadata_modified'] is False:
+            return stats
+        gmeta = search.gen_gmeta(self.get_subject_url(short_path),
+                                 [self.get_group()], new_metadata)
         if dry_run:
-            log.debug('Dry Run')
-            raise exc.DryRun(prev_metadata, new_metadata)
-
-        log.debug('Ingesting...')
-        self.ingest_entry(gmeta)
-        return new_metadata
+            return stats
+        stats['ingest'] = self.ingest_entry(gmeta)
+        return stats
 
     def upload(self, dataframe, destination, metadata=None, globus=True,
                update=False, dry_run=False, skip_analysis=False, project=None):
@@ -616,15 +723,17 @@ class PilotClient(NativeClient):
         if not destination:
             raise exc.NoDestinationProvided(fmt=[self.ls('')])
 
-        metadata = self.register(
+        stats = self.register(
             dataframe, destination, metadata=metadata, update=update,
             dry_run=dry_run, skip_analysis=skip_analysis
         )
+        stats['protocol'] = 'globus' if globus else 'http'
+        stats['upload'] = {}
         up = self.upload_globus if globus else self.upload_http
-        log.debug('Uploading using {}'.format(up))
-        upload_result = up(dataframe, destination, project=project)
-        log.debug(upload_result)
-        return metadata
+        if not dry_run and stats['files_modified'] is True:
+            log.debug('Uploading using {}'.format(up))
+            stats['upload'] = up(dataframe, destination, project=project)
+        return stats
 
     def upload_http(self, dataframe, destination, project=None):
         """Upload to the configured HTTP endpoint for this context/project.
@@ -632,10 +741,12 @@ class PilotClient(NativeClient):
         destination for existing files. Overwrites any existing dataframe.
         The project must have a configured http endpoint on petrel
         """
-        log.debug('Starting HTTP Upload...')
-        short_path = os.path.join(destination, os.path.basename(dataframe))
-        path = self.get_path(short_path, project=project)
-        return self.get_http_client(project).put(path, filename=dataframe)
+        return_values = []
+        for local_path, remote_path in search.get_subdir_paths(dataframe):
+            path = self.get_path(os.path.join(destination, remote_path))
+            rv = self.get_http_client(project).put(path, filename=local_path)
+            return_values.append(rv)
+        return return_values
 
     def upload_globus(self, dataframe, destination, project=None,
                       globus_args=None):
@@ -654,16 +765,20 @@ class PilotClient(NativeClient):
           See ``transfer_file`` for more info.
           https://globus-sdk-python.readthedocs.io/en/stable/clients/transfer/#globus_sdk.TransferClient.submit_transfer  # noqa
         """
-        log.debug('Starting Globus Upload...')
-        short_path = os.path.join(destination, os.path.basename(dataframe))
-        result = self.transfer_file(self.profile.load_option('local_endpoint'),
-                                    self.get_endpoint(),
-                                    os.path.abspath(dataframe),
-                                    self.get_path(short_path, project=project),
-                                    **(globus_args or {}))
-        log.debug('Logging...')
+        log.info('Uploading (Globus) {} to {}'.format(dataframe, destination))
+        paths = []
+        for file_path, remote_short_path in search.get_subdir_paths(dataframe):
+            rel_dest = os.path.join(destination, remote_short_path)
+            paths.append((file_path, self.get_path(rel_dest, project=project)))
+        result = self.transfer_files(
+            self.profile.load_option('local_endpoint'),
+            self.get_endpoint(),
+            paths,
+            **(globus_args or {})
+        )
         tl = transfer_log.TransferLog()
-        tl.add_log(result, short_path)
+        dest = os.path.join(destination, os.path.basename(dataframe))
+        tl.add_log(result, dest)
         return result
 
     def transfer_file(self, src_ep, dest_ep, src_path, dest_path,
@@ -690,6 +805,35 @@ class PilotClient(NativeClient):
           See more options at:
           https://globus-sdk-python.readthedocs.io/en/stable/clients/transfer/#globus_sdk.TransferClient.submit_transfer  # noqa
         """
+        return self.transfer_files(src_ep, dest_ep, [(src_path, dest_path)],
+                                   globus_args=globus_args)
+
+    def transfer_files(self, src_ep, dest_ep, paths, globus_args=None):
+        """Low level utility for transferring a multiple files using Globus.
+        Does not account for context/project basepaths. All files are expected
+        to originate from the same src_ep, to be transferred to the same
+        destination.
+        ** parameters **
+        ``src_ep`` (*uuid*)
+          Source Globus Endpoint
+        ``destination`` (*uuid*)
+          Destination Globus Endpoint
+        ``paths`` (*list of two item tuples*)
+          A list of items to transfer. Each item must be a tuple with two
+          entries, the first the path to the source file, and the second
+          the path of the destination. For example:
+          [('/users/foo/bar.txt', '~/bar.txt'), ('a.json', '~/a.json')]
+        ``globus_args`` (*dict*)
+          Globus Transfer options. Defaults include:
+          {
+            'label': 'MyApp Transfer',
+            'notify_on_succeeded': False,
+            'sync_level': 'checksum',
+            'encrypt_data': True,
+          }
+          See more options at:
+          https://globus-sdk-python.readthedocs.io/en/stable/clients/transfer/#globus_sdk.TransferClient.submit_transfer  # noqa
+        """
         tc = self.get_transfer_client()
         g_defaults = {
             'label': '{} Transfer'.format(self.context.get_value('app_name')),
@@ -699,8 +843,9 @@ class PilotClient(NativeClient):
         }
         g_defaults.update(globus_args or {})
         tdata = globus_sdk.TransferData(tc, src_ep, dest_ep, **g_defaults)
-        tdata.add_item(src_path, dest_path)
-        log.debug('Starting Transfer...')
+        for src_path, dest_path in paths:
+            log.debug('Transferring {} to {}'.format(src_path, dest_path))
+            tdata.add_item(src_path, dest_path)
         transfer_result = tc.submit_transfer(tdata)
         log.debug('Submitted Transfer')
         return transfer_result
@@ -782,5 +927,4 @@ class PilotClient(NativeClient):
             label='File Deletion with {}'.format(app_name))
         ddata.add_item(full_path)
         delete_result = tc.submit_delete(ddata)
-        tc.task_wait(delete_result.data['task_id'])
-        log.debug('Success!')
+        log.debug(delete_result)

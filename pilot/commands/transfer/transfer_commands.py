@@ -21,8 +21,8 @@ BIG_SIZE_WARNING = 2 ** 30
 @click.command(help='Upload dataframe to location on Globus and categorize it '
                     'in search')
 @click.argument('dataframe',
-                type=click.Path(exists=True, file_okay=True, dir_okay=False,
-                                readable=True, resolve_path=True),)
+                type=click.Path(exists=True, file_okay=True, dir_okay=True,
+                                readable=True, resolve_path=True))
 @click.argument('destination', type=click.Path(), required=False)
 @click.option('-j', '--json', 'metadata', type=click.Path(),
               help='Metadata in JSON format')
@@ -40,8 +40,7 @@ BIG_SIZE_WARNING = 2 ** 30
 #               help='Path to x label file')
 # @click.option('--y-labels', type=click.Path(),
 #               help='Path to y label file')
-@click.pass_context
-def upload(ctx, dataframe, destination, metadata, gcp, update, dry_run,
+def upload(dataframe, destination, metadata, gcp, update, dry_run,
            verbose, no_analyze):
     """
     Create a search entry and upload this file to the GCS Endpoint.
@@ -52,35 +51,28 @@ def upload(ctx, dataframe, destination, metadata, gcp, update, dry_run,
     if metadata is not None:
         with open(metadata) as mf_fh:
             user_metadata = json.load(mf_fh)
-    try:
-        with pilot_code_handler(dataframe, destination, verbose):
-            pc = pilot.commands.get_pilot_client()
-
-            transport = 'globus' if gcp else 'http'
-            click.secho('Uploading {} using {}... '.format(dataframe,
-                                                           transport))
-            pc.upload(dataframe, destination, metadata=user_metadata,
-                      globus=gcp, update=update, dry_run=dry_run,
-                      skip_analysis=no_analyze)
-            click.secho('Success!', fg='green')
-            short_path = os.path.join(destination, os.path.basename(dataframe))
-            url = pc.get_portal_url(short_path)
-            click.echo('You can view your new record here: \n{}'.format(url))
-    except pilot.exc.AnalysisException as ae:
-        click.secho('Error analyzing {}, skipping...'.format(dataframe),
-                    fg='yellow')
-        if verbose:
-            traceback.print_exception(*ae.original_exc_info)
-        else:
-            click.secho('(Use --verbose to see full error)', fg='yellow')
-        ctx.invoke(upload, dataframe=dataframe, destination=destination,
-                   metadata=metadata, gcp=gcp, update=update, dry_run=dry_run,
-                   verbose=verbose, no_analyze=True)
+    with pilot_code_handler(dataframe, destination, verbose):
+        pc = pilot.commands.get_pilot_client()
+        transport = 'globus' if gcp else 'http'
+        basename = os.path.basename(dataframe)
+        click.secho('Uploading {} using {}... '.format(basename,
+                                                       transport))
+        stats = pc.upload(dataframe, destination, metadata=user_metadata,
+                          globus=gcp, update=update, dry_run=dry_run,
+                          skip_analysis=no_analyze)
+        if dry_run:
+            raise pilot.exc.DryRun(stats=stats, verbose=verbose)
+        elif not stats['metadata_modified']:
+            raise pilot.exc.NoChangesNeeded()
+        click.secho('Success!', fg='green')
+        short_path = os.path.join(destination, basename)
+        url = pc.get_portal_url(short_path)
+        click.echo('You can view your new record here: \n{}'.format(url))
 
 
 @click.command(help='Register an existing dataframe in search', hidden=True)
 @click.argument('dataframe',
-                type=click.Path(exists=True, file_okay=True, dir_okay=False,
+                type=click.Path(exists=True, file_okay=True, dir_okay=True,
                                 readable=True, resolve_path=True),)
 @click.argument('destination', type=click.Path(), required=False)
 @click.option('-j', '--json', 'metadata', type=click.Path(),
@@ -101,12 +93,17 @@ def register(dataframe, destination, metadata, update, dry_run, verbose,
     if metadata is not None:
         with open(metadata) as mf_fh:
             user_metadata = json.load(mf_fh)
-    short_path = os.path.join(destination, os.path.basename(dataframe))
-    with pilot_code_handler(short_path, verbose):
+    with pilot_code_handler(dataframe, destination, verbose):
         pc = pilot.commands.get_pilot_client()
         click.secho('Registering {}... '.format(dataframe))
-        pc.register(dataframe, destination, metadata=user_metadata,
-                    update=update, dry_run=dry_run, skip_analysis=no_analyze)
+        short_path = os.path.join(destination, os.path.basename(dataframe))
+        stats = pc.register(dataframe, destination, metadata=user_metadata,
+                            update=update, dry_run=dry_run,
+                            skip_analysis=no_analyze)
+        if dry_run:
+            raise pilot.exc.DryRun(stats=stats, verbose=verbose)
+        elif not stats['metadata_modified']:
+            raise pilot.exc.NoChangesNeeded()
         click.secho('Success!', fg='green')
         url = pc.get_portal_url(short_path)
         click.echo('You can view your new record here: \n{}'.format(url))
@@ -167,6 +164,13 @@ def pilot_code_handler(dataframe, destination, verbose):
         fg = 'green' if pce.CODE == ExitCodes.SUCCESS else 'yellow'
         click.secho(str(pce), err=True, fg=fg)
         sys.exit(pce.CODE)
+    except pilot.exc.AnalysisException as ae:
+        click.secho('Error analyzing {}, skipping...'.format(dataframe),
+                    fg='yellow')
+        if verbose:
+            traceback.print_exception(*ae.original_exc_info)
+        else:
+            click.secho('(Use --verbose to see full error)', fg='yellow')
 
 
 @click.command(help='Download a file to your local directory.')
@@ -182,12 +186,19 @@ def download(path, overwrite, range):
         return
     try:
         record = pc.get_search_entry(path)
-        length = 0
-        if record and record.get('files'):
-            length = record['files'][0].get('length')
-        elif not record:
-            click.secho('No record exists for {}, you may want to register it.'
-                        .format(path), fg='yellow')
+        url = pc.get_globus_http_url(path)
+        match = pilot.search_discovery.get_matching_file(url, record)
+        if not match:
+            cands = pilot.search_discovery.get_relative_filenames(url, record)
+            if cands:
+                click.secho('{} contains {} files, pick one to download:\n{}'
+                            .format(path, len(cands), cands), fg='yellow')
+            else:
+                click.secho(
+                    'No record exists for {}, you may want to register it.'
+                    .format(path), fg='yellow')
+            return 1
+        length = match.get('length', 0)
         r_content = pc.download_parts(path, range=range)
         params = {'label': 'Downloading {}'.format(fname), 'length': length,
                   'show_pos': True}

@@ -65,15 +65,7 @@ def get_foreign_keys(filename=FOREIGN_KEYS_FILE, pilot_client=None):
     return fkeys
 
 
-def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True,
-                    mimetype=None):
-    mimetype = mimetype or analysis.mimetypes.detect_type(dataframe)
-    dc_formats = []
-    rfm_metadata = {}
-    if mimetype:
-        dc_formats.append(mimetype)
-        rfm_metadata['mime_type'] = mimetype
-
+def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True):
     name = pilot_client.profile.name.split(' ')
     if len(name) > 1 and ',' not in pilot_client.profile.name:
         # If the persons name is ['Samuel', 'L.', 'Jackson'], produces:
@@ -81,6 +73,9 @@ def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True,
         formal_name = '{}, {}'.format(name[-1:][0], ' '.join(name[:-1]))
     else:
         formal_name = pilot_client.profile.name
+    remote_file_manifest = gen_remote_file_manifest(
+        dataframe, url, pilot_client, skip_analysis=skip_analysis
+    )
     return {
         'dc': {
             'titles': [
@@ -114,13 +109,12 @@ def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True,
                     'date': get_formatted_date()
                 }
             ],
-            'formats': dc_formats,
+            'formats': sorted(list({f['mime_type']
+                                    for f in remote_file_manifest
+                                    if f.get('mime_type')})),
             'version': '1'
         },
-        'files': gen_remote_file_manifest(dataframe, url, pilot_client,
-                                          metadata=rfm_metadata,
-                                          mimetype=mimetype,
-                                          skip_analysis=skip_analysis),
+        'files': remote_file_manifest,
         'project_metadata': {
             'project-slug': pilot_client.project.current
         },
@@ -264,6 +258,34 @@ def update_metadata(scraped_metadata, prev_metadata, user_metadata):
     return metadata
 
 
+def gather_metadata_stats(new_metadata, previous_metadata):
+    """
+    Gather general differences between new_metadata and previous metadata.
+    Both arguments must be valid search data, either returned from
+    PilotClient.get_search_entry() or search.scrape_metadata().
+    Returns the following info:
+    * record_exists: True if previous metadata is not empty
+    * previous_metadata: The previous metadata
+    * new_metadata: The new metadata
+    * metadata_modified: True if metadata was modified, false otherwise
+    * files_modified: True if file content has changed, false otherwise.
+    * version: The version listed on the previous metadata, if it exists
+    * new_version: The version listed on the new metadata
+    """
+    return {
+        'record_exists': True if previous_metadata else False,
+        'previous_metadata': previous_metadata,
+        'new_metadata': new_metadata,
+        'metadata_modified': metadata_modified(new_metadata,
+                                               previous_metadata),
+        'files_modified': files_modified(
+            new_metadata.get('files'), previous_metadata.get('files')),
+        'version': (previous_metadata.get('dc', {}).get('version')
+                    if previous_metadata else None),
+        'new_version': new_metadata.get('dc', {}).get('version'),
+    }
+
+
 def gen_gmeta(subject, visible_to, content):
     try:
         validate_dataset(content)
@@ -357,24 +379,47 @@ def gen_dc_formats(metadata, formats):
     metadata['dc']['formats'] = formats
 
 
-def gen_remote_file_manifest(filepath, url, pilot_client, metadata={},
+def gen_remote_file_manifest(filepath, url, pilot_client,
                              algorithms=DEFAULT_HASH_ALGORITHMS,
-                             mimetype=None,
                              skip_analysis=True):
-    rfm = metadata.copy()
-    rfm.update({alg: compute_checksum(filepath, getattr(hashlib, alg)())
-                for alg in algorithms})
-    fkeys = get_foreign_keys(pilot_client)
-    metadata = (analysis.analyze_dataframe(filepath, mimetype, fkeys)
-                if not skip_analysis else {})
-    rfm.update({
-        'filename': os.path.basename(filepath),
-        'url': url,
-        'field_metadata': metadata,
-    })
-    if os.path.exists(filepath):
-        rfm['length'] = os.stat(filepath).st_size
-    return [rfm]
+    manifest_entries = []
+    for subfile, remote_short_path in get_subdir_paths(filepath):
+        rfm = {alg: compute_checksum(subfile, getattr(hashlib, alg)())
+               for alg in algorithms}
+        fkeys = get_foreign_keys(pilot_client)
+        mimetype = analysis.mimetypes.detect_type(subfile)
+        metadata = (analysis.analyze_dataframe(subfile, mimetype, fkeys)
+                    if not skip_analysis else {})
+        rfm.update({
+            'filename': os.path.basename(subfile),
+            'url': os.path.join(os.path.dirname(url), remote_short_path),
+            'field_metadata': metadata,
+            'mime_type': mimetype
+        })
+        if os.path.exists(subfile):
+            rfm['length'] = os.stat(subfile).st_size
+        manifest_entries.append(rfm)
+    return manifest_entries
+
+
+def get_files(path):
+    """Walk a directory to get all files in a directory. """
+    if os.path.isfile(path):
+        return [path]
+    else:
+        file_lists = [[os.path.join(dirpath, f) for f in files]
+                      for dirpath, _, files in os.walk(path)]
+        # Flatten list of lists into a single list
+        return [item for sublist in file_lists for item in sublist]
+
+
+def get_subdir_paths(path):
+    """Walk a directory to get all files, but return both the real path and
+    the relative short_path. the short_path can be passed to the pilot client
+    path methods to get the fully resolved remote path of the file."""
+    local_path = os.path.dirname(path)
+    return [(local_abspath, local_abspath.replace(local_path, '').lstrip('/'))
+            for local_abspath in get_files(path)]
 
 
 def compute_checksum(file_path, algorithm, block_size=65536):

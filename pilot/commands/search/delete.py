@@ -19,6 +19,8 @@ log = logging.getLogger(__name__)
               help='Delete the data but not the search record', default=False)
 @click.option('--metadata', 'metadata_only', default=False, is_flag=True,
               help='Delete the search record but not the data')
+# @click.option('--recursive', '-r', default=False, is_flag=True,
+#               help='Delete the entire contents of a directory')
 def delete_command(path, entry_id, subject, dry_run, data_only,
                    metadata_only):
     pc = pilot.commands.get_pilot_client()
@@ -32,18 +34,12 @@ def delete_command(path, entry_id, subject, dry_run, data_only,
     if not metadata_only:
         dir_list = pc.ls(os.path.dirname(path), extended=True)
         basename = os.path.basename(path)
-        log.debug('Checking if {} in {}'.format(basename, dir_list))
+        log.debug('Checking if {} in {}'.format(basename, dir_list.keys()))
 
         if os.path.basename(path) not in dir_list:
             click.secho('No file "{}" exists'.format(path), fg='yellow')
             return
         elif dir_list[basename]['type'] == 'dir':
-            subdir_listing = pc.ls(path)
-            log.debug('Subdir contains {}'.format(subdir_listing))
-            if subdir_listing:
-                click.secho('Directory is not empty, contains: {}'
-                            ''.format(subdir_listing), fg='yellow')
-                return 1
             is_dir = True
 
     sub_url = pc.get_subject_url(path)
@@ -59,6 +55,21 @@ def delete_command(path, entry_id, subject, dry_run, data_only,
 
     try:
         if is_dir:
+            entry = pc.get_search_entry(path)
+            if entry:
+                number_of_files = len(entry.get('files', []))
+                click.echo('Removing {} ({} files)... '.format(
+                    path, number_of_files))
+                pc.delete(path, recursive=True)
+                click.echo('Removing search record...')
+                pc.delete_entry(path)
+                return 0
+            subdir_listing = pc.ls(path)
+            log.debug('Subdir contains {}'.format(subdir_listing))
+            if subdir_listing:
+                click.secho('Directory is not empty, contains: {}'
+                            ''.format(subdir_listing), fg='yellow')
+                return 1
             pc.delete(path, recursive=True)
             click.echo('The Directory {} has been removed'.format(path))
             return

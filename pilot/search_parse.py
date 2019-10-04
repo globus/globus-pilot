@@ -1,4 +1,5 @@
-
+import os
+import urllib
 import logging
 import datetime
 
@@ -19,18 +20,46 @@ FIELD_METADATA_TITLES = [
  ]
 
 
-def get_field_metadata_titles():
-    return [t for _, t in FIELD_METADATA_TITLES]
+def get_formatted_fields(entry, columns, formatting='{:21.20}{}'):
+    output = []
+    raw_data = dict(parse_result(entry, columns))
+    tdata = zip(get_titles(columns),
+                [raw_data[name] for name in columns])
+    for title, data in tdata:
+        if isinstance(data, list):
+            output += [formatting.format(title, line) for line in data[:1]]
+            output += [formatting.format('', line) for line in data[1:]]
+        else:
+            output.append(formatting.format(title, data))
+    return output
+
+
+def get_formatted_field_metadata(entry, url):
+    fmt = ('{:21.20}'
+           '{:8.7}{:7.6}{:5.4}{:12.11}{:7.6}'
+           '{:7.6}{:8.7}{:8.7}{:8.7}')
+    _, titles = zip(*FIELD_METADATA_TITLES)
+    formatted_titles = [fmt.format(*titles)]
+
+    data = []
+    for row in get_field_metadata(entry, url):
+        _, fm_data = zip(*row)
+        data.append(fmt.format(*[str(i) for i in fm_data]))
+    if data:
+        return formatted_titles + data
+    return []
 
 
 def get_titles(list_of_names):
-    title_map = dict([(name, title) for name, title, _ in PARSE_FUNCS])
+    title_map = dict([(name, title) for name, title, _ in GENERAL_PARSE_FUNCS])
     return [title_map.get(name) for name in list_of_names]
 
 
-def parse_result(result):
+def parse_result(result, fields=None):
     processed_results = []
-    for name, _, processor in PARSE_FUNCS:
+    fields = fields or GENERAL_PARSE_FUNCS
+    funcs_subset = [func for func in GENERAL_PARSE_FUNCS if func[0] in fields]
+    for name, _, processor in funcs_subset:
         try:
             data = processor(result)
         except Exception:
@@ -39,33 +68,26 @@ def parse_result(result):
     return processed_results
 
 
-def get_field_metadata(result):
-    field_metadata = get_single_file_rfm(result).get('field_metadata', {})
+def get_field_metadata(result, url):
+    rfm_files = [f for f in result.get('files', []) if f.get('url') == url]
+    if len(rfm_files) != 1:
+        return []
+    rfm_file = rfm_files[0].get('field_metadata', {})
+
     ret = []
     metadata_names = [n for n, _ in FIELD_METADATA_TITLES]
-    for field_metadata_item in field_metadata.get('field_definitions', []):
+    for field_metadata_item in rfm_file.get('field_definitions', []):
         ret.append([(name, field_metadata_item.get(name, ''))
                     for name in metadata_names])
     return ret
 
 
-def get_single_file_rfm(result):
-    """
-    The location has changed over time, it may be in a couple different
-    locations. This function guarantees to fetch from the correct one.
-    """
-    if result.get('remote_file_manifest'):
-        return result['remote_file_manifest']
-    elif result.get('files'):
-        return result['files'][0]
-
-
 def get_size(result):
-    size = get_single_file_rfm(result)['length']
+    size = sum([f.get('length', 0) for f in result.get('files')])
     # 2**10 = 1024
     power = 2**10
     n = 0
-    Dic_powerN = {0: '', 1: 'k', 2: 'M', 3: 'G', 4: 'T'}
+    Dic_powerN = {0: '', 1: 'K', 2: 'M', 3: 'G', 4: 'T'}
     while size > power:
         size /= power
         n += 1
@@ -82,7 +104,25 @@ def get_dates(result):
     return fdates
 
 
-PARSE_FUNCS = [
+def get_paths(result):
+    return [urllib.parse.urlparse(f.get('url')).path
+            for f in result.get('files')]
+
+
+def get_common_path(result):
+    paths = get_paths(result)
+    common_path = paths[0]
+    while common_path and not all([common_path in p for p in paths]):
+        common_path = os.path.dirname(common_path)
+    return common_path
+
+
+def get_relative_paths(result):
+    return [path.replace(get_common_path(result), '').lstrip('/')
+            for path in get_paths(result)]
+
+
+GENERAL_PARSE_FUNCS = [
     ('title', 'Title', lambda r: r['dc']['titles'][0]['title']),
     ('authors', 'Authors',
      lambda r: [c['creatorName'] for c in r['dc']['creators']]),
@@ -95,12 +135,14 @@ PARSE_FUNCS = [
     ('dataframe', 'Dataframe',
      lambda r: r['project_metadata']['dataframe_type']),
     ('rows', 'Rows',
-     lambda r: get_single_file_rfm(r)['field_metadata']['numrows']),
+     lambda r: r['files'][0]['field_metadata']['numrows']),
     ('columns', 'Columns',
-     lambda r: get_single_file_rfm(r)['field_metadata']['numcols']),
+     lambda r: r['files'][0]['field_metadata']['numcols']),
     ('formats', 'Formats', lambda r: r['dc']['formats']),
     ('version', 'Version', lambda r: r['dc']['version']),
     ('size', 'Size', get_size),
+    ('combined_size', 'Combined Size', get_size),
+    ('files', 'Files', get_relative_paths),
     ('description', 'Description',
      lambda r: r['dc']['descriptions'][0]['description']),
 ]

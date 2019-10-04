@@ -7,6 +7,7 @@ import globus_sdk
 from unittest.mock import Mock
 from .mocks import (MemoryStorage, MOCK_TOKEN_SET, GlobusTransferTaskResponse,
                     ANALYSIS_FILE_BASE_DIR, SCHEMA_FILE_BASE_DIR,
+                    CLIENT_FILE_BASE_DIR,
                     MOCK_PROFILE, MOCK_PROJECTS, MOCK_CONTEXT)
 
 from pilot import client, config, commands, transfer_log
@@ -88,6 +89,17 @@ def mock_search_results(mock_search_data):
                        'content': [mock_search_data],
                        'subject': 'foo_folder'}],
             'offset': 0, 'total': 1}
+
+
+@pytest.fixture
+def mock_multi_file_result(mock_search_data):
+    data = mock_search_data.copy()
+    mf_filename = os.path.join(CLIENT_FILE_BASE_DIR, 'multi_file_entry.json')
+    with open(mf_filename) as f:
+        multi_file = json.load(f)
+    sub = 'globus://foo-project-endpoint/foo_folder/multi_file'
+    data['gmeta'] = [{'content': [multi_file], 'subject': sub}]
+    return data
 
 
 @pytest.fixture

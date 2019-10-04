@@ -20,9 +20,9 @@ def test_parse_record(monkeypatch, mock_search_data):
 def test_parse_field_metadata(monkeypatch, mock_search_data):
     log = Mock()
     monkeypatch.setattr(search_parse, 'log', log)
-    field_meta = search_parse.get_field_metadata(mock_search_data)
-    from pprint import pprint
-    pprint(field_meta)
+    fm_url = ('https://ebf55996-33bf-11e9-9fa4-0a06afd4a22e.e.globus.org'
+              '/test/metadata/simple.tsv')
+    field_meta = search_parse.get_field_metadata(mock_search_data, fm_url)
     both = ['name', 'type', 'count']
     number = ['min', 'max', 'mean', 'std', '25', '50', '75']
     string = ['count', 'frequency', 'top', 'unique']
