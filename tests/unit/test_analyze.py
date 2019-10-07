@@ -8,7 +8,7 @@ from tests.unit.mocks import ANALYSIS_MIXED_FILES
 
 ANALYZABLE_MIMETYPES = [
     'text/csv', 'text/tab-separated-values',
-    'application/x-feather', 'application/x-parquet',
+    'application/x-feather', 'application/x-parquet', 'application/x-hdf'
 ]
 
 EXPECTED_MIXED_ANALYSIS_RESULT = {
@@ -63,8 +63,10 @@ ANALYZABLE_MIXED_FILES = [(f, mtype) for f, mtype in ANALYSIS_MIXED_FILES
 
 
 @pytest.mark.parametrize("filename,mimetype", ANALYZABLE_MIXED_FILES)
-def test_eval(filename, mimetype):
+def test_analyze_filetypes(filename, mimetype):
     ana = analyze_dataframe(filename, mimetype)
+    if mimetype == 'application/x-hdf':
+        ana = ana[0]
     assert ana['numcols'] == 2
     assert ana['numrows'] == 99
     row1_keys = set(ana['field_definitions'][0].keys())
