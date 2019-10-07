@@ -1,9 +1,9 @@
 {
 	"description":
-	  "This is tabular skewt data showing air above Chicago on July 12th, from ground level to 100,000 feet.",
+	  "This is weather analysis showing air above Chicago on July 12th, from ground level to 100,000 feet.",
 	"creators": [{"creatorName": "NOAA"}],
 	"publisher": "NOAA",
-	"title": "Raw tabular data for skewt plot of air above Chicago",
+	"title": "Weather Analysis of air above Chicago",
 	"subjects": [{"subject": "skewt"}, {"subject": "chicago"}],
 	"publicationYear": "2019",
 	"resourceType": {
