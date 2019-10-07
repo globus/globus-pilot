@@ -6,7 +6,7 @@ from slugify import slugify
 import globus_sdk
 
 from pilot import commands, exc
-from pilot.commands import input_validation, search
+from pilot.commands import input_validation
 
 log = logging.getLogger(__name__)
 
@@ -202,7 +202,7 @@ def delete(project):
     if project not in pc.project.load_all():
         click.secho('{} is not a valid project'.format(project), fg='red')
         return 1
-    results = search.search_commands.search_by_project(project=project)
+    results = pc.search(project=project)
     pinfo = pc.project.get_info(project)
     search_query = {
         'q': '*',
@@ -217,7 +217,7 @@ def delete(project):
     transfer_client = pc.get_transfer_client()
     log.debug('Base path for delete is: {}'.format(project_base_path))
     dz = '\n{}\nDANGER ZONE\n{}'.format('/' * 80, '/' * 80)
-    click.secho('{dz}\nThis will delete all data and search results in your'
+    click.secho('{dz}\nThis will delete all data and search results in your '
                 'project.\n{tot} datasets will be deleted for {project}'
                 '{dz}'.format(dz=dz, tot=results['total'], project=project),
                 bg='red')
