@@ -652,6 +652,9 @@ class PilotClient(NativeClient):
                 raise exc.DirectoryDoesNotExist(fmt=[destination]) from None
             else:
                 raise exc.GlobusTransferError(tapie.message) from None
+
+        if self.get_search_entry(destination):
+            raise exc.DestinationIsRecord(fmt=[destination])
         short_path = os.path.join(destination, os.path.basename(dataframe))
         prev_metadata = self.get_search_entry(short_path)
         if prev_metadata and not update and not dry_run:
