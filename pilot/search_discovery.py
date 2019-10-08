@@ -5,20 +5,30 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def get_sub_in_collection(subject, entries):
-    subs = [ent['subject'] for ent in entries]
-    dir_sub = os.path.dirname(subject)
-    while dir_sub and dir_sub not in subs:
-        dir_sub = os.path.dirname(dir_sub)
-    if subs.count(dir_sub) == 1:
-        log.debug('Found subject (partial) {} in project.'.format(dir_sub))
-        dir_ent = entries[subs.index(dir_sub)]['content'][0]
-        urls = [m.get('url') for m in dir_ent.get('files', [])]
-        sub_path = urllib.parse.urlparse(subject).path
-        for url in urls:
-            if sub_path in url:
-                log.debug('Found specific file in subject: {}'.format(url))
-                return dir_ent
+def get_sub_in_collection(subject, entries, precise=True):
+    match_entries = get_subs_in_gmetas(subject, entries)
+    log.debug('Sub Matches: {}'.format([s['subject'] for s in match_entries]))
+    if len(match_entries) != 1:
+        log.debug('Match Fail: Sub {} matched {} subs, not 1.'
+                  ''.format(subject, len(match_entries)))
+        return None
+    content = match_entries[0]['content'][0]
+    if precise is False:
+        return content
+    urls = [m.get('url') for m in content.get('files', [])]
+    sub_path = urllib.parse.urlparse(subject).path
+    for url in urls:
+        log.debug('Checking {}'.format(url))
+        if sub_path in url:
+            log.debug('Found specific file in entry: {}'.format(url))
+            return content
+
+
+def get_subs_in_gmetas(subject, entries):
+    sub_map, directory = {ent['subject']: ent for ent in entries}, subject
+    while directory and directory not in sub_map.keys():
+        directory = os.path.dirname(directory)
+    return [sub_map[s] for s in sub_map.keys() if directory in s]
 
 
 def get_matching_file(url, entry):
