@@ -6,6 +6,27 @@ log = logging.getLogger(__name__)
 
 
 def get_sub_in_collection(subject, entries, precise=True):
+    """
+    Look for a subject or a partial match subject in a bunch of search entries.
+    If 'subject' refers to a file, this looks for an exact subject match in
+    entries and returns the content if it exists. If 'subject' is a multi-file
+    collection subject must either match the top level folder or a file within
+    the collection (or a non-existent file within the collection if
+    precise=False).
+    **Parameters**
+    ``subject`` (*string*)
+      A Globus Search URL
+    ``entries`` (*string*)
+      A list of Globus Search GMeta entries.
+    ``precise`` (*bool*)
+      If the path given points to a location inside a multi-file directory
+      only return the record if the location matches a file.
+      For example, given an entry containing the files:
+        my_dir/foo1.txt, my_dir/foo2.txt, my_dir/foo3.txt
+      If precise=True and the path is my_dir/foo4.txt, None will be
+      returned. If precise=False and the path is my_dir/foo4.txt, the
+      "my_dir" record will still be returned.
+    """
     match_entries = get_subs_in_gmetas(subject, entries)
     log.debug('Sub Matches: {}'.format([s['subject'] for s in match_entries]))
     if len(match_entries) != 1:
