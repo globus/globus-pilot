@@ -61,6 +61,12 @@ def test_upload_to_nonexistant_dir(mock_cli, mock_transfer_error):
         mock_cli.upload(EMPTY_TEST_FILE, 'my_folder')
 
 
+def test_upload_destination_is_record(mock_cli, mock_multi_file_result):
+    mock_cli.search.return_value = mock_multi_file_result
+    with pytest.raises(exc.DestinationIsRecord):
+        mock_cli.upload(EMPTY_TEST_FILE, '/multi_file/foo')
+
+
 def test_upload_unexpected_ls_error(mock_cli, mock_transfer_error):
     mock_transfer_error.code = 'UnexpectedError'
     mock_cli.ls = Mock(side_effect=globus_sdk.exc.TransferAPIError)
@@ -68,7 +74,7 @@ def test_upload_unexpected_ls_error(mock_cli, mock_transfer_error):
         mock_cli.upload(EMPTY_TEST_FILE, 'my_folder')
 
 
-def test_upload_with_custom_metadata(mock_cli, mock_transfer_log):
+def test_upload_with_custom_metadata(mock_cli):
     cust_meta = {'custom_key': 'custom_value'}
     stats = mock_cli.upload(EMPTY_TEST_FILE, 'my_folder', metadata=cust_meta)
     meta = stats['new_metadata']
@@ -90,9 +96,11 @@ def test_upload_validation_error(mock_cli, mock_transfer_log):
 
 
 def test_no_update_needed(mock_cli, mock_transfer_log):
-    url = mock_cli.get_globus_http_url(os.path.basename(EMPTY_TEST_FILE))
+    basen = os.path.basename(EMPTY_TEST_FILE)
+    url = mock_cli.get_globus_http_url(basen)
     meta = scrape_metadata(EMPTY_TEST_FILE, url, mock_cli)
-    mock_cli.get_search_entry.return_value = meta
+    entry = {'content': [meta], 'subject': mock_cli.get_subject_url(basen)}
+    mock_cli.list_entries = Mock(return_value=[entry])
     mock_cli.upload(EMPTY_TEST_FILE, '/', update=True)
     assert not mock_cli.ingest_entry.called
     assert not mock_transfer_log.called
@@ -100,8 +108,11 @@ def test_no_update_needed(mock_cli, mock_transfer_log):
 
 def test_upload_record_exists(mock_cli):
     url = mock_cli.get_globus_http_url('my_folder/test_file_zero_length.txt')
+    sub = mock_cli.get_subject_url('my_folder/test_file_zero_length.txt')
     meta = scrape_metadata(EMPTY_TEST_FILE, url, mock_cli)
-    mock_cli.get_search_entry.return_value = meta
+    entry = {'content': [meta], 'subject': sub}
+    mock_cli.list_entries = Mock(return_value=[entry])
+
     with pytest.raises(exc.RecordExists):
         mock_cli.upload(SMALL_TEST_FILE, 'my_folder')
 

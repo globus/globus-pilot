@@ -38,7 +38,7 @@
       "sha256": "efdfdf84d786f8acb8fb9b2642c4307eae3d5ae1ece9623c0b7dcea395cff946",
       "md5": "bdf4db6ffc2d0811452156ec7dedbb49",
       "filename": "text_metadata.txt",
-      "url": "https://foo-project-endpoint.e.globus.org/myroot/foo_folder/multi_file/text_metadata.txt",
+      "url": "https://foo-project-endpoint.e.globus.org/foo_folder/multi_file/text_metadata.txt",
       "field_metadata": {},
       "mime_type": "text/plain",
       "length": 66
@@ -47,7 +47,7 @@
       "sha256": "2fdd1da52dbe40207d14a2c6f84f6464ae9be4a41988a48e431193116e276b36",
       "md5": "c6ffbc0b1e0406767127753a6782197f",
       "filename": "tinyimage.png",
-      "url": "https://foo-project-endpoint.e.globus.org/myroot/foo_folder/multi_file/folder/tinyimage.png",
+      "url": "https://foo-project-endpoint.e.globus.org/foo_folder/multi_file/folder/tinyimage.png",
       "field_metadata": {},
       "mime_type": "image/png",
       "length": 16384
@@ -56,7 +56,7 @@
       "sha256": "e8a7eb17516e28d1448aaf232ffb089744c985f2e1372ab348e2d9cba8a3ce51",
       "md5": "8669101fd163d664702c74d308bcde36",
       "filename": "tsv1.tsv",
-      "url": "https://foo-project-endpoint.e.globus.org/myroot/foo_folder/multi_file/folder/tsv1.tsv",
+      "url": "https://foo-project-endpoint.e.globus.org/foo_folder/multi_file/folder/tsv1.tsv",
       "field_metadata": {},
       "mime_type": "text/tab-separated-values",
       "length": 513
@@ -65,7 +65,7 @@
       "sha256": "36279dd2b830528c75187401bb486460355548dd6e128946a60d8112cee637ba",
       "md5": "628d95d3f6b5c365c65e3cf4b46aa291",
       "filename": "tsv2.tsv",
-      "url": "https://foo-project-endpoint.e.globus.org/myroot/foo_folder/multi_file/folder/folder2/tsv2.tsv",
+      "url": "https://foo-project-endpoint.e.globus.org/foo_folder/multi_file/folder/folder2/tsv2.tsv",
       "field_metadata": {},
       "mime_type": "text/tab-separated-values",
       "length": 95

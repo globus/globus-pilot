@@ -480,7 +480,7 @@ class PilotClient(NativeClient):
         return [ent for ent in raw['gmeta'] if path in ent.get('subject')]
 
     def get_search_entry(self, path, project=None, relative=True,
-                         resolve_collections=True):
+                         resolve_collections=True, precise=True):
         """
         Get a search entry for a given resource
         **Parameters**
@@ -494,6 +494,14 @@ class PilotClient(NativeClient):
         ``resolve_collections`` (*bool*)
           If the path given points to what might be a multi-file directory
           entry, attempt to resolve the entry.
+        ``precise`` (*bool*)
+          If the path given points to a location inside a multi-file directory
+          only return the record if the location matches a file.
+          For example, given an entry containing the files:
+            my_dir/foo1.txt, my_dir/foo2.txt, my_dir/foo3.txt
+          If precise=True and the path is my_dir/foo4.txt, None will be
+          returned. If precise=False and the path is my_dir/foo4.txt, the
+          "my_dir" record will still be returned.
         **Examples**
         >>> pc.get_search_entry('foo.txt')
           {'dc': {'creators': [{'creatorName': 'NOAA'}],
@@ -511,7 +519,7 @@ class PilotClient(NativeClient):
         except globus_sdk.exc.SearchAPIError as sapie:
             if sapie.code == 'NotFound.Generic' and resolve_collections:
                 return search_discovery.get_sub_in_collection(
-                    subject, self.list_entries())
+                    subject, self.list_entries(), precise=precise)
 
     def ingest_entry(self, gmeta_entry, index=None):
         """
@@ -622,7 +630,7 @@ class PilotClient(NativeClient):
         * pilot.exc.DirectoryDoesNotExist - destination not found
         * pilot.exc.GlobusTransferError - unexpected transfer error
         * pilot.exc.RecordExists - Record exists and update flag was false
-        * pilot.exc.NoChangesNeeded - Record was an exact match
+        * pilot.exc.DestinationIsRecord -- Can't register record inside another
         * pilot.exc.DryRun - Everything succeeded, but ingest was aborted
 
         **Parameters**
@@ -652,11 +660,17 @@ class PilotClient(NativeClient):
                 raise exc.DirectoryDoesNotExist(fmt=[destination]) from None
             else:
                 raise exc.GlobusTransferError(tapie.message) from None
-
-        if self.get_search_entry(destination):
-            raise exc.DestinationIsRecord(fmt=[destination])
         short_path = os.path.join(destination, os.path.basename(dataframe))
-        prev_metadata = self.get_search_entry(short_path)
+        subject = self.get_subject_url(short_path)
+        prev_candidates = self.list_entries()
+        if destination != '/':
+            dsub = self.get_subject_url(destination)
+            dest_is_entry = search_discovery.get_sub_in_collection(
+                dsub, prev_candidates, precise=False)
+            if dest_is_entry:
+                raise exc.DestinationIsRecord(fmt=[destination])
+        prev_metadata = search_discovery.get_sub_in_collection(
+            subject, prev_candidates, precise=False)
         if prev_metadata and not update and not dry_run:
             raise exc.RecordExists(prev_metadata, fmt=[short_path])
         new_metadata = self.gather_metadata(

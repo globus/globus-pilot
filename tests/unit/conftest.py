@@ -92,8 +92,8 @@ def mock_search_results(mock_search_data):
 
 
 @pytest.fixture
-def mock_multi_file_result(mock_search_data):
-    data = mock_search_data.copy()
+def mock_multi_file_result(mock_search_results):
+    data = mock_search_results.copy()
     mf_filename = os.path.join(CLIENT_FILE_BASE_DIR, 'multi_file_entry.json')
     with open(mf_filename) as f:
         multi_file = json.load(f)
@@ -154,7 +154,8 @@ def mock_transfer_log(monkeypatch):
 
 
 @pytest.fixture
-def mock_cli(mock_cli_basic, mock_transfer_client, mock_profile):
+def mock_cli(mock_cli_basic, mock_transfer_client, mock_profile,
+             mock_transfer_log):
     """
     Returns a mock logged in pilot client. Storage is mocked with a custom
     object, so this does behave slightly differently than the real client.
@@ -170,6 +171,7 @@ def mock_cli(mock_cli_basic, mock_transfer_client, mock_profile):
     mock_cli_basic.logout = Mock()
     mock_cli_basic.ingest_entry = Mock()
     mock_cli_basic.get_search_entry = Mock(return_value=None)
+    mock_cli_basic.search = Mock(return_value={'gmeta': []})
     mock_cli_basic.ls = Mock()
     mock_cli_basic.mkdir = Mock()
     mock_cli_basic.delete = Mock()

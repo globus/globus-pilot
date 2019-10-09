@@ -2,20 +2,12 @@ import os
 import pytest
 import globus_sdk
 from unittest.mock import Mock, call, mock_open, patch
-from pilot.client import PilotClient
 from pilot import globus_clients, exc
 from tests.unit.mocks import (MOCK_PROFILE, MOCK_TOKEN_SET,
                               CLIENT_FILE_BASE_DIR)
 from fair_research_login.exc import LoadError
 
 TINY_DATAFRAME = os.path.join(CLIENT_FILE_BASE_DIR, 'tiny_dataframe.tsv')
-
-
-@pytest.mark.skip
-def test_upload_gcp(mock_transfer_client, mixed_tsv, mock_config):
-    pc = PilotClient()
-    result = pc.upload_gcp(mixed_tsv, 'bar', test=True)
-    assert result.data['code'] == 'Accepted'
 
 
 def test_login(monkeypatch, mock_cli_basic, mock_config):

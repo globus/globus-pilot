@@ -30,8 +30,8 @@ def get_sub_in_collection(subject, entries, precise=True):
     match_entries = get_subs_in_gmetas(subject, entries)
     log.debug('Sub Matches: {}'.format([s['subject'] for s in match_entries]))
     if len(match_entries) != 1:
-        log.debug('Match Fail: Sub {} matched {} subs, not 1.'
-                  ''.format(subject, len(match_entries)))
+        log.debug('Match Fail: Sub {} matched {}/{} subs, not 1.'
+                  ''.format(subject, len(match_entries), len(entries)))
         return None
     content = match_entries[0]['content'][0]
     if precise is False:
