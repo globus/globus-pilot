@@ -5,24 +5,29 @@ import numpy
 import matplotlib
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib.colors import LogNorm
 import pylab
 import h5py
 
-def gen_image(dset, basename, cbar=True):
+def gen_image(dset, basename, cbar=True, log=False):
     if sys.platform == 'darwin':
         matplotlib.use("macOSX")
-    image_filename = basename + '.png'
+
     figsize = (numpy.array(dset.shape) / 100.0)[::-1]
     fig = plt.figure()
     fig.set_size_inches(figsize)
-
     if cbar:
         figsize[1] *= 1.1
         plt.title(basename)
     else:
         plt.axes([0, 0, 1, 1])  # Make the plot occupy the whole canvas
         plt.axis('off')
-    im = plt.imshow(dset)
+    if log:
+        image_filename = basename + '_log.png'
+        im = plt.imshow(dset,norm=LogNorm())
+    else:
+        image_filename = basename + '.png'
+        im = plt.imshow(dset)
     if cbar:
         ax = plt.gca()
         divider = make_axes_locatable(ax)
@@ -35,7 +40,9 @@ def plot_pixelSum(xpcs_h5file):
     pixelSum_dset = xpcs_h5file['exchange/pixelSum']
     basename = h5fname.rstrip('.hdf') + '_pixelSum'
     gen_image(pixelSum_dset, basename)
+    gen_image(pixelSum_dset, basename, log=True)
     gen_image(pixelSum_dset, basename + '_pre', cbar=False)
+    gen_image(pixelSum_dset, basename + '_pre', cbar=False, log=True)
 
 def plot_intensity_vs_time(xpcs_h5file):
     basename = xpcs_h5file.filename.rstrip('.hdf')
