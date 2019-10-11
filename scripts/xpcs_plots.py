@@ -66,7 +66,7 @@ def plot_intensity_vs_q(xpcs_h5file):
 
 def plot_g2_all(xpcs_h5file):
     def sfig(bn, gs, ge):
-        fig.suptitle('Correlations g2 {:d} {:d}'.format(gs, ge))
+        fig.suptitle('{} Correlations g2 {:d} to {:d}'.format(bn, gs, ge))
         plt.savefig('{}_g2_corr_{:03d}_{:03d}.png'.format(bn, gs, ge), dpi=100)
     
     basename = xpcs_h5file.filename.rstrip('.hdf')
