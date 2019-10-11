@@ -6,6 +6,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.colors import LogNorm
+from matplotlib.ticker import FormatStrFormatter
 import pylab
 import h5py
 
@@ -62,7 +63,40 @@ def plot_intensity_vs_q(xpcs_h5file):
     plt.ylabel("Intensity (photons/pixel/frame)")
     plt.title(basename)
     plt.savefig(basename + '_intensity.png')
+
+def plot_g2_all(xpcs_h5file):
+    def sfig(bn, gs, ge):
+        fig.suptitle('Correlations g2 {:d} {:d}'.format(gs, ge))
+        plt.savefig('{}_g2_corr_{:03d}_{:03d}.png'.format(bn, gs, ge), dpi=100)
     
+    basename = xpcs_h5file.filename.rstrip('.hdf')
+    exp = xpcs_h5file['/measurement/instrument/detector/exposure_period']
+    dt = xpcs_h5file['/exchange/tau'][0]*exp[0][0]
+    g2_all = xpcs_h5file['/exchange/norm-0-g2']
+    g2_err_all = xpcs_h5file['/exchange/norm-0-stderr']
+    dynamicQ = xpcs_h5file['/xpcs/dqlist'][0]
+    n_plots = dynamicQ.shape[0]
+
+    g_index = 0
+    while g_index < n_plots:
+        g_start = g_index
+        pylab.clf()
+        fig, axs = plt.subplots(nrows=3, ncols=3, constrained_layout=True)
+        fig.set_size_inches((10,10))
+        for i in range(0, 3): # x, left-right axis
+            for j in range(0, 3): # y, top-down axis
+                ax = axs[i,j]
+                ax.errorbar(dt, g2_all[:, g_index], yerr=g2_err_all[:, g_index],
+                                fmt='ko', fillstyle='none', capsize=2, markersize=5)
+                ax.set_title('q={:f}'.format(dynamicQ[g_index]))
+                plt.yscale('linear')
+                plt.xscale('log')
+                g_index += 1
+                if g_index == n_plots:
+                    sfig(basename, g_start, g_index - 1)
+                    break
+        sfig(basename, g_start, g_index - 1)
+
 if __name__ == '__main__':
     import sys
     h5filename = sys.argv[1]
@@ -72,5 +106,6 @@ if __name__ == '__main__':
     pylab.clf()
     plot_intensity_vs_q(x_h5_file)
     pylab.clf()
+    plot_g2_all(x_h5_file)
+    pylab.clf()
     plot_pixelSum(x_h5_file)
-
