@@ -89,8 +89,8 @@ def plot_g2_all(xpcs_h5file):
                 ax.errorbar(dt, g2_all[:, g_index], yerr=g2_err_all[:, g_index],
                                 fmt='ko', fillstyle='none', capsize=2, markersize=5)
                 ax.set_title('q={:f}'.format(dynamicQ[g_index]))
-                plt.yscale('linear')
-                plt.xscale('log')
+                ax.set_yscale('linear')
+                ax.set_xscale('log')
                 g_index += 1
                 if g_index == n_plots:
                     sfig(basename, g_start, g_index - 1)
