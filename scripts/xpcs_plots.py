@@ -6,9 +6,15 @@ import matplotlib
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.colors import LogNorm
-from matplotlib.ticker import FormatStrFormatter
 import pylab
 import h5py
+
+def trim_axs(axs, N):
+    """little helper to massage the axs list to have correct length..."""
+    axs = axs.flat
+    for ax in axs[N:]:
+        ax.remove()
+    return axs[:N]
 
 def gen_image(dset, basename, cbar=True, log=False):
     if sys.platform == 'darwin':
@@ -54,6 +60,31 @@ def plot_intensity_vs_time(xpcs_h5file):
     plt.title(basename)
     plt.savefig(basename + '_frameSum.png')
 
+def plot_intensity_t_vs_q(xpcs_h5file):
+    basename = xpcs_h5file.filename.rstrip('.hdf')
+    q = xpcs_h5file['/xpcs/sqlist']
+    pmt_t = xpcs_h5file['/exchange/partition-mean-partial']
+    n_plots = pmt_t.shape[0]
+    n_cols = 4
+    n_rows = n_plots//n_cols
+    if n_plots % n_cols:
+        n_rows += 1
+    figsize = (10, 0.25 + 2*n_rows)
+    fig, axs = plt.subplots(nrows=n_rows, ncols=n_cols, constrained_layout=True)
+    axs = trim_axs(axs, n_plots)
+    fig.set_size_inches(figsize)
+    pmt_idx = 0
+    for j in range(0, n_rows):
+        for i in range(0, n_cols):
+            ax = axs[pmt_idx]
+            ax.loglog(q[0], pmt_t[pmt_idx])
+            ax.set_title('{:d}'.format(pmt_idx))
+            pmt_idx += 1
+            if pmt_idx == n_plots:
+                break
+    fig.suptitle('{} Intensity Mean Partial'.format(basename))
+    plt.savefig('{}_intensity_t.png'.format(basename), dpi=100)
+
 def plot_intensity_vs_q(xpcs_h5file):
     basename = xpcs_h5file.filename.rstrip('.hdf')
     q = xpcs_h5file['/xpcs/sqlist']
@@ -82,7 +113,7 @@ def plot_g2_all(xpcs_h5file):
         g_start = g_index
         pylab.clf()
         fig, axs = plt.subplots(nrows=3, ncols=3, constrained_layout=True)
-        fig.set_size_inches((10,10))
+        fig.set_size_inches((10,10.25))
         for i in range(0, 3): # x, left-right axis
             for j in range(0, 3): # y, top-down axis
                 ax = axs[i,j]
@@ -105,6 +136,8 @@ if __name__ == '__main__':
     plot_intensity_vs_time(x_h5_file)
     pylab.clf()
     plot_intensity_vs_q(x_h5_file)
+    pylab.clf()
+    plot_intensity_t_vs_q(x_h5_file)
     pylab.clf()
     plot_g2_all(x_h5_file)
     pylab.clf()
