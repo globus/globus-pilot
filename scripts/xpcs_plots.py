@@ -64,24 +64,31 @@ def plot_intensity_t_vs_q(xpcs_h5file):
     basename = xpcs_h5file.filename.rstrip('.hdf')
     q = xpcs_h5file['/xpcs/sqlist']
     pmt_t = xpcs_h5file['/exchange/partition-mean-partial']
+    markers = ['o', 'x', '+', 'v', '^', '<', '>', 's', 'p', '*', 'h',
+    'D']
+    n_markers = len(markers)
     n_plots = pmt_t.shape[0]
-    n_cols = 4
-    n_rows = n_plots//n_cols
-    if n_plots % n_cols:
-        n_rows += 1
-    figsize = (10, 0.25 + 2*n_rows)
-    fig, axs = plt.subplots(nrows=n_rows, ncols=n_cols, constrained_layout=True)
-    axs = trim_axs(axs, n_plots)
-    fig.set_size_inches(figsize)
-    pmt_idx = 0
-    for j in range(0, n_rows):
-        for i in range(0, n_cols):
-            ax = axs[pmt_idx]
-            ax.loglog(q[0], pmt_t[pmt_idx])
-            ax.set_title('{:d}'.format(pmt_idx))
-            pmt_idx += 1
-            if pmt_idx == n_plots:
-                break
+    fig = plt.figure()
+    fig.set_size_inches((8,6.25))
+    ax = plt.gca()
+    for i in range(0, n_plots):
+        if i >= n_markers:
+            markerfacecolor = 'gray'
+            i_marker = i - n_markers
+        else:
+            markerfacecolor = 'None'
+            i_marker = i
+        ax.plot(q[0], pmt_t[i], color='k', marker=markers[i_marker],
+                    alpha=0.5,
+                    markerfacecolor=markerfacecolor,
+                    markeredgecolor='k',
+                    markersize=4,
+                    markeredgewidth=0.3,
+                    linestyle = 'None',
+                    label='{:d}'.format(i+1))
+    ax.set_yscale('log')
+    ax.set_xscale('log')
+    ax.legend(numpoints=1)
     fig.suptitle('{} Intensity Mean Partial'.format(basename))
     plt.savefig('{}_intensity_t.png'.format(basename), dpi=100)
 
