@@ -88,19 +88,23 @@ def plot_intensity_t_vs_q(xpcs_h5file):
                     label='{:d}'.format(i+1))
     ax.set_yscale('log')
     ax.set_xscale('log')
+    ax.set_xlabel("q (A^-1)")
+    ax.set_ylabel("Intensity (photons/pixel/frame)")
     ax.legend(numpoints=1)
     fig.suptitle('{} Intensity Mean Partial'.format(basename))
-    plt.savefig('{}_intensity_t.png'.format(basename), dpi=100)
+    plt.savefig('{}_intensity_t.png'.format(basename), dpi=150)
 
 def plot_intensity_vs_q(xpcs_h5file):
     basename = xpcs_h5file.filename.rstrip('.hdf')
     q = xpcs_h5file['/xpcs/sqlist']
     pmt = xpcs_h5file['/exchange/partition-mean-total']
-    pylab.loglog(q[0], pmt[0])
+    fig = plt.figure()
+    fig.set_size_inches((8,6.25))
+    plt.loglog(q[0], pmt[0], color='k')
     plt.xlabel("q (A^-1)")
     plt.ylabel("Intensity (photons/pixel/frame)")
     plt.title(basename)
-    plt.savefig(basename + '_intensity.png')
+    plt.savefig(basename + '_intensity.png', dpi=150)
 
 def plot_g2_all(xpcs_h5file):
     def sfig(bn, gs, ge):
