@@ -91,7 +91,8 @@ def plot_intensity_t_vs_q(xpcs_h5file):
     ax.set_xlabel("q (A^-1)")
     ax.set_ylabel("Intensity (photons/pixel/frame)")
     ax.legend(numpoints=1)
-    fig.suptitle('{} Intensity Mean Partial'.format(basename))
+    plt.title('{} Intensity Mean Partial'.format(basename))
+    plt.tight_layout()
     plt.savefig('{}_intensity_t.png'.format(basename), dpi=150)
 
 def plot_intensity_vs_q(xpcs_h5file):
@@ -103,7 +104,8 @@ def plot_intensity_vs_q(xpcs_h5file):
     plt.loglog(q[0], pmt[0], color='k')
     plt.xlabel("q (A^-1)")
     plt.ylabel("Intensity (photons/pixel/frame)")
-    plt.title(basename)
+    plt.title('{} Intensity Mean Total'.format(basename))
+    plt.tight_layout()
     plt.savefig(basename + '_intensity.png', dpi=150)
 
 def plot_g2_all(xpcs_h5file):
