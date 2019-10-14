@@ -10,6 +10,14 @@ import pylab
 import h5py
 
 
+def trim_axs(axs, N):
+    """little helper to massage the axs list to have correct length..."""
+    axs = axs.flat
+    for ax in axs[N:]:
+        ax.remove()
+    return axs[:N]
+
+
 def gen_image(dset, basename, cbar=True, log=False):
     if sys.platform == 'darwin':
         matplotlib.use("macOSX")
@@ -55,15 +63,54 @@ def plot_intensity_vs_time(xpcs_h5file):
     plt.savefig('total_intensity_vs_time.png')
 
 
+def plot_intensity_t_vs_q(xpcs_h5file):
+    basename = xpcs_h5file.filename.rstrip('.hdf')
+    q = xpcs_h5file['/xpcs/sqlist']
+    pmt_t = xpcs_h5file['/exchange/partition-mean-partial']
+    markers = ['o', 'x', '+', 'v', '^', '<', '>', 's', 'p', '*', 'h',
+    'D']
+    n_markers = len(markers)
+    n_plots = pmt_t.shape[0]
+    fig = plt.figure()
+    fig.set_size_inches((8,6.25))
+    ax = plt.gca()
+    for i in range(0, n_plots):
+        if i >= n_markers:
+            markerfacecolor = 'gray'
+            i_marker = i - n_markers
+        else:
+            markerfacecolor = 'None'
+            i_marker = i
+        ax.plot(q[0], pmt_t[i], color='k', marker=markers[i_marker],
+                    alpha=0.5,
+                    markerfacecolor=markerfacecolor,
+                    markeredgecolor='k',
+                    markersize=4,
+                    markeredgewidth=0.3,
+                    linestyle = 'None',
+                    label='{:d}'.format(i+1))
+    ax.set_yscale('log')
+    ax.set_xscale('log')
+    ax.set_xlabel("q (A^-1)")
+    ax.set_ylabel("Intensity (photons/pixel/frame)")
+    ax.legend(numpoints=1)
+    plt.title('{} Intensity Mean Partial'.format(basename))
+    plt.tight_layout()
+    plt.savefig('{}_intensity_t.png'.format(basename), dpi=150)
+
 def plot_intensity_vs_q(xpcs_h5file):
     basename = xpcs_h5file.filename.rstrip('.hdf')
     q = xpcs_h5file['/xpcs/sqlist']
     pmt = xpcs_h5file['/exchange/partition-mean-total']
-    pylab.loglog(q[0], pmt[0])
+    fig = plt.figure()
+    fig.set_size_inches((8,6.25))
+    plt.loglog(q[0], pmt[0], color='k')
     plt.xlabel("q (A^-1)")
     plt.ylabel("Intensity (photons/pixel/frame)")
-    plt.title(basename)
-    plt.savefig('intensity_vs_q.png')
+    plt.title('{} Intensity Mean Total'.format(basename))
+    plt.tight_layout()
+    plt.savefig(basename + '_intensity.png', dpi=150)
+
 
 def plot_g2_all(xpcs_h5file):
     def sfig(bn, gs, ge):
@@ -83,7 +130,7 @@ def plot_g2_all(xpcs_h5file):
         g_start = g_index
         pylab.clf()
         fig, axs = plt.subplots(nrows=3, ncols=3, constrained_layout=True)
-        fig.set_size_inches((10,10))
+        fig.set_size_inches((10,10.25))
         for i in range(0, 3): # x, left-right axis
             for j in range(0, 3): # y, top-down axis
                 ax = axs[i,j]
@@ -105,6 +152,8 @@ if __name__ == '__main__':
     plot_intensity_vs_time(x_h5_file)
     pylab.clf()
     plot_intensity_vs_q(x_h5_file)
+    pylab.clf()
+    plot_intensity_t_vs_q(x_h5_file)
     pylab.clf()
     plot_g2_all(x_h5_file)
     pylab.clf()
