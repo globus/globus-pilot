@@ -9,6 +9,9 @@ from matplotlib.colors import LogNorm
 import pylab
 import h5py
 
+if sys.platform == 'darwin':
+    matplotlib.use("macOSX")
+
 
 def trim_axs(axs, N):
     """little helper to massage the axs list to have correct length..."""
@@ -19,9 +22,6 @@ def trim_axs(axs, N):
 
 
 def gen_image(dset, basename, cbar=True, log=False):
-    if sys.platform == 'darwin':
-        matplotlib.use("macOSX")
-
     figsize = (numpy.array(dset.shape) / 100.0)[::-1]
     fig = plt.figure()
     fig.set_size_inches(figsize)
