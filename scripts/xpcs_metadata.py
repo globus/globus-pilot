@@ -9,6 +9,30 @@ import numpy
 import click
 import h5py
 
+GENERAL_METADATA = {
+    "creators": [
+        {
+            "creatorName": "Suresh Narayanan"
+        }
+    ],
+    "publicationYear": "2019",
+    "publisher": "Argonne National Lab",
+    "resourceType": {
+        "resourceType": "Dataset",
+        "resourceTypeGeneral": "Dataset"
+    },
+    "subjects": [
+        {
+            "subject": "beamline"
+        }
+    ],
+}
+
+# Keys that cause ingest into Globus Search to fail. This is likely due to
+# another key of the same name being ingested previously, causing the types
+# not to match (After first ingest, you cannot ingest a different type).
+SPOILED_KEYS = ['measurement.instrument.source_begin.datetime']
+
 
 @click.group(help='Tiny client for generating metadata out of a beamline hdf '
                   'file. Output can then be uploaded using: '
@@ -39,14 +63,19 @@ def gather_items(hdf5_dataframe):
 @click.argument('dataframe',
                 type=click.Path(exists=True, file_okay=True, dir_okay=False,
                                 readable=True, resolve_path=True))
-
 def gather(dataframe):
     hframe = h5py.File(dataframe, 'r')
 
     metafilename, _ = os.path.splitext(os.path.basename(dataframe))
     metafilename += '.json'
+    metadata = GENERAL_METADATA.copy()
+    metadata.update(gather_items(hframe))
 
-    metadata = gather_items(hframe)
+    # Ingesting spoiled keys can cause explosive un-ingests
+    for key in SPOILED_KEYS:
+        if key in metadata.keys():
+            print(f'Popping toxic key "{key}"')
+            metadata.pop(key)
 
     with open(metafilename, 'w') as f:
         f.write(json.dumps(metadata, indent=4))
