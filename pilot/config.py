@@ -1,4 +1,5 @@
 import os
+import stat
 import logging
 from configobj import ConfigObj
 from fair_research_login import ConfigParserTokenStorage
@@ -45,6 +46,9 @@ class Config():
 
     def save(self, cfg):
         cfg.write()
+        # Set flags to 600, so only the USER can read and write.
+        # This protects tokens from prying eyes on multi-user systems!
+        os.chmod(self.filename, stat.S_IREAD | stat.S_IWRITE)
 
     def load(self):
         return ConfigObj(self.filename)
