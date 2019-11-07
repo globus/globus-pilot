@@ -20,13 +20,17 @@ FIELD_METADATA_TITLES = [
  ]
 
 
-def get_formatted_fields(entry, columns, formatting='{:21.20}{}'):
+def get_formatted_fields(entry, columns, formatting='{:21.20}{}', limit=10):
     output = []
     raw_data = dict(parse_result(entry, columns))
     tdata = zip(get_titles(columns),
                 [raw_data[name] for name in columns])
     for title, data in tdata:
         if isinstance(data, list):
+            if len(data) > limit:
+                data.insert(0, 'List truncated due to number of items. '
+                               'Showing 10/{}.'.format(len(data)))
+                data = data[:limit]
             output += [formatting.format(title, line) for line in data[:1]]
             output += [formatting.format('', line) for line in data[1:]]
         else:
@@ -62,7 +66,8 @@ def parse_result(result, fields=None):
     for name, _, processor in funcs_subset:
         try:
             data = processor(result)
-        except Exception:
+        except Exception as e:
+            log.exception(e)
             data = ''
         processed_results.append((name, data))
     return processed_results
@@ -117,6 +122,22 @@ def get_relative_paths(result):
             for path in get_paths(result)]
 
 
+def get_formats(result):
+    formats = [f['mime_type'] for f in result.get('files', {})
+               if f.get('mime_type')]
+    return ['{} ({})'.format(f, formats.count(f)) for f in set(formats)]
+
+
+def get_files(result):
+    listings = []
+    common_path = get_common_path(result)
+    for f in result.get('files', []):
+        path = urllib.parse.urlparse(f.get('url')).path
+        path = path.replace(common_path, '').lstrip('/')
+        listings.append('{} ({})'.format(path, f.get('mime_type')))
+    return sorted(listings)
+
+
 GENERAL_PARSE_FUNCS = [
     ('title', 'Title', lambda r: r['dc']['titles'][0]['title']),
     ('authors', 'Authors',
@@ -133,11 +154,11 @@ GENERAL_PARSE_FUNCS = [
      lambda r: r['files'][0]['field_metadata']['numrows']),
     ('columns', 'Columns',
      lambda r: r['files'][0]['field_metadata']['numcols']),
-    ('formats', 'Formats', lambda r: r['dc']['formats']),
+    ('formats', 'Formats', get_formats),
     ('version', 'Version', lambda r: r['dc']['version']),
     ('size', 'Size', get_size),
     ('combined_size', 'Combined Size', get_size),
-    ('files', 'Files', get_relative_paths),
+    ('files', 'Files', get_files),
     ('description', 'Description',
      lambda r: r['dc']['descriptions'][0]['description']),
 ]
