@@ -60,12 +60,13 @@ def upload(dataframe, destination, metadata, gcp, update, dry_run,
         stats = pc.upload(dataframe, destination, metadata=user_metadata,
                           globus=gcp, update=update, dry_run=dry_run,
                           skip_analysis=no_analyze)
+        short_path = os.path.join(destination, basename)
         if dry_run:
             raise pilot.exc.DryRun(stats=stats, verbose=verbose)
         elif not stats['metadata_modified']:
-            raise pilot.exc.NoChangesNeeded()
-        click.secho('Success!', fg='green')
-        short_path = os.path.join(destination, basename)
+            raise pilot.exc.NoChangesNeeded(fmt=[short_path])
+        click.secho('A transfer has been queued, see `pilot status` for '
+                    'an update of the transfer.', fg='green')
         url = pc.get_portal_url(short_path)
         click.echo('You can view your new record here: \n{}'.format(url))
 
@@ -103,7 +104,7 @@ def register(dataframe, destination, metadata, update, dry_run, verbose,
         if dry_run:
             raise pilot.exc.DryRun(stats=stats, verbose=verbose)
         elif not stats['metadata_modified']:
-            raise pilot.exc.NoChangesNeeded()
+            raise pilot.exc.NoChangesNeeded(fmt=[short_path])
         click.secho('Success!', fg='green')
         url = pc.get_portal_url(short_path)
         click.echo('You can view your new record here: \n{}'.format(url))
