@@ -115,7 +115,10 @@ class DryRun(PilotCodeException):
 
 
 class NoLocalEndpointSet(PilotCodeException):
-    MESSAGE = 'No Local endpoint set'
+    MESSAGE = ('No Local endpoint set. If you are running locally and GCP is '
+               'installed, start GCP then run `pilot login --force` for pilot '
+               'to autodetect your endpoint. If you are running on GCS, you '
+               'can use `pilot profile --local-endpoint UUID:PATH`')
     CODE = ExitCodes.NO_LOCAL_ENDPOINT_SET
 
 

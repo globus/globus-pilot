@@ -25,7 +25,9 @@ BIG_SIZE_WARNING = 2 ** 30
                                 readable=True, resolve_path=True))
 @click.argument('destination', type=click.Path(), required=False)
 @click.option('-j', '--json', 'metadata', type=click.Path(),
-              help='Metadata in JSON format')
+              help='Add custom metadata. For field reference, go to:\n'
+                   'https://github.com/globusonline/pilot1-tools '
+                   'and navigate to doc under `docs/reference.rst`')
 @click.option('-u', '--update/--no-update', default=False,
               help='Overwrite an existing dataframe and increment the version')
 @click.option('--gcp/--no-gcp', default=True,
@@ -57,15 +59,18 @@ def upload(dataframe, destination, metadata, gcp, update, dry_run,
         basename = os.path.basename(dataframe)
         click.secho('Uploading {} using {}... '.format(basename,
                                                        transport))
+        tc = pc.get_transfer_client()
+        tc.operation_ls(pc.profile.load_option('local_endpoint'))
         stats = pc.upload(dataframe, destination, metadata=user_metadata,
                           globus=gcp, update=update, dry_run=dry_run,
                           skip_analysis=no_analyze)
+        short_path = os.path.join(destination, basename)
         if dry_run:
             raise pilot.exc.DryRun(stats=stats, verbose=verbose)
         elif not stats['metadata_modified']:
-            raise pilot.exc.NoChangesNeeded()
-        click.secho('Success!', fg='green')
-        short_path = os.path.join(destination, basename)
+            raise pilot.exc.NoChangesNeeded(fmt=[short_path])
+        click.secho('A transfer has been queued, see `pilot status` for '
+                    'an update of the transfer.', fg='green')
         url = pc.get_portal_url(short_path)
         click.echo('You can view your new record here: \n{}'.format(url))
 
@@ -103,7 +108,7 @@ def register(dataframe, destination, metadata, update, dry_run, verbose,
         if dry_run:
             raise pilot.exc.DryRun(stats=stats, verbose=verbose)
         elif not stats['metadata_modified']:
-            raise pilot.exc.NoChangesNeeded()
+            raise pilot.exc.NoChangesNeeded(fmt=[short_path])
         click.secho('Success!', fg='green')
         url = pc.get_portal_url(short_path)
         click.echo('You can view your new record here: \n{}'.format(url))
@@ -171,6 +176,8 @@ def pilot_code_handler(dataframe, destination, verbose):
             traceback.print_exception(*ae.original_exc_info)
         else:
             click.secho('(Use --verbose to see full error)', fg='yellow')
+    except globus_sdk.exc.TransferAPIError as tapie:
+        click.secho(tapie.message, fg='yellow')
 
 
 @click.command(help='Download a file to your local directory.')

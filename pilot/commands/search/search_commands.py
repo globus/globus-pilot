@@ -101,7 +101,9 @@ def list_command(output_json, limit):
 @click.argument('path', type=click.Path())
 @click.option('--json/--no-json', 'output_json', default=False,
               help='Output as JSON.')
-def describe(path, output_json):
+@click.option('--limit', type=int, default=10,
+              help='Limit number of entities displayed')
+def describe(path, output_json, limit):
     pc = commands.get_pilot_client()
     entry = pc.get_search_entry(path)
     if not entry:
@@ -119,7 +121,7 @@ def describe(path, output_json):
                 'data', 'dataframe', 'rows', 'columns',
                 'formats', 'version', 'size', 'description']
         output = '\n'.join(
-            get_formatted_fields(entry, cols) +
+            get_formatted_fields(entry, cols, limit=limit) +
             [''] +
             get_single_file_info(entry, single_file_entry) +
             ['', ''] +
@@ -130,7 +132,7 @@ def describe(path, output_json):
                 'formats', 'version', 'combined_size', 'description',
                 'files']
         output = '\n'.join(
-            get_formatted_fields(entry, cols) +
+            get_formatted_fields(entry, cols, limit=limit) +
             [''] +
             get_location_info(entry)
         )
