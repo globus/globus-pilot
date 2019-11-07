@@ -14,6 +14,7 @@ class ExitCodes(IntEnum):
     RECORD_EXISTS = 7
     INVALID_CLIENT_CONFIGURATION = 8
     NO_LOCAL_ENDPOINT_SET = 9
+    LOCAL_ENDPOINT_UNRESPONSIVE = 10
 
 
 class PilotClientException(Exception):
@@ -120,6 +121,12 @@ class NoLocalEndpointSet(PilotCodeException):
                'to autodetect your endpoint. If you are running on GCS, you '
                'can use `pilot profile --local-endpoint UUID:PATH`')
     CODE = ExitCodes.NO_LOCAL_ENDPOINT_SET
+
+
+class LocalEndpointUnresponsive(PilotCodeException):
+    MESSAGE = ('Your local endpoint is not responding. Is GCP Running? '
+               'Transfer Response: {}')
+    CODE = ExitCodes.LOCAL_ENDPOINT_UNRESPONSIVE
 
 
 class RequiredUploadFields(PilotClientException):

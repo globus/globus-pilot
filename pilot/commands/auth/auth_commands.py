@@ -5,7 +5,8 @@ import globus_sdk
 import click
 
 import pilot
-from pilot.commands import input_validation
+import pilot.exc
+from pilot.commands import input_validation, endpoint_utils
 
 
 log = logging.getLogger(__name__)
@@ -52,13 +53,11 @@ def login(refresh_tokens, force, local_server, browser):
             pc.profile.save_option('local_endpoint', local_ep)
             pc.profile.save_option('local_endpoint_path', local_path)
             pc.profile.save_option('local_endpoint_name', name)
-            tc.operation_ls(local_ep, path=local_path)
-    except globus_sdk.exc.TransferAPIError as tapie:
+            endpoint_utils.test_local_endpoint()
+    except pilot.exc.LocalEndpointUnresponsive as leu:
         log.debug('Endpoint UUID: {}, local path: {}'
                   .format(local_ep, local_path))
-        click.secho('There was a problem when checking your local endpoint. '
-                    'You should ensure it is working properly. {}'
-                    .format(tapie.message), fg='yellow')
+        click.secho(str(leu), fg='yellow')
     if prev_info != pc.profile.load_user_info():
         pitems = [('Name:', pc.profile.name),
                   ('Organization:', pc.profile.organization),
