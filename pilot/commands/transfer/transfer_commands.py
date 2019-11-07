@@ -25,7 +25,9 @@ BIG_SIZE_WARNING = 2 ** 30
                                 readable=True, resolve_path=True))
 @click.argument('destination', type=click.Path(), required=False)
 @click.option('-j', '--json', 'metadata', type=click.Path(),
-              help='Metadata in JSON format')
+              help='Add custom metadata. For field reference, go to:\n'
+                   'https://github.com/globusonline/pilot1-tools '
+                   'and navigate to doc under `docs/reference.rst`')
 @click.option('-u', '--update/--no-update', default=False,
               help='Overwrite an existing dataframe and increment the version')
 @click.option('--gcp/--no-gcp', default=True,
