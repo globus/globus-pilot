@@ -9,6 +9,7 @@ def test_list_command(monkeypatch, mock_cli, mock_search_results):
     globus_response.data = mock_search_results
     sc.post_search.return_value = globus_response
     mock_cli.get_search_client = Mock(return_value=sc)
+    mock_cli.ls.return_value = {}
     assert sc.post_search().data == mock_search_results
 
     runner = CliRunner()
