@@ -59,6 +59,8 @@ def upload(dataframe, destination, metadata, gcp, update, dry_run,
         basename = os.path.basename(dataframe)
         click.secho('Uploading {} using {}... '.format(basename,
                                                        transport))
+        tc = pc.get_transfer_client()
+        tc.operation_ls(pc.profile.load_option('local_endpoint'))
         stats = pc.upload(dataframe, destination, metadata=user_metadata,
                           globus=gcp, update=update, dry_run=dry_run,
                           skip_analysis=no_analyze)
@@ -174,6 +176,8 @@ def pilot_code_handler(dataframe, destination, verbose):
             traceback.print_exception(*ae.original_exc_info)
         else:
             click.secho('(Use --verbose to see full error)', fg='yellow')
+    except globus_sdk.exc.TransferAPIError as tapie:
+        click.secho(tapie.message, fg='yellow')
 
 
 @click.command(help='Download a file to your local directory.')
