@@ -26,19 +26,21 @@ Setting Your Local
 
 The first time you run `pilot`, you may encounter an error an error like the one below:
 
-```
-RuntimeError: Click will abort further execution because Python 3 was
-  configured to use ASCII as encoding for the environment.
-```
+.. code-block::
+
+    RuntimeError: Click will abort further execution because Python 3 was
+      configured to use ASCII as encoding for the environment.
+
 
 This can happen if on systems with custom configured UTF-8 settings. You should
 see a list of encodings your system supports, simply choose one and set it.
 For example:
 
-```
-export LC_ALL=en_US.utf-8
-export LANG=en_US.utf-8
-```
+.. code-block::
+
+    export LC_ALL=en_US.utf-8
+    export LANG=en_US.utf-8
+
 
 Replace ``en_US.utf-8`` with an encoding your system supports.
 
