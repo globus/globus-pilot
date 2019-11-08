@@ -9,4 +9,4 @@ configobj
 python-slugify
 requests-toolbelt
 puremagic
-Wand
+Pillow

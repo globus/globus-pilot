@@ -1,13 +1,14 @@
 import logging
-from wand.image import Image
+from PIL import Image
 
 def analyze_image(filename, foreign_keys=None):
-    img = Image(filename=filename)
+    img = Image.open(filename)
     image_metadata = {
         'name': 'Image Metadata',
         'width': img.width,
         'height': img.height,
-        'colorspace': img.colorspace,
+        'colorspace': img.mode,
         'format': img.format,
+        'format_description': img.format_description,
         }
     return image_metadata
