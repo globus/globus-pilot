@@ -203,6 +203,7 @@ class PilotClient(NativeClient):
         ``project`` (*string*)
           The project to fetch info for. Defaults to current project
         """
+        project = project or self.project.current
         return self.project.get_info(project)['endpoint']
 
     def get_index(self, project=None):
@@ -234,6 +235,9 @@ class PilotClient(NativeClient):
         >>> pc.get_path('/projects/goo/moo.txt', project='goo', relative=False)
         '/projects/goo/moo.txt'
         """
+        if not isinstance(path, str):
+            raise exc.PilotClientException('get_path(): "path" must be a '
+                                           'string, not {}'.format(type(path)))
         bdir = self.project.get_info(project)['base_path']
         path = path.lstrip('.')
         if relative is True:
@@ -246,7 +250,7 @@ class PilotClient(NativeClient):
             if bdir not in path:
                 log.warning(
                     'Absolute path {} not in project {} path {}'.format(
-                        path, project or self.project.current, bdir)
+                        path, project, bdir)
                 )
         log.debug('Path: {}'.format(path))
         return path
@@ -549,8 +553,11 @@ class PilotClient(NativeClient):
             log.debug(f'Search task still {task_status}')
             time.sleep(.2)
             task_status = sc.get_task(result['task_id'])['state']
-        if sc.get_task(result['task_id'])['state'] != 'SUCCESS':
-            raise exc.PilotClientException('Failed to ingest search subject')
+        ingest_task = sc.get_task(result['task_id'])
+        if ingest_task['state'] != 'SUCCESS':
+            log.error(ingest_task.data)
+            raise exc.PilotClientException('Failed to ingest search subject: '
+                                           '{}'.format(ingest_task['message']))
         return True
 
     def delete_entry(self, path, entry_id='metadata', full_subject=False):
@@ -577,8 +584,8 @@ class PilotClient(NativeClient):
             return search_cli.delete_entry(index, subject, entry_id=entry_id)
 
     def gather_metadata(self, dataframe, destination, previous_metadata=None,
-                        custom_metadata=None, skip_analysis=False, project=None
-                        ):
+                        custom_metadata=None, skip_analysis=False,
+                        project=None, foreign_keys=None):
         """Gather metadata on a local file or directory. Returns a new dict
         which combines previous metadata and custom metadata. If skip_analysis
         is True, new analytics won't be attempted and old analytics will be
@@ -605,12 +612,29 @@ class PilotClient(NativeClient):
         short_path = os.path.join(destination, os.path.basename(dataframe))
         url = self.get_globus_http_url(short_path, project=project)
         new_metadata = search.scrape_metadata(
-            dataframe, url, self, skip_analysis=skip_analysis)
+            dataframe, url, self.profile, self.project.current,
+            skip_analysis=skip_analysis
+        )
+        if foreign_keys:
+            base_sub = self.get_subject_url('', project=project)
+            existing_paths = [e['subject'].replace(base_sub, '').lstrip('/')
+                              for e in self.list_entries('', project=project)]
+            new_files = search.get_foreign_keys(new_metadata['files'],
+                                                foreign_keys, existing_paths)
+            for new_file in new_files:
+                d = new_file.get('field_metadata', {}).get('field_definitions')
+                for fdef in d:
+                    if fdef and fdef.get('reference'):
+                        fdef['reference']['resource'] = self.get_subject_url(
+                            fdef['reference']['resource'], project=project
+                        )
+            new_metadata['files'] = new_files
         return search.update_metadata(new_metadata, previous_metadata or {},
                                       custom_metadata or {})
 
     def register(self, dataframe, destination, metadata=None,
-                 update=False, dry_run=False, skip_analysis=False):
+                 update=False, dry_run=False, skip_analysis=False,
+                 foreign_keys=None):
         """
         Gather metadata on a local search record and register metadata in
         Globus Search. This method assumes either the dataframe already exists
@@ -661,7 +685,8 @@ class PilotClient(NativeClient):
             raise exc.RecordExists(prev_metadata, fmt=[short_path])
         new_metadata = self.gather_metadata(
             dataframe, destination, previous_metadata=prev_metadata,
-            custom_metadata=metadata or {}, skip_analysis=skip_analysis
+            custom_metadata=metadata or {}, skip_analysis=skip_analysis,
+            foreign_keys=foreign_keys
         )
         stats = search.gather_metadata_stats(new_metadata, prev_metadata or {})
         stats['ingest'] = {}
@@ -675,7 +700,8 @@ class PilotClient(NativeClient):
         return stats
 
     def upload(self, dataframe, destination, metadata=None, globus=True,
-               update=False, dry_run=False, skip_analysis=False, project=None):
+               update=False, dry_run=False, skip_analysis=False, project=None,
+               foreign_keys=None):
         """
         Register a dataframe in Globus Search then upload it to a relative
         project directory on the configured Globus endpoint.
@@ -728,7 +754,8 @@ class PilotClient(NativeClient):
 
         stats = self.register(
             dataframe, destination, metadata=metadata, update=update,
-            dry_run=dry_run, skip_analysis=skip_analysis
+            dry_run=dry_run, skip_analysis=skip_analysis,
+            foreign_keys=foreign_keys
         )
         stats['protocol'] = 'globus' if globus else 'http'
         stats['upload'] = {}
