@@ -16,14 +16,14 @@ ANALYZE_MAP = {
     }
 
 
-def analyze_dataframe(filename, mimetype=None, foreign_keys=None):
+def analyze_dataframe(filename, mimetype=None):
     mimetype = mimetype or mimetypes.detect_type(filename)
     analyze_function = ANALYZE_MAP.get(mimetype)
     if analyze_function is None:
         log.debug('No analyzer for mimetype {}'.format(mimetype))
         return {}
     try:
-        return analyze_function(filename, foreign_keys=foreign_keys)
+        return analyze_function(filename)
     except Exception as e:
         log.exception(e)
         log.error('Failed to parse metadata.')

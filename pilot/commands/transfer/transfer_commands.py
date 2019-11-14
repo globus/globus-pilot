@@ -21,6 +21,13 @@ log = logging.getLogger(__name__)
 BIG_SIZE_WARNING = 2 ** 30
 
 
+def load_json(filename):
+    if filename is not None and os.path.exists(filename):
+        with open(filename) as fh:
+            return json.load(fh)
+    return {}
+
+
 @click.command(help='Upload dataframe to location on Globus and categorize it '
                     'in search')
 @click.argument('dataframe',
@@ -41,21 +48,13 @@ BIG_SIZE_WARNING = 2 ** 30
 @click.option('--verbose', is_flag=True, default=False)
 @click.option('--no-analyze', is_flag=True, default=False,
               help='Analyze the field to collect additional metadata.')
-# @click.option('--x-labels', type=click.Path(),
-#               help='Path to x label file')
-# @click.option('--y-labels', type=click.Path(),
-#               help='Path to y label file')
+@click.option('--foreign-keys', 'foreign_keys', type=click.Path(),
+              help='File containing links to other search records.')
 def upload(dataframe, destination, metadata, gcp, update, dry_run,
-           verbose, no_analyze):
+           verbose, no_analyze, foreign_keys):
     """
     Create a search entry and upload this file to the GCS Endpoint.
-
-    # TODO: Fault tolerance for interrupted or failed file uploads (rollback)
     """
-    user_metadata = {}
-    if metadata is not None:
-        with open(metadata) as mf_fh:
-            user_metadata = json.load(mf_fh)
     with pilot_code_handler(dataframe, destination, verbose):
         pc = pilot.commands.get_pilot_client()
         transport = 'globus' if gcp else 'http'
@@ -63,9 +62,10 @@ def upload(dataframe, destination, metadata, gcp, update, dry_run,
         click.secho('Uploading {} using {}... '.format(basename,
                                                        transport))
         test_local_endpoint()
-        stats = pc.upload(dataframe, destination, metadata=user_metadata,
+        stats = pc.upload(dataframe, destination, metadata=load_json(metadata),
                           globus=gcp, update=update, dry_run=dry_run,
-                          skip_analysis=no_analyze)
+                          skip_analysis=no_analyze,
+                          foreign_keys=load_json(foreign_keys))
         short_path = os.path.join(destination, basename)
         if dry_run:
             raise pilot.exc.DryRun(stats=stats, verbose=verbose)
@@ -74,7 +74,8 @@ def upload(dataframe, destination, metadata, gcp, update, dry_run,
         click.secho('A transfer has been queued, see `pilot status` for '
                     'an update of the transfer.', fg='green')
         url = pc.get_portal_url(short_path)
-        click.echo('You can view your new record here: \n{}'.format(url))
+        if url:
+            click.echo('You can view your new record here: \n{}'.format(url))
 
 
 @click.command(help='Register an existing dataframe in search', hidden=True)
@@ -91,29 +92,29 @@ def upload(dataframe, destination, metadata, gcp, update, dry_run,
 @click.option('--verbose', is_flag=True, default=False)
 @click.option('--no-analyze', is_flag=True, default=False,
               help='Analyze the field to collect additional metadata.')
+@click.option('--foreign-keys', 'foreign_keys', type=click.Path(),
+              help='File containing links to other search records.')
 def register(dataframe, destination, metadata, update, dry_run, verbose,
-             no_analyze):
+             no_analyze, foreign_keys):
     """
     Create a search entry for a pre-existing file
     """
-    user_metadata = {}
-    if metadata is not None:
-        with open(metadata) as mf_fh:
-            user_metadata = json.load(mf_fh)
     with pilot_code_handler(dataframe, destination, verbose):
         pc = pilot.commands.get_pilot_client()
         click.secho('Registering {}... '.format(dataframe))
         short_path = os.path.join(destination, os.path.basename(dataframe))
-        stats = pc.register(dataframe, destination, metadata=user_metadata,
-                            update=update, dry_run=dry_run,
-                            skip_analysis=no_analyze)
+        stats = pc.register(dataframe, destination,
+                            metadata=load_json(metadata), update=update,
+                            dry_run=dry_run, skip_analysis=no_analyze,
+                            foreign_keys=load_json(foreign_keys))
         if dry_run:
             raise pilot.exc.DryRun(stats=stats, verbose=verbose)
         elif not stats['metadata_modified']:
             raise pilot.exc.NoChangesNeeded(fmt=[short_path])
         click.secho('Success!', fg='green')
         url = pc.get_portal_url(short_path)
-        click.echo('You can view your new record here: \n{}'.format(url))
+        if url:
+            click.echo('You can view your new record here: \n{}'.format(url))
 
 
 @contextlib.contextmanager
