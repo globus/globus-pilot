@@ -57,6 +57,20 @@ def get_formatted_date():
     return datetime.datetime.now(pytz.utc).isoformat().replace('+00:00', 'Z')
 
 
+def suggest_shortname(existing_shortnames, non_existent_shortname):
+
+    matches = {
+        difflib.SequenceMatcher(None, es, non_existent_shortname).ratio(): es
+        for es in existing_shortnames
+    }
+    suggestion = ''
+    if matches:
+        suggestion = 'Did you mean {}?'.format(
+            matches.get(max(matches.keys()))
+        )
+    return suggestion
+
+
 def get_foreign_keys(entry_files, foreign_keys, existing_paths):
     files = copy.deepcopy(entry_files)
     for filem in files:
@@ -65,24 +79,16 @@ def get_foreign_keys(entry_files, foreign_keys, existing_paths):
             continue
         for field_def in defs:
             foreign_f = field_def.get('name')
-            if foreign_keys.get(foreign_f):
-                ref = copy.deepcopy(foreign_keys[foreign_f]['reference'])
-                if ref['resource'] in existing_paths:
-                    field_def['reference'] = ref
-                else:
-                    basename = os.path.basename(ref['resource'])
-                    matches = {
-                        difflib.SequenceMatcher(None, ep, basename).ratio(): ep
-                        for ep in existing_paths
-                    }
-                    suggestion = ''
-                    if matches:
-                        suggestion = 'Did you mean {}?'.format(
-                            matches.get(max(matches.keys()))
-                        )
-                    raise Exception('Reference {} did not resolve. {}'
-                                    .format(ref['resource'], suggestion
-                                            ))
+            if not foreign_keys.get(foreign_f):
+                continue
+            ref = copy.deepcopy(foreign_keys[foreign_f]['reference'])
+            if ref['resource'] in existing_paths:
+                field_def['reference'] = ref
+            else:
+                sug = suggest_shortname(existing_paths,
+                                        os.path.basename(ref['resource']))
+                raise Exception('Reference {} did not resolve. {}'
+                                .format(ref['resource'], sug))
     return files
 
 

@@ -97,7 +97,7 @@ def test_download_http(monkeypatch, mixed_tsv, mock_cli_basic):
     assert get.call_args == call('/foo_folder/a.tsv', range=None)
 
 
-def test_ingest(monkeypatch, mock_cli_basic):
+def test_ingest(monkeypatch, mock_cli_basic, mock_sdk_response):
     search_cli = Mock()
     search_cli.ingest.return_value = {'task_id': 'foo'}
     search_cli.get_task = Mock(return_value={'state': 'SUCCESS'})
@@ -106,7 +106,8 @@ def test_ingest(monkeypatch, mock_cli_basic):
     r = mock_cli_basic.ingest_entry({'my': 'search_entry'})
     assert r is True
 
-    search_cli.get_task = Mock(return_value={'state': 'FAILURE'})
+    mock_sdk_response.data = {'state': 'FAILURE'}
+    search_cli.get_task.return_value = mock_sdk_response
     with pytest.raises(exc.PilotClientException):
         mock_cli_basic.ingest_entry({'my': 'search_entry'})
 

@@ -78,7 +78,7 @@ def test_upload_validation_error(mock_cli):
 
 def test_no_update_needed(mock_cli):
     url = mock_cli.get_globus_http_url(os.path.basename(EMPTY_TEST_FILE))
-    meta = scrape_metadata(EMPTY_TEST_FILE, url, mock_cli)
+    meta = scrape_metadata(EMPTY_TEST_FILE, url, mock_cli.profile, 'foo')
     mock_cli.get_search_entry.return_value = meta
     result = CliRunner().invoke(upload, [EMPTY_TEST_FILE, '/',
                                          '--no-gcp', '-u'])
@@ -88,7 +88,7 @@ def test_no_update_needed(mock_cli):
 
 def test_upload_record_exists(mock_cli):
     url = mock_cli.get_globus_http_url('my_folder/test_file_zero_length.txt')
-    meta = scrape_metadata(EMPTY_TEST_FILE, url, mock_cli)
+    meta = scrape_metadata(EMPTY_TEST_FILE, url, mock_cli.profile, 'foo')
     mock_cli.get_search_entry.return_value = meta
     result = CliRunner().invoke(upload, [SMALL_TEST_FILE, 'my_folder'])
     assert result.exit_code == ExitCodes.RECORD_EXISTS

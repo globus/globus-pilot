@@ -80,7 +80,7 @@ def test_upload_analyze_error(mock_cli, monkeypatch):
     mock_exc = Mock(side_effect=AnalysisException('fail!', None))
     monkeypatch.setattr(analysis, 'analyze_dataframe', mock_exc)
     with pytest.raises(exc.AnalysisException):
-            mock_cli.upload(EMPTY_TEST_FILE, 'my_folder')
+        mock_cli.upload(EMPTY_TEST_FILE, 'my_folder')
 
 
 def test_upload_validation_error(mock_cli, mock_transfer_log):
@@ -91,7 +91,7 @@ def test_upload_validation_error(mock_cli, mock_transfer_log):
 
 def test_no_update_needed(mock_cli, mock_transfer_log):
     url = mock_cli.get_globus_http_url(os.path.basename(EMPTY_TEST_FILE))
-    meta = scrape_metadata(EMPTY_TEST_FILE, url, mock_cli)
+    meta = scrape_metadata(EMPTY_TEST_FILE, url, mock_cli.profile, 'foo')
     mock_cli.get_search_entry.return_value = meta
     mock_cli.upload(EMPTY_TEST_FILE, '/', update=True)
     assert not mock_cli.ingest_entry.called
@@ -100,7 +100,7 @@ def test_no_update_needed(mock_cli, mock_transfer_log):
 
 def test_upload_record_exists(mock_cli):
     url = mock_cli.get_globus_http_url('my_folder/test_file_zero_length.txt')
-    meta = scrape_metadata(EMPTY_TEST_FILE, url, mock_cli)
+    meta = scrape_metadata(EMPTY_TEST_FILE, url, mock_cli.profile, 'foo')
     mock_cli.get_search_entry.return_value = meta
     with pytest.raises(exc.RecordExists):
         mock_cli.upload(SMALL_TEST_FILE, 'my_folder')
