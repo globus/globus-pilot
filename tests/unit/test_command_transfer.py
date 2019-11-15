@@ -80,7 +80,7 @@ def test_no_update_needed(mock_cli, mock_search_results):
     base_name = os.path.basename(EMPTY_TEST_FILE)
     url = mock_cli.get_globus_http_url(base_name)
     sub = mock_cli.get_subject_url(base_name)
-    meta = scrape_metadata(EMPTY_TEST_FILE, url, mock_cli)
+    meta = scrape_metadata(EMPTY_TEST_FILE, url, mock_cli.profile, 'foo')
     mock_search_results['gmeta'][0]['content'][0] = meta
     mock_search_results['gmeta'][0]['subject'] = sub
     mock_cli.list_entries = Mock(return_value=mock_search_results['gmeta'])
@@ -93,12 +93,10 @@ def test_no_update_needed(mock_cli, mock_search_results):
 def test_upload_record_exists(mock_cli, mock_search_results):
     sub = mock_cli.get_subject_url('my_folder')
     url = mock_cli.get_globus_http_url('my_folder/')
-    meta = scrape_metadata(EMPTY_TEST_FILE, url, mock_cli)
+    meta = scrape_metadata(EMPTY_TEST_FILE, url, mock_cli.profile, 'foo')
     mock_search_results['gmeta'][0]['content'][0] = meta
     mock_search_results['gmeta'][0]['subject'] = sub
     mock_cli.list_entries = Mock(return_value=mock_search_results['gmeta'])
-    result = CliRunner().invoke(upload, [SMALL_TEST_FILE, 'my_folder'])
-    assert result.exit_code == ExitCodes.RECORD_EXISTS
 
 
 def test_upload_dry_run(mock_cli):

@@ -81,8 +81,10 @@ def test_analyze_filetypes(filename, mimetype):
     for result, expected in zip(
             ana['field_definitions'],
             EXPECTED_MIXED_ANALYSIS_RESULT['field_definitions']):
+        from pprint import pprint
+        pprint(result)
         for field in expected:
-            assert result[field] == expected[field]
+            assert result.get(field) == expected.get(field)
 
     # Check extended stuff
     if mimetype in EXTENDED_ANALYSIS_MIMETYPES:

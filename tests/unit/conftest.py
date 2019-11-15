@@ -127,6 +127,16 @@ def mock_transfer_error(monkeypatch):
 
 
 @pytest.fixture
+def mock_sdk_response(monkeypatch):
+    class SDKResp:
+        data = {}
+
+        def __getitem__(self, item, default=None):
+            return self.data
+    return SDKResp()
+
+
+@pytest.fixture
 def mock_cli_basic(monkeypatch, mock_config, mock_projects):
     pc = client.PilotClient()
 
