@@ -105,7 +105,6 @@ def list_command(path, output_json, limit):
         output = [results, fmt.format(*titles)] + output
         click.echo('\n'.join(output))
 
-    log.debug("GOT HERE")
     result_names = [os.path.basename(r['subject']) for r in curated_results]
     path_info = pc.ls(path, extended=True)
     dirs = [name for name, info in path_info.items()
