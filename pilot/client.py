@@ -7,7 +7,7 @@ from globus_sdk import AuthClient, SearchClient, TransferClient
 from fair_research_login import NativeClient, LoadError, ScopesMismatch
 from pilot import (
     profile, config, globus_clients, exc, logging_cfg, context, search,
-    transfer_log, search_discovery, project as project_module,
+    transfer_log, search_discovery, cache, project as project_module,
 )
 
 logging_cfg.setup_logging()
@@ -93,6 +93,7 @@ class PilotClient(NativeClient):
                          app_name=self.context.get_value('app_name'))
         self.project = project_module.Project()
         self.profile = profile.Profile()
+        self.cache = cache.FileCache()
 
     def login(self, *args, **kwargs):
         r"""
@@ -384,7 +385,14 @@ class PilotClient(NativeClient):
         """
         path = self.get_path(path, project, relative)
         endpoint = self.get_endpoint(project)
-        r = self.get_transfer_client().operation_ls(endpoint, path=path)
+
+        r = self.cache.get(self.get_globus_url(path))
+        if r:
+            log.debug('Using cache for item {}'.format(endpoint+path))
+        else:
+            log.debug('Cache expired or not available')
+            r = self.get_transfer_client().operation_ls(endpoint, path=path)
+            self.cache[self.get_globus_url(path)] = r.data
         if extended:
             return {f['name']: f for f in r['DATA']}
         return [f['name'] for f in r['DATA']]

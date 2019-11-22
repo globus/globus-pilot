@@ -3,6 +3,7 @@ import urllib
 import json
 import logging
 import click
+import globus_sdk
 from pilot import commands
 from pilot.search_parse import (
     parse_result, get_titles, get_common_path, get_relative_paths,
@@ -106,7 +107,13 @@ def list_command(path, output_json, limit):
         click.echo('\n'.join(output))
 
     result_names = [os.path.basename(r['subject']) for r in curated_results]
-    path_info = pc.ls(path, extended=True)
+    try:
+        path_info = pc.ls(path, extended=True)
+    except globus_sdk.exc.TransferAPIError as tapie:
+        if tapie.code == 'ClientError.NotFound':
+            click.secho('{} does not exist'.format(path), fg='yellow')
+            return
+        raise
     dirs = [name for name, info in path_info.items()
             if info['type'] == 'dir' and name not in result_names]
     if dirs:

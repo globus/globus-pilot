@@ -66,8 +66,8 @@ def parse_result(result, fields=None):
     for name, _, processor in funcs_subset:
         try:
             data = processor(result)
-        except Exception as e:
-            log.exception(e)
+        except Exception:
+            # log.exception(e)
             data = ''
         processed_results.append((name, data))
     return processed_results
