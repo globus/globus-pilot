@@ -1,6 +1,7 @@
 import sys
 import click
 import logging
+import globus_sdk
 
 from pilot import commands, exc
 from pilot.version import __version__
@@ -38,13 +39,13 @@ def cli(ctx):
                                 '"pilot project update"'
                                 ' to get the newest changes.', fg='yellow')
                 log.debug('Update was successful.')
-            except exc.HTTPSClientException as hce:
-                log.exception(hce)
+            except globus_sdk.exc.SearchAPIError as sapie:
+                if not sapie.code == 'NotFound.Generic':
+                    log.error('This error is unexpected!')
+                    log.exception(sapie)
                 click.secho(
-                    'Unable to fetch the master project manifest. '
-                    'It may have moved, or the HTTP server hosting it is down.'
-                    ' Uploads and downloads may not work. Please check with '
-                    'your admin for further details.', fg='red')
+                    'No manifest exists on this index. You can add '
+                    'one by running `pilot context push`', fg='red')
         pcommands = ['delete', 'describe', 'download', 'list', 'mkdir',
                      'upload']
         if not pc.project.is_set() and ctx.invoked_subcommand in pcommands:

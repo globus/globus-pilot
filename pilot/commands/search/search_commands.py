@@ -68,15 +68,23 @@ def get_location_info(entry):
               help='Output as JSON.')
 @click.option('--limit', type=int, default=100,
               help='Limit returned results to the number provided')
-def list_command(path, output_json, limit):
+@click.option('--relative/--no-relative', default=True,
+              help='Only list results relative to project')
+@click.option('--all', 'all_recs', default=False, is_flag=True,
+              help='Do not filter on project')
+def list_command(path, output_json, limit, relative, all_recs):
     # Should require login if there are publicly visible records
     pc = commands.get_pilot_client()
     project = pc.project.current
-    search_results = pc.search(project=project, custom_params={'limit': limit})
+    search_params = {'limit': limit}
+    if all_recs:
+        search_params['filters'], relative = [], False
+    search_results = pc.search(project=project, custom_params=search_params)
+    log.debug(search_results)
     if output_json:
         click.echo(json.dumps(search_results, indent=4))
         return
-    path_sub = pc.get_subject_url(path)
+    path_sub = pc.get_subject_url(path) if relative else path
     curated_results = [r for r in search_results['gmeta']
                        if path_sub in r['subject']]
 
@@ -89,12 +97,13 @@ def list_command(path, output_json, limit):
     for result in curated_results:
         # If this path refers to a result in a different base location, skip
         # it, it isn't part of this project
-        if pc.get_path('') not in result['subject']:
+        if relative and pc.get_path('') not in result['subject']:
             log.debug('Skipping result {}'.format(result['subject']))
             continue
 
         data = dict(parse_result(result['content'][0], items))
-        parsed = [data.get(name) for name in items] + [get_short_path(result)]
+        parsed = [data.get(name) for name in items]
+        parsed += [get_short_path(result) if relative else result['subject']]
         parsed = [str(p) for p in parsed]
 
         output.append(fmt.format(*parsed))
@@ -121,9 +130,12 @@ def list_command(path, output_json, limit):
               help='Output as JSON.')
 @click.option('--limit', type=int, default=10,
               help='Limit number of entities displayed')
-def describe(path, output_json, limit):
+@click.option('--relative/--no-relative', default=True)
+@click.option('--path-is-sub', default=False, is_flag=True)
+def describe(path, output_json, limit, relative, path_is_sub):
     pc = commands.get_pilot_client()
-    entry = pc.get_search_entry(path)
+    entry = pc.get_search_entry(path, relative=relative,
+                                path_is_sub=path_is_sub)
     if not entry:
         click.echo('Unable to find entry')
         return

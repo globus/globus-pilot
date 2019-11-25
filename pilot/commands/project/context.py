@@ -48,23 +48,15 @@ def set_context(ctx, index_name):
                 'projects_endpoint': '',
                 'projects_base_path': '',
                 'projects_group': '',
-                'projects_default_search_index': '',
+                'projects_default_search_index': index_uuid,
                 'projects_default_resource_server': 'petrel_https_server',
             })
         except Exception as e:
             log.exception(e)
             click.secho('Unable to find index {}'.format(index_name))
             return
-    pc.context.current = index_name
-    try:
-        pc.context.update()
-    except globus_sdk.exc.SearchAPIError as sapie:
-        if sapie.code == 'NotFound.Generic':
-            click.secho('No existing context data found for {}.'.format(
-                pc.context.get_value('manifest_subject')))
-            pc.project.purge()
-        else:
-            click.secho(str(sapie), fg='red')
+    pc.context.set_context(index_name)
+    pc.context.update()
     ctx.invoke(info, context=index_name)
     ctx.invoke(commands.project.project.project_command)
     try:
@@ -74,6 +66,20 @@ def set_context(ctx, index_name):
     except ScopesMismatch:
         click.secho('Scopes do not match for this context, please login '
                     'again.', fg='red')
+    log.debug(pc.context.get_value('projects_default_search_index'))
+    if not pc.project.load_all():
+        example = '''
+        [[default-project]]
+        base_path = /
+        description = 
+        endpoint = 
+        group = 
+        resource_server = petrel_https_server
+        search_index = {}
+        title = default-project
+        '''.format(pc.context.get_value('projects_default_search_index'))
+        click.secho('No projects in this index, you can bootstrap one in the '
+                    'config under [projects]\n{}'.format(example))
 
 
 @context_command.command(help='Print Context Details')

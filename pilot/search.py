@@ -25,16 +25,16 @@ DEFAULT_PUBLISHER = 'Argonne National Laboratory'
 MINIMUM_USER_REQUIRED_FIELDS = []
 
 GMETA_LIST = {
-    "@version": "2016-11-09",
+    # "@version": "2016-11-09",
     "ingest_type": "GMetaList",
     "ingest_data": {
-        "@version": "2016-11-09",
+        # "@version": "2016-11-09",
         "gmeta": []
     }
 }
 
 GMETA_ENTRY = {
-    "@version": "2016-11-09",
+    # "@version": "2016-11-09",
     "visible_to": [],
     "content": '',
     "subject": ''
@@ -338,24 +338,46 @@ def gather_metadata_stats(new_metadata, previous_metadata):
     }
 
 
-def gen_gmeta(subject, visible_to, content):
-    try:
-        validate_dataset(content)
-    except jsonschema.exceptions.ValidationError as ve:
-        if any([m in ve.message for m in MINIMUM_USER_REQUIRED_FIELDS]):
-            raise RequiredUploadFields(ve.message,
-                                       MINIMUM_USER_REQUIRED_FIELDS) from None
-    visible_to = [vt if vt == 'public' else GROUP_URN_PREFIX.format(vt)
-                  for vt in visible_to]
-    log.debug('visible_to for {} set to {}'.format(subject, visible_to))
-    entry = GMETA_ENTRY.copy()
-    entry['visible_to'] = visible_to
-    entry['subject'] = subject
-    entry['content'] = content
-    entry['id'] = 'metadata'
-    gmeta = GMETA_LIST.copy()
-    gmeta['ingest_data']['gmeta'].append(entry)
-    return gmeta
+def gen_gmeta(subject, visible_to, content, validate=True):
+    log.warning('Deprecated. Please use pilot.search.get_gmeta_list instead.')
+    return get_gmeta_list([{
+        'subject': subject,
+        'visible_to': visible_to,
+        'content': content
+    }], validate=validate)
+
+def get_gmeta_list(content_list, default_visible_to=None, validate=True):
+    default_visible_to = default_visible_to or 'public'
+    gmeta_entries = []
+    for ent in content_list:
+        try:
+            validate_dataset(ent['content'])
+        except jsonschema.exceptions.ValidationError as ve:
+            log.error('Error processing subject {}'.format(ent['subject']))
+            if not validate:
+                log.exception(ve)
+                log.warning('Validation Disabled! Make sure you really want '
+                            'to ingest {}'.format(ent['subject']))
+            else:
+                raise
+        visible_to = ent.get('visible_to', default_visible_to)
+        if isinstance(visible_to, str):
+            visible_to = [visible_to]
+        vt_list = []
+        for vt in visible_to:
+            if vt == 'public' or vt.startswith('urn:globus:'):
+                vt_list.append(vt)
+            else:
+                vt_list.append(GROUP_URN_PREFIX.format(vt))
+        entry = copy.deepcopy(GMETA_ENTRY)
+        entry['visible_to'] = vt_list
+        entry['subject'] = ent['subject']
+        entry['content'] = ent['content']
+        entry['id'] = ent.get('id', 'metadata')
+        gmeta_entries.append(entry)
+    gmeta_list_doc = copy.deepcopy(GMETA_LIST)
+    gmeta_list_doc['ingest_data']['gmeta'] = gmeta_entries
+    return gmeta_list_doc
 
 
 def set_dc_field(metadata, field_name, value):

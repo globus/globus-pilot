@@ -384,6 +384,10 @@ class PilotClient(NativeClient):
         """
         path = self.get_path(path, project, relative)
         endpoint = self.get_endpoint(project)
+        project = project or self.project.current
+        if not endpoint:
+            raise exc.PilotClientException('No Endpoint configured for '
+                                           'project {}'.format(project))
         r = self.get_transfer_client().operation_ls(endpoint, path=path)
         if extended:
             return {f['name']: f for f in r['DATA']}
@@ -484,7 +488,8 @@ class PilotClient(NativeClient):
         return [ent for ent in raw['gmeta'] if path in ent.get('subject')]
 
     def get_full_search_entry(self, path, project=None, relative=True,
-                              resolve_collections=True, precise=True):
+                              path_is_sub=False, resolve_collections=True,
+                              precise=True):
         """
         Get a search entry for a given resource
         **Parameters**
@@ -495,6 +500,9 @@ class PilotClient(NativeClient):
         ``relative`` (*bool*)
           If True, prepends the path to the project. If False,
           does not prepend path but ensures it's in the project's directory
+        ``path_is_sub`` (*bool*)
+          If true, the given path is expected to be the full subject, and is
+          passed through without modification
         ``resolve_collections`` (*bool*)
           If the path given points to what might be a multi-file directory
           entry, attempt to resolve the entry.
@@ -516,7 +524,10 @@ class PilotClient(NativeClient):
         """
         sc = self.get_search_client()
         project = project or self.project.current
-        subject = self.get_subject_url(path, project, relative)
+        if path_is_sub:
+            subject = path
+        else:
+            subject = self.get_subject_url(path, project, relative)
         try:
             return sc.get_subject(self.get_index(project), subject)
         except globus_sdk.exc.SearchAPIError as sapie:
@@ -528,17 +539,95 @@ class PilotClient(NativeClient):
                     return ent
 
     def get_search_entry(self, path, project=None, relative=True,
-                         resolve_collections=True, precise=True):
+                         path_is_sub=False, resolve_collections=True,
+                         precise=True):
         entry = self.get_full_search_entry(
-            path, project=project, relative=relative,
+            path, project=project, relative=relative, path_is_sub=path_is_sub,
             resolve_collections=resolve_collections, precise=precise
         )
         if entry:
             return entry['content'][0]
 
-    def ingest_entry(self, gmeta_entry, index=None):
+    def ingest(self, path, content, group=None, project=None,
+               relative=None, index=None, dry_run=False):
         """
-        Ingest a complete gmeta_entry into search.
+        Ingest content into search. The content is validated against Pilot's
+        built-in schema.
+        **Parameters**
+        ``path`` (*path string*)
+          Path to a local resource on this project
+        ``group`` (*uuid string*) Globus group to use for this ingest, if
+          different from the group configured for this project. Defaults to
+          the group configured for this project
+        ``project`` (*string*)
+          The project to fetch info for. Defaults to current project
+        ``relative`` (*bool*)
+          If True, prepends the path to the project. If False,
+          does not prepend path but ensures it's in the project's directory
+          If the path given points to a location inside a multi-file directory
+          only return the record if the location matches a file.
+          For example, given an entry containing the files:
+            my_dir/foo1.txt, my_dir/foo2.txt, my_dir/foo3.txt
+        ``index`` (*uuid string*) Index to ingest to. Defaults to index
+          configured for this project
+        ``dry_run`` Do not actually ingest, but attempt to construct a gmeta
+          entry and validate it.
+        **Examples**
+        >>> content = pc.gather_metadata('foo.txt', 'bar')
+        >>> pc.ingest('bar/foo.txt', content)
+        """
+        sub = self.get_subject_url(path, project=project, relative=relative)
+        gmeta = search.gen_gmeta(sub, [group or self.get_group()], content)
+        if dry_run:
+            return gmeta
+        return self.ingest_gmeta(gmeta, index)
+
+    def ingest_many(self, content_map, group=None, project=None, relative=None,
+                    index=None, dry_run=False):
+        """
+        Ingest many entries into search, with paths to entries mapped to
+        content.
+        built-in schema.
+        **Parameters**
+        ``content_map`` (*dict {short_path: content}*)
+          Path to a local resource on this project
+        ``group`` (*uuid string*) Globus group to use for this ingest, if
+          different from the group configured for this project. Defaults to
+          the group configured for this project
+        ``project`` (*string*)
+          The project to fetch info for. Defaults to current project
+        ``relative`` (*bool*)
+          If True, prepends the path to the project. If False,
+          does not prepend path but ensures it's in the project's directory
+          If the path given points to a location inside a multi-file directory
+          only return the record if the location matches a file.
+          For example, given an entry containing the files:
+            my_dir/foo1.txt, my_dir/foo2.txt, my_dir/foo3.txt
+        ``index`` (*uuid string*) Index to ingest to. Defaults to index
+          configured for this project
+        ``dry_run`` Do not actually ingest, but attempt to construct a gmeta
+          entry and validate it.
+        **Examples**
+        >>> content_map = {}
+        >>> content_map['bar/foo.txt'] = pc.gather_metadata('foo.txt', 'bar')
+        >>> content_map['bar/moo.txt'] = pc.gather_metadata('moo.txt', 'bar')
+        >>> pc.ingest_many(content_map)
+        """
+        content = [{
+            'subject': self.get_subject_url(path, project=project,
+                                            relative=relative),
+            'content': entry_content
+        } for path, entry_content in content_map.items()]
+        gmeta = search.get_gmeta_list(content, group)
+        if dry_run:
+            log.info('{} entry ingest ABORTED due to dry run.'
+                     ''.format(len(content)))
+            return gmeta
+        return self.ingest_gmeta(gmeta, index)
+
+    def ingest_gmeta(self, gmeta, index=None):
+        """
+        Ingest a complete raw gmeta_entry into search.
         **Parameters**
         ``gmeta_entry`` (*dict*)
           A dict matching a Globus Search gmeta entry. An example is here:
@@ -564,7 +653,7 @@ class PilotClient(NativeClient):
         """
         sc = self.get_search_client()
         index = index or self.get_index()
-        result = sc.ingest(index, gmeta_entry)
+        result = sc.ingest(index, gmeta)
         pending_states = ['PENDING', 'PROGRESS']
         log.info('Ingesting to {}'.format(index))
         task_status = sc.get_task(result['task_id'])['state']
@@ -697,10 +786,9 @@ class PilotClient(NativeClient):
         stats['ingest'] = {}
         if stats['metadata_modified'] is False:
             return stats
-        gmeta = search.gen_gmeta(subject, [self.get_group()], new_metadata)
         if dry_run:
             return stats
-        stats['ingest'] = self.ingest_entry(gmeta)
+        stats['ingest'] = self.ingest_entry(short_path, new_metadata)
         return stats
 
     def upload(self, dataframe, destination, metadata=None, globus=True,
