@@ -8,7 +8,7 @@ MULTI_FILE_METADATA = os.path.join(CLIENT_FILE_BASE_DIR,
 
 def test_get_sub_in_collection(mock_multi_file_result):
     gmeta = mock_multi_file_result['gmeta']
-    content = gmeta[0]['content'][0]
+    content = gmeta[0]
     mf_sub = gmeta[0]['subject']
     mf_tsv = os.path.join(mf_sub, 'folder/folder2/tsv2.tsv')
     no_exist = os.path.join(mf_sub, 'does_not_exist.csv')
@@ -22,11 +22,11 @@ def test_get_sub_in_collection(mock_multi_file_result):
 def test_get_sub_in_collection_none_on_non_single(mock_multi_file_result,
                                                   mock_cli):
     gmeta = mock_multi_file_result['gmeta']
-    content1, sub1 = gmeta[0]['content'][0], gmeta[0]['subject']
+    content1, sub1 = gmeta[0], gmeta[0]['subject']
     sub2 = mock_cli.get_subject_url('another_sub')
     url2 = mock_cli.get_globus_http_url('another_sub')
     ent2 = {'content': [{'files': [{'url': url2}]}], 'subject':  sub2}
-    content2 = ent2['content'][0]
+    content2 = ent2
 
     gmeta.append(ent2)
 

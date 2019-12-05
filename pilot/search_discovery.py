@@ -33,10 +33,10 @@ def get_sub_in_collection(subject, entries, precise=True):
         log.debug('Match Fail: Sub {} matched {}/{} subs, not 1.'
                   ''.format(subject, len(match_entries), len(entries)))
         return None
-    content = match_entries[0]['content'][0]
+    content = match_entries[0]
     if precise is False:
         return content
-    urls = [m.get('url') for m in content.get('files', [])]
+    urls = [m.get('url') for m in content['content'][0].get('files', [])]
     sub_path = urllib.parse.urlparse(subject).path
     for url in urls:
         log.debug('Checking {}'.format(url))

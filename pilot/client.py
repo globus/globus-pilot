@@ -518,8 +518,11 @@ class PilotClient(NativeClient):
             return entry['content'][0]
         except globus_sdk.exc.SearchAPIError as sapie:
             if sapie.code == 'NotFound.Generic' and resolve_collections:
-                return search_discovery.get_sub_in_collection(
-                    subject, self.list_entries(), precise=precise)
+                ent = search_discovery.get_sub_in_collection(
+                    subject, self.list_entries(), precise=precise
+                )
+                if ent:
+                    return ent['content'][0]
 
     def ingest_entry(self, gmeta_entry, index=None):
         """
