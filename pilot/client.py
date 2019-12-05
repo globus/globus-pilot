@@ -665,27 +665,30 @@ class PilotClient(NativeClient):
                 raise exc.GlobusTransferError(tapie.message) from None
         short_path = os.path.join(destination, os.path.basename(dataframe))
         subject = self.get_subject_url(short_path)
+        # Get a list of all entries to check if the new record already exists
         prev_candidates = self.list_entries()
-        if destination != '/':
-            dsub = self.get_subject_url(destination)
-            dest_is_entry = search_discovery.get_sub_in_collection(
-                dsub, prev_candidates, precise=False)
-            if dest_is_entry:
-                raise exc.DestinationIsRecord(fmt=[destination])
-        prev_metadata = search_discovery.get_sub_in_collection(
+        prev_entry = search_discovery.get_sub_in_collection(
             subject, prev_candidates, precise=False)
-        if prev_metadata and not update and not dry_run:
-            raise exc.RecordExists(prev_metadata, fmt=[short_path])
+        prev_metadata = {}
+        if prev_entry:
+            if not update and not dry_run:
+                raise exc.RecordExists(prev_entry['content'][0],
+                                       fmt=[short_path])
+            # If we hit on another subject, use the previous subject. This
+            # handles two cases: 1. replacing an existing subject 2. Adding
+            # a file to an existing subject, where we should use the top level
+            # subject name of the entry.
+            subject = prev_entry['subject']
+            prev_metadata = prev_entry['content'][0]
         new_metadata = self.gather_metadata(
             dataframe, destination, previous_metadata=prev_metadata,
             custom_metadata=metadata or {}, skip_analysis=skip_analysis
         )
-        stats = search.gather_metadata_stats(new_metadata, prev_metadata or {})
+        stats = search.gather_metadata_stats(new_metadata, prev_metadata)
         stats['ingest'] = {}
         if stats['metadata_modified'] is False:
             return stats
-        gmeta = search.gen_gmeta(self.get_subject_url(short_path),
-                                 [self.get_group()], new_metadata)
+        gmeta = search.gen_gmeta(subject, [self.get_group()], new_metadata)
         if dry_run:
             return stats
         stats['ingest'] = self.ingest_entry(gmeta)

@@ -1,6 +1,7 @@
 import os
 from pilot.search import (update_metadata, scrape_metadata,
-                          get_files, get_subdir_paths)
+                          get_files, get_subdir_paths,
+                          carryover_old_file_metadata)
 from tests.unit.mocks import ANALYSIS_FILE_BASE_DIR, MULTI_FILE_DIR
 
 MIXED_FILE = os.path.join(ANALYSIS_FILE_BASE_DIR, 'mixed.tsv')
@@ -29,10 +30,11 @@ def test_update_metadata_new_record_w_meta(mock_cli):
 
 def test_update_metadata_new_file(mock_cli):
     old = scrape_metadata(MIXED_FILE, 'globus://foo.com', mock_cli)
-    new = scrape_metadata(NUMBERS_FILE, 'globus://bar.com', mock_cli)
+    new = scrape_metadata(NUMBERS_FILE, 'globus://foo.com', mock_cli)
 
     meta = update_metadata(new, old, {})
-    assert meta['files'] == new['files']
+    assert old['files'][0] in meta['files']
+    assert new['files'][0] in meta['files']
 
 
 def test_update_metadata_prev_record(mock_cli, mock_profile):
@@ -46,6 +48,45 @@ def test_update_metadata_prev_record(mock_cli, mock_profile):
     meta = update_metadata(new, old, {})
     assert meta['dc']['creators'][0]['creatorName'] == 'Curie, Marie'
     assert meta['files'] == new['files'] == old['files']
+
+
+def test_carryover_old_file_metadata_same_file():
+    file1 = [{'url': 'foo.txt'}]
+    assert carryover_old_file_metadata(file1, file1) == file1
+
+
+def test_carryover_old_file_metadata_diff_mimetype():
+    old = [{'url': 'foo.txt', 'mime_type': 'text/plain'}]
+    new = [{'url': 'foo.txt'}]
+    assert carryover_old_file_metadata(new, old) == old
+
+
+def test_carryover_old_file_metadata_skips_attrs():
+    old = [{'url': 'foo.txt', 'length': 10, 'md5': 'abc', 'sha256': 'xyz'}]
+    new = [{'url': 'foo.txt', 'length': 20, 'md5': 'def'}]
+    assert carryover_old_file_metadata(new, old) == new
+
+
+def test_carryover_old_file_metadata_does_not_overwrite():
+    old = [{'url': 'foo.txt', 'mime_type': 'text/csv'}]
+    new = [{'url': 'foo.txt', 'mime_type': 'text/plain'}]
+    assert carryover_old_file_metadata(new, old) == new
+
+
+def test_carryover_old_file_metadata_with_mix():
+    old = [{'url': 'foo.txt', 'length': 10, 'md5': 'abc', 'sha256': 'xyz',
+            'custom_attr': 'foo', 'extra_attr': 'bar'}]
+    new = [{'url': 'foo.txt', 'length': 20, 'md5': 'def',
+            'custom_attr': 'foo'}]
+    expected = [{'url': 'foo.txt', 'length': 20, 'md5': 'def',
+                 'custom_attr': 'foo', 'extra_attr': 'bar'}]
+    assert carryover_old_file_metadata(new, old) == expected
+
+
+def test_carryover_unrelated_files():
+    old = [{'url': 'foo'}]
+    new = [{'url': 'bar'}]
+    assert carryover_old_file_metadata(new, old) == new + old
 
 
 def test_update_file_version(mock_cli, mock_profile):
