@@ -15,6 +15,7 @@ class ExitCodes(IntEnum):
     INVALID_CLIENT_CONFIGURATION = 8
     NO_LOCAL_ENDPOINT_SET = 9
     DESTINATION_IS_RECORD = 10
+    NO_RECORD_EXISTS = 11
 
 
 class PilotClientException(Exception):

@@ -877,21 +877,28 @@ class PilotClient(NativeClient):
         downloader = self.download_globus if globus else self.download_http
         return downloader(path, project=project, relative=relative)
 
-    def download_parts(self, path, project=None, relative=True, range=None):
+    def download_parts(self, url, dest=None, project=None, range=None):
         """Download a file in parts over HTTP and yield the number of bytes
         written for each part. Yields a generator for each part."""
-        fname = os.path.basename(path)
-        url = self.get_path(path, project=project, relative=relative)
-        http_client = self.get_http_client(project=project)
+        dest = os.path.dirname(dest or '')
+        relative_dest = ''
+        for dir in dest.split('/'):
+            relative_dest = os.path.join(relative_dest, dir)
+            if not os.path.exists(relative_dest):
+                log.info('Making relative dir: {}'.format(relative_dest))
+                os.mkdir(relative_dest)
+        http_client = self.get_http_client(project=project or None)
         log.debug(f'Fetching item {url}')
         response = http_client.get(url, range=range)
-        with open(fname, 'wb') as fh:
+        file_dest = os.path.join(dest, os.path.basename(url))
+        with open(file_dest, 'wb') as fh:
             for part in response.iter_content:
                 yield fh.write(part)
         log.debug('Fetch Successful')
         return 0
 
-    def download_http(self, path, project=None, relative=True, range=None):
+    def download_http(self, path, dest=None, project=None, relative=True,
+                      range=None):
         """
         Download a file to the local system using HTTPS to the local filesystem
         using the 'path' basename. Returns the total number of bytes written
@@ -912,7 +919,9 @@ class PilotClient(NativeClient):
         >>> pc.download('foo.txt', project='bar', range='0-100')
         >>> pc.download('bar/moo.txt', range='0-100,150-200')
         """
-        return sum(self.download_parts(path, project, relative, range))
+        dest = dest or os.path.basename(path)
+        return sum(self.download_parts(path, dest=dest, project=project,
+                                       range=range))
 
     def download_globus(self, path, globus_args=None):
         result = self.transfer_file(

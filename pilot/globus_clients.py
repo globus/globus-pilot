@@ -110,7 +110,10 @@ class HTTPFileClient(BaseClient):
             )
             self.authorizer.set_authorization_header(rheaders)
 
-        url = slash_join(self.base_url, path)
+        if path.startswith('https://') or path.startswith('http://'):
+            url = path
+        else:
+            url = slash_join(self.base_url, path)
         self.logger.debug("request will hit URL:{}".format(url))
 
         # because a 401 can trigger retry, we need to wrap the retry-able thing

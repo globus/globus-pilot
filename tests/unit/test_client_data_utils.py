@@ -76,17 +76,18 @@ def test_upload_http(monkeypatch, mixed_tsv, mock_cli_basic):
                                  filename=TINY_DATAFRAME)
 
 
-def test_download_http(monkeypatch, mixed_tsv, mock_cli_basic):
+def test_download_http(monkeypatch, mixed_tsv, mock_cli_basic, mock_projects):
     response = Mock()
     response.iter_content = ['hello', 'world']
     get = Mock(return_value=response)
     monkeypatch.setattr(globus_clients.HTTPFileClient, 'get', get)
+    monkeypatch.setattr(os, 'mkdir', Mock())
     m_open = mock_open()
     m_open.return_value.write.return_value = 1
     with patch("builtins.open", m_open):
         mock_cli_basic.download('a.tsv')
     assert get.called
-    assert get.call_args == call('/foo_folder/a.tsv', range=None)
+    assert get.call_args == call('a.tsv', range=None)
 
 
 def test_ingest(monkeypatch, mock_cli_basic):
