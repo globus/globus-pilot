@@ -10,6 +10,7 @@ import traceback
 import contextlib
 from pilot.exc import (RequiredUploadFields, HTTPSClientException,
                        InvalidField, ExitCodes)
+from pilot.search_parse import get_size
 from jsonschema.exceptions import ValidationError
 
 log = logging.getLogger(__name__)
@@ -185,27 +186,25 @@ def download(path, overwrite, range):
         click.echo('Aborted! File {} would be overwritten.'.format(fname))
         return
     try:
-        record = pc.get_search_entry(path)
-        url = pc.get_globus_http_url(path)
-        match = pilot.search_discovery.get_matching_file(url, record)
-        if not match:
-            cands = pilot.search_discovery.get_relative_filenames(url, record)
-            if cands:
-                click.secho('{} contains {} files, pick one to download:\n{}'
-                            .format(path, len(cands), cands), fg='yellow')
-            else:
-                click.secho(
-                    'No record exists for {}, you may want to register it.'
-                    .format(path), fg='yellow')
-            return 1
-        length = match.get('length', 0)
-        r_content = pc.download_parts(path, range=range)
-        params = {'label': 'Downloading {}'.format(fname), 'length': length,
-                  'show_pos': True}
-        with click.progressbar(**params) as bar:
-            for bytes_written in r_content:
-                bar.update(bytes_written)
-        click.echo('Saved {}'.format(fname))
+        ent = pc.get_search_entry(path, resolve_collections=True,
+                                  precise=False)
+        base_path = os.path.dirname(pc.get_globus_http_url(path))
+        if not ent:
+            click.secho('No record exists for {}, you may want to register it.'
+                        .format(path), fg='yellow')
+            sys.exit(pilot.exc.ExitCodes.NO_RECORD_EXISTS)
+        if len(ent['files']) > 1:
+            click.secho('Downloading {} files, totalling {}'.format(
+                len(ent['files']), get_size(ent)))
+        for file_ent in ent['files']:
+            dest = file_ent['url'].lstrip(base_path).lstrip('/')
+            r_content = pc.download_parts(file_ent['url'], dest=dest,
+                                          project=None, range=range)
+            params = {'label': 'Downloading {}'.format(file_ent['filename']),
+                      'length': file_ent['length'], 'show_pos': True}
+            with click.progressbar(**params) as bar:
+                for bytes_written in r_content:
+                    bar.update(bytes_written)
     except HTTPSClientException as hce:
         log.exception(hce)
         if hce.http_status == 404:
