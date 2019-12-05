@@ -884,7 +884,7 @@ class PilotClient(NativeClient):
         relative_dest = ''
         for dir in dest.split('/'):
             relative_dest = os.path.join(relative_dest, dir)
-            if not os.path.exists(relative_dest):
+            if relative_dest and not os.path.exists(relative_dest):
                 log.info('Making relative dir: {}'.format(relative_dest))
                 os.mkdir(relative_dest)
         http_client = self.get_http_client(project=project or None)
