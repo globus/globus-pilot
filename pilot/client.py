@@ -925,11 +925,11 @@ class PilotClient(NativeClient):
 
     def download_globus(self, path, globus_args=None):
         result = self.transfer_file(
-            self.profile.load_option('local_endpoint'),
             self.get_endpoint(),
+            self.profile.load_option('local_endpoint'),
             path,
-            os.path.basename(path),
-            **globus_args)
+            os.path.join(os.getcwd(), os.path.basename(path)),
+            **(globus_args or {}))
         return result
 
     def delete(self, path, project=None, relative=True, recursive=False):
