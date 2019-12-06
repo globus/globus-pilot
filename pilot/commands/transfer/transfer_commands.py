@@ -180,6 +180,8 @@ def pilot_code_handler(dataframe, destination, verbose):
 @click.option('--range', help='Download only part of a file. '
                               'Ex: bytes=0-1, 4-5')
 def download(path, overwrite, range):
+    # TODO -- Downloading single files within mfes is BROKEN! This instead
+    # casues all files to be downloaded
     pc = pilot.commands.get_pilot_client()
     fname = os.path.basename(path)
     if os.path.exists(fname) and not overwrite:
