@@ -1,5 +1,5 @@
 import os
-from pilot.search_discovery import get_sub_in_collection
+from pilot.search_discovery import get_sub_in_collection, is_top_level
 from tests.unit.mocks import CLIENT_FILE_BASE_DIR
 
 MULTI_FILE_METADATA = os.path.join(CLIENT_FILE_BASE_DIR,
@@ -32,3 +32,15 @@ def test_get_sub_in_collection_none_on_non_single(mock_multi_file_result,
 
     assert get_sub_in_collection(sub1, gmeta, precise=True) == content1
     assert get_sub_in_collection(sub2, gmeta, precise=True) == content2
+
+
+def test_is_top_level(mock_multi_file_result):
+    entry = mock_multi_file_result['gmeta'][0]['content'][0]
+    assert is_top_level(entry, '/foo_folder/multi_file/') is True
+    assert is_top_level(entry, '/foo_folder/multi_file') is True
+    assert is_top_level(entry,
+                        '/foo_folder/multi_file/text_metadata.txt') is False
+    assert is_top_level(entry, '/foo_folder/multi_file/folder/') is False
+    assert is_top_level(entry,
+                        '/foo_folder/multi_file/folder/folder2') is False
+    assert is_top_level(entry, '/foo_folder/multi_file/does_not_exst') is False

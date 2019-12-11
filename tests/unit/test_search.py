@@ -1,6 +1,6 @@
 import os
 from pilot.search import (update_metadata, scrape_metadata,
-                          get_files, get_subdir_paths,
+                          get_files, prune_files, get_subdir_paths,
                           carryover_old_file_metadata)
 from tests.unit.mocks import ANALYSIS_FILE_BASE_DIR, MULTI_FILE_DIR
 
@@ -35,6 +35,22 @@ def test_update_metadata_new_file(mock_cli):
     meta = update_metadata(new, old, {})
     assert old['files'][0] in meta['files']
     assert new['files'][0] in meta['files']
+
+
+def test_prune_files(mock_multi_file_result):
+    entry = mock_multi_file_result['gmeta'][0]['content'][0]
+    assert len(entry['files']) == 4
+    assert len(prune_files(entry,
+                           '/foo_folder/multi_file/text_metadata.txt')) == 3
+    assert len(prune_files(entry,
+                           '/foo_folder/multi_file/')) == 0
+    assert len(prune_files(entry,
+                           '/foo_folder/multi_file/folder/')) == 1
+    assert len(prune_files(entry,
+                           '/foo_folder/multi_file/folder/folder2')) == 3
+
+    assert len(prune_files(entry,
+                           '/foo_folder/multi_file/folder')) == 1
 
 
 def test_update_metadata_prev_record(mock_cli, mock_profile):

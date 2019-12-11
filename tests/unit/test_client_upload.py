@@ -49,6 +49,14 @@ def test_dir_upload(mock_cli, mock_transfer_log):
         assert url in expected_urls
 
 
+def test_update_mfe_with_file(mock_cli, mock_transfer_log):
+    assert False
+
+
+def test_update_mfe_with_dir(mock_cli, mock_transfer_log):
+    assert False
+
+
 def test_upload_without_destination(mock_cli):
     with pytest.raises(exc.NoDestinationProvided):
         mock_cli.upload(EMPTY_TEST_FILE, None)
