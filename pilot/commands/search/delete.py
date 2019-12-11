@@ -57,12 +57,14 @@ def delete_command(path, entry_id, subject, dry_run, data_only,
         if is_dir:
             entry = pc.get_search_entry(path)
             if entry:
-                number_of_files = len(entry.get('files', []))
-                click.echo('Removing {} ({} files)... '.format(
-                    path, number_of_files))
+                num_files = len(entry.get('files', []))
+                deleted = pc.delete_entry(path)
                 pc.delete(path, recursive=True)
-                click.echo('Removing search record...')
-                pc.delete_entry(path)
+                if num_files == deleted:
+                    click.echo('Removed {} ({} files)'.format(path, num_files))
+                else:
+                    click.echo('Removed {} ({}/{} files)'.format(
+                        path, deleted, num_files))
                 return 0
             subdir_listing = pc.ls(path)
             log.debug('Subdir contains {}'.format(subdir_listing))
