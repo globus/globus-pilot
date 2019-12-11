@@ -74,3 +74,13 @@ def get_relative_filenames(url, entry):
     base_url = os.path.dirname(url)
     return [f['url'].replace(base_url, '').lstrip('/')
             for f in get_matching_files(url, entry)]
+
+
+def get_paths(entry):
+    return [urllib.parse.urlparse(f.get('url')).path
+            for f in entry.get('files', [])]
+
+
+def is_top_level(entry, subject):
+    sub_path = urllib.parse.urlparse(subject).path
+    return all([f_path.startswith(sub_path) for f_path in get_paths(entry)])

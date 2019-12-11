@@ -479,8 +479,8 @@ class PilotClient(NativeClient):
         path = self.get_path(path, project=project, relative=relative)
         return [ent for ent in raw['gmeta'] if path in ent.get('subject')]
 
-    def get_search_entry(self, path, project=None, relative=True,
-                         resolve_collections=True, precise=True):
+    def get_full_search_entry(self, path, project=None, relative=True,
+                              resolve_collections=True, precise=True):
         """
         Get a search entry for a given resource
         **Parameters**
@@ -514,15 +514,23 @@ class PilotClient(NativeClient):
         project = project or self.project.current
         subject = self.get_subject_url(path, project, relative)
         try:
-            entry = sc.get_subject(self.get_index(project), subject)
-            return entry['content'][0]
+            return sc.get_subject(self.get_index(project), subject)
         except globus_sdk.exc.SearchAPIError as sapie:
             if sapie.code == 'NotFound.Generic' and resolve_collections:
                 ent = search_discovery.get_sub_in_collection(
                     subject, self.list_entries(), precise=precise
                 )
                 if ent:
-                    return ent['content'][0]
+                    return ent
+
+    def get_search_entry(self, path, project=None, relative=True,
+                         resolve_collections=True, precise=True):
+        entry = self.get_full_search_entry(
+            path, project=project, relative=relative,
+            resolve_collections=resolve_collections, precise=precise
+        )
+        if entry:
+            return entry['content'][0]
 
     def ingest_entry(self, gmeta_entry, index=None):
         """
@@ -563,29 +571,6 @@ class PilotClient(NativeClient):
         if sc.get_task(result['task_id'])['state'] != 'SUCCESS':
             raise exc.PilotClientException('Failed to ingest search subject')
         return True
-
-    def delete_entry(self, path, entry_id='metadata', full_subject=False):
-        """
-        Delete a search entry in Globus Search.
-        **Parameters**
-        ``path`` (*path string*)
-          Path to a local resource on this project
-        ``entry_id`` (*string*)
-          Name of the entry to delete.
-        ``full_subject`` (*bool*)
-          Delete all entries in the subject. This is typically equivalent to
-          normal deletes if only one entry exists for the given subject.
-        **Examples**
-        >>> pc.delete_entry('foo/bar.txt')
-        >>> pc.delete_entry('moo.txt', entry_id='special_metadata')
-        >>> pc.delete_entry('goo.json' full_subject=True)
-        """
-        index, subject = self.get_index(), self.get_subject_url(path)
-        search_cli = self.get_search_client()
-        if full_subject:
-            return search_cli.delete_subject(index, subject)
-        else:
-            return search_cli.delete_entry(index, subject, entry_id=entry_id)
 
     def gather_metadata(self, dataframe, destination, previous_metadata=None,
                         custom_metadata=None, skip_analysis=False, project=None
@@ -931,6 +916,53 @@ class PilotClient(NativeClient):
             os.path.join(os.getcwd(), os.path.basename(path)),
             **(globus_args or {}))
         return result
+
+    def delete_entry(self, path, entry_id='metadata', full_subject=False,
+                     project=None, relative=True):
+        """
+        Delete a search entry in Globus Search. If the given path is a partial
+        match on a multi-file-entry, the entry is pruned and re-ingested. If
+        the delete is partial, full_subject has no effect. If the delete is
+        partial and a different entry_id is provided, the entry will be
+        re-ingested with the new entry_id.
+        **Parameters**
+        ``path`` (*path string*)
+          Path to a local resource on this project
+        ``entry_id`` (*string*)
+          Name of the entry to delete.
+        ``full_subject`` (*bool*)
+          Delete all entries in the subject. This is typically equivalent to
+          normal deletes if only one entry exists for the given subject.
+        **Examples**
+        >>> pc.delete_entry('foo/bar.txt')
+        >>> pc.delete_entry('moo.txt', entry_id='special_metadata')
+        >>> pc.delete_entry('goo.json' full_subject=True)
+        """
+        index = self.get_index(project=project)
+        entry = self.get_full_search_entry(
+            path, project=project, relative=relative, resolve_collections=True,
+            precise=True
+        )
+        if not entry:
+            raise exc.RecordDoesNotExist(path)
+        sub = entry['subject']
+        entry = entry['content'][0]
+        full_path = self.get_path(path, project=project, relative=relative)
+        if not search_discovery.is_top_level(entry, full_path):
+            log.info('Pruning {} from multi-file-entry'.format(path))
+            new_files = search.prune_files(entry, full_path)
+            del_num = len(entry['files']) - len(new_files)
+            entry['files'] = new_files
+            group = self.get_group(project=project)
+            gmeta = search.gen_gmeta(sub, [group], entry)
+            self.ingest_entry(gmeta)
+            return del_num
+        search_cli = self.get_search_client()
+        if full_subject:
+            search_cli.delete_subject(index, sub)
+        else:
+            search_cli.delete_entry(index, sub, entry_id=entry_id)
+        return 1
 
     def delete(self, path, project=None, relative=True, recursive=False):
         """

@@ -1,6 +1,7 @@
 import os
 import copy
 import hashlib
+import urllib
 import pytz
 import datetime
 import json
@@ -119,6 +120,17 @@ def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True):
             'project-slug': pilot_client.project.current
         },
     }
+
+
+def prune_files(entry, path):
+    path = path.lstrip('/').rstrip('/')
+    remaining = []
+    for f in entry.get('files'):
+        url_path = urllib.parse.urlparse(f.get('url')).path.lstrip('/')
+        if not url_path.startswith(path):
+            log.debug('{} not in {}, keeping file...'.format(f['url'], path))
+            remaining.append(f)
+    return remaining
 
 
 def carryover_old_file_metadata(new_scrape_rfm, old_rfm):

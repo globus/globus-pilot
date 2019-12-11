@@ -40,6 +40,10 @@ class PilotValidator(PilotClientException):
         return self.message
 
 
+class RecordDoesNotExist(PilotClientException):
+    pass
+
+
 class PilotCodeException(PilotClientException):
     """Pilot Code Exceptions are a general class for any exception that might
     be thrown during the execution of a pilot command. The main difference from
