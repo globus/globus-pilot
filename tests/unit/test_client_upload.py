@@ -49,12 +49,28 @@ def test_dir_upload(mock_cli, mock_transfer_log):
         assert url in expected_urls
 
 
-def test_update_mfe_with_file(mock_cli, mock_transfer_log):
-    assert False
+def test_update_mfe_with_file(mock_cli, mock_transfer_log,
+                              mock_multi_file_result):
+    gse = Mock(return_value=mock_multi_file_result['gmeta'])
+    mock_cli.list_entries = gse
+    metadata = mock_cli.upload(EMPTY_TEST_FILE, 'my_folder/multi_file',
+                               update=True)['new_metadata']
+    assert len(mock_multi_file_result['gmeta'][0]['content'][0]['files']) == 4
+    assert len(metadata['files']) == 5
+    urls = [f['url'] for f in metadata['files']]
+    new_url = mock_cli.get_globus_http_url('my_folder/multi_file/' +
+                                           os.path.basename(EMPTY_TEST_FILE))
+    assert new_url in urls
 
 
-def test_update_mfe_with_dir(mock_cli, mock_transfer_log):
-    assert False
+def test_update_mfe_with_dir(mock_cli, mock_transfer_log,
+                             mock_multi_file_result):
+    gse = Mock(return_value=mock_multi_file_result['gmeta'])
+    mock_cli.list_entries = gse
+    metadata = mock_cli.upload(MULTI_FILE_DIR, 'my_folder/multi_file',
+                               update=True)['new_metadata']
+    assert len(mock_multi_file_result['gmeta'][0]['content'][0]['files']) == 4
+    assert len(metadata['files']) == 8
 
 
 def test_upload_without_destination(mock_cli):
@@ -71,7 +87,7 @@ def test_upload_to_nonexistant_dir(mock_cli, mock_transfer_error):
 
 def test_upload_destination_is_record(mock_cli, mock_multi_file_result):
     mock_cli.search.return_value = mock_multi_file_result
-    with pytest.raises(exc.DestinationIsRecord):
+    with pytest.raises(exc.RecordExists):
         mock_cli.upload(EMPTY_TEST_FILE, '/multi_file/foo')
 
 
@@ -94,7 +110,7 @@ def test_upload_analyze_error(mock_cli, monkeypatch):
     mock_exc = Mock(side_effect=AnalysisException('fail!', None))
     monkeypatch.setattr(analysis, 'analyze_dataframe', mock_exc)
     with pytest.raises(exc.AnalysisException):
-            mock_cli.upload(EMPTY_TEST_FILE, 'my_folder')
+        mock_cli.upload(EMPTY_TEST_FILE, 'my_folder')
 
 
 def test_upload_validation_error(mock_cli, mock_transfer_log):
@@ -137,12 +153,18 @@ def test_upload_dry_run(mock_cli):
     assert stats['new_version'] == '1'
 
 
-def test_dataframe_up_to_date(mock_cli, mock_transfer_log):
+def test_dataframe_up_to_date(mock_cli, mock_transfer_log, monkeypatch):
     """Update metadata but not the actual file"""
     with open(EMTPY_TEST_FILE_META) as f:
-        mock_cli.get_search_entry.return_value = json.load(f)
+        le = Mock(return_value=[
+            {'content': [json.load(f)],
+             'subject': os.path.basename(EMPTY_TEST_FILE)}
+        ])
+        mock_cli.list_entries = le
     new_meta = {"custom_metadata_key": "custom_metadata_value"}
-    mock_cli.upload(EMPTY_TEST_FILE, '/', metadata=new_meta, update=True)
+    res = mock_cli.upload(EMPTY_TEST_FILE, '/', metadata=new_meta, update=True)
+    assert res['metadata_modified'] is True
+    assert res['files_modified'] is False
     assert not globus_sdk.TransferData.called
 
 
@@ -154,7 +176,7 @@ def test_upload_local_endpoint_not_set(mock_cli, mock_profile):
 
 
 def test_upload_gcp_log(mock_cli, mock_transfer_log):
-    mock_cli.get_search_entry.return_value = {}
+    mock_cli.get_full_search_entry.return_value = {}
     mock_cli.get_transfer_client().submit_transfer.return_value = {}
     mock_cli.upload(SMALL_TEST_FILE, 'my_folder', globus=True)
     assert mock_transfer_log.called
