@@ -161,17 +161,38 @@ def test_get_search_entry_dir(monkeypatch, mock_cli_basic,
     assert entry == mock_multi_file_result['gmeta'][0]['content'][0]
 
 
-def test_delete_entry(monkeypatch, mock_cli_basic):
+def test_delete_entry_sub(monkeypatch, mock_cli_basic, mock_multi_file_result):
     search_cli = Mock()
+    mock_cli_basic.ingest_entry = Mock()
     monkeypatch.setattr(mock_cli_basic, 'get_search_client',
                         Mock(return_value=search_cli))
-    mock_cli_basic.delete_entry('foo', 'bar')
-    assert search_cli.delete_entry.called
-
-
-def test_delete_subject(monkeypatch, mock_cli_basic):
-    search_cli = Mock()
-    monkeypatch.setattr(mock_cli_basic, 'get_search_client',
-                        Mock(return_value=search_cli))
-    mock_cli_basic.delete_entry('foo', 'bar', full_subject=True)
+    ment = Mock(return_value=mock_multi_file_result['gmeta'][0])
+    mock_cli_basic.get_full_search_entry = ment
+    mock_cli_basic.delete_entry('/multi_file', entry_id='my_id')
+    assert not mock_cli_basic.ingest_entry.called
+    assert search_cli.delete_entry.call_args == call(
+        'foo-search-index',
+        'globus://foo-project-endpoint/foo_folder/multi_file',
+        entry_id='my_id'
+    )
+    mock_cli_basic.delete_entry('/multi_file', 'my_custom_id',
+                                full_subject=True)
     assert search_cli.delete_subject.called
+
+
+def test_delete_file_in_mfe(monkeypatch, mock_cli_basic,
+                            mock_multi_file_result):
+    mock_cli_basic.ingest_entry = Mock()
+    mock_cli_basic.get_full_search_entry = Mock(
+        return_value=mock_multi_file_result['gmeta'][0])
+    mock_cli_basic.delete_entry('/multi_file/text_metadata.txt')
+    assert mock_cli_basic.ingest_entry.called
+
+
+def test_delete_entry_no_result(monkeypatch, mock_cli_basic):
+    search_cli = Mock()
+    monkeypatch.setattr(mock_cli_basic, 'get_search_client',
+                        Mock(return_value=search_cli))
+    mock_cli_basic.get_full_search_entry = Mock(return_value=None)
+    with pytest.raises(exc.RecordDoesNotExist):
+        mock_cli_basic.delete_entry('foo', 'bar')

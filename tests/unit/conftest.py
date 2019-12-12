@@ -170,7 +170,7 @@ def mock_cli(mock_cli_basic, mock_transfer_client, mock_profile,
     mock_cli_basic.login = Mock()
     mock_cli_basic.logout = Mock()
     mock_cli_basic.ingest_entry = Mock()
-    mock_cli_basic.get_search_entry = Mock(return_value=None)
+    mock_cli_basic.get_full_search_entry = Mock(return_value=None)
     mock_cli_basic.search = Mock(return_value={'gmeta': []})
     mock_cli_basic.ls = Mock()
     mock_cli_basic.mkdir = Mock()

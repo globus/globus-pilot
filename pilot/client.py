@@ -640,7 +640,6 @@ class PilotClient(NativeClient):
           The project to use as the base path. Defaults to current project
         **Examples**
         """
-
         try:
             self.ls(destination)
         except globus_sdk.exc.TransferAPIError as tapie:
