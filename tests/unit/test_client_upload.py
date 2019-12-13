@@ -51,6 +51,8 @@ def test_dir_upload(mock_cli, mock_transfer_log):
 
 def test_update_mfe_with_file(mock_cli, mock_transfer_log,
                               mock_multi_file_result):
+    sub = mock_cli.get_subject_url('my_folder/multi_file')
+    mock_multi_file_result['gmeta'][0]['subject'] = sub
     gse = Mock(return_value=mock_multi_file_result['gmeta'])
     mock_cli.list_entries = gse
     metadata = mock_cli.upload(EMPTY_TEST_FILE, 'my_folder/multi_file',
@@ -65,12 +67,29 @@ def test_update_mfe_with_file(mock_cli, mock_transfer_log,
 
 def test_update_mfe_with_dir(mock_cli, mock_transfer_log,
                              mock_multi_file_result):
+    sub = mock_cli.get_subject_url('my_folder/multi_file')
+    mock_multi_file_result['gmeta'][0]['subject'] = sub
     gse = Mock(return_value=mock_multi_file_result['gmeta'])
     mock_cli.list_entries = gse
     metadata = mock_cli.upload(MULTI_FILE_DIR, 'my_folder/multi_file',
                                update=True)['new_metadata']
     assert len(mock_multi_file_result['gmeta'][0]['content'][0]['files']) == 4
     assert len(metadata['files']) == 8
+
+
+def test_upload_in_dir_with_similar_record(mock_cli, mock_search_result):
+    """
+    This was to fix a bug where uploading similar records would cause conflicts
+
+    * my_folder/simple_tsv
+    * my_folder/empty_test_file.txt
+    """
+    sub = mock_cli.get_subject_url('my_folder/simple_tsv')
+    mock_search_result['subject'] = sub
+    gse = Mock(return_value=[mock_search_result])
+    mock_cli.list_entries = gse
+    # should not raise RecordExists Exception
+    mock_cli.upload(EMPTY_TEST_FILE, 'my_folder')
 
 
 def test_upload_without_destination(mock_cli):

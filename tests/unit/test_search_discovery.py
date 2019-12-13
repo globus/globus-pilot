@@ -34,6 +34,13 @@ def test_get_sub_in_collection_none_on_non_single(mock_multi_file_result,
     assert get_sub_in_collection(sub2, gmeta, precise=True) == content2
 
 
+def test_get_sub_with_dirs(mock_multi_file_result, mock_cli):
+    gmeta = mock_multi_file_result['gmeta']
+    gmeta[0]['subject'] = mock_cli.get_subject_url('dir/file1.txt')
+    sub2 = mock_cli.get_subject_url('dir/file2.txt')
+    assert get_sub_in_collection(sub2, gmeta, precise=False) is None
+
+
 def test_is_top_level(mock_multi_file_result):
     entry = mock_multi_file_result['gmeta'][0]['content'][0]
     assert is_top_level(entry, '/foo_folder/multi_file/') is True
