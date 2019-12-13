@@ -49,7 +49,7 @@ def get_subs_in_gmetas(subject, entries):
     sub_map, directory = {ent['subject']: ent for ent in entries}, subject
     while directory and directory not in sub_map.keys():
         directory = os.path.dirname(directory)
-    return [sub_map[s] for s in sub_map.keys() if directory in s]
+    return [sub_map[s] for s in sub_map.keys() if directory and directory in s]
 
 
 def get_matching_file(url, entry):
