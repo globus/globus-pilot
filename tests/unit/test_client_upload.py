@@ -151,7 +151,7 @@ def test_no_update_needed(mock_cli, mock_transfer_log):
 
 def test_upload_record_exists(mock_cli):
     url = mock_cli.get_globus_http_url('my_folder/test_file_zero_length.txt')
-    sub = mock_cli.get_subject_url('my_folder/test_file_zero_length.txt')
+    sub = mock_cli.get_subject_url('my_folder')
     meta = scrape_metadata(EMPTY_TEST_FILE, url, mock_cli)
     entry = {'content': [meta], 'subject': sub}
     mock_cli.list_entries = Mock(return_value=[entry])
@@ -174,14 +174,16 @@ def test_upload_dry_run(mock_cli):
 
 def test_dataframe_up_to_date(mock_cli, mock_transfer_log, monkeypatch):
     """Update metadata but not the actual file"""
+    sub = mock_cli.get_subject_url(os.path.basename(EMPTY_TEST_FILE))
     with open(EMTPY_TEST_FILE_META) as f:
         le = Mock(return_value=[
             {'content': [json.load(f)],
-             'subject': os.path.basename(EMPTY_TEST_FILE)}
+             'subject': sub}
         ])
         mock_cli.list_entries = le
     new_meta = {"custom_metadata_key": "custom_metadata_value"}
     res = mock_cli.upload(EMPTY_TEST_FILE, '/', metadata=new_meta, update=True)
+    assert res['record_exists']
     assert res['metadata_modified'] is True
     assert res['files_modified'] is False
     assert not globus_sdk.TransferData.called

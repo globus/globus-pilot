@@ -77,9 +77,12 @@ def test_upload_validation_error(mock_cli):
 
 
 def test_no_update_needed(mock_cli, mock_search_results):
-    url = mock_cli.get_globus_http_url(os.path.basename(EMPTY_TEST_FILE))
+    base_name = os.path.basename(EMPTY_TEST_FILE)
+    url = mock_cli.get_globus_http_url(base_name)
+    sub = mock_cli.get_subject_url(base_name)
     meta = scrape_metadata(EMPTY_TEST_FILE, url, mock_cli)
     mock_search_results['gmeta'][0]['content'][0] = meta
+    mock_search_results['gmeta'][0]['subject'] = sub
     mock_cli.list_entries = Mock(return_value=mock_search_results['gmeta'])
     result = CliRunner().invoke(upload, [EMPTY_TEST_FILE, '/',
                                          '--no-gcp', '-u'])
@@ -88,9 +91,11 @@ def test_no_update_needed(mock_cli, mock_search_results):
 
 
 def test_upload_record_exists(mock_cli, mock_search_results):
-    url = mock_cli.get_globus_http_url('my_folder/test_file_zero_length.txt')
+    sub = mock_cli.get_subject_url('my_folder')
+    url = mock_cli.get_globus_http_url('my_folder/')
     meta = scrape_metadata(EMPTY_TEST_FILE, url, mock_cli)
     mock_search_results['gmeta'][0]['content'][0] = meta
+    mock_search_results['gmeta'][0]['subject'] = sub
     mock_cli.list_entries = Mock(return_value=mock_search_results['gmeta'])
     result = CliRunner().invoke(upload, [SMALL_TEST_FILE, 'my_folder'])
     assert result.exit_code == ExitCodes.RECORD_EXISTS
@@ -107,7 +112,10 @@ def test_dataframe_up_to_date(mock_cli, mock_transfer_log,
                               mock_search_results):
     with open(EMTPY_TEST_FILE_META) as f:
         meta = json.load(f)
+    base_name = os.path.basename(EMPTY_TEST_FILE)
+    sub = mock_cli.get_subject_url(base_name)
     mock_search_results['gmeta'][0]['content'][0] = meta
+    mock_search_results['gmeta'][0]['subject'] = sub
     mock_cli.list_entries = Mock(return_value=mock_search_results['gmeta'])
     result = CliRunner().invoke(upload, [EMPTY_TEST_FILE, '/',
                                          '-u', '-j', CUSTOM_METADATA])
