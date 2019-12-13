@@ -8,6 +8,7 @@ import datetime
 import pilot
 import traceback
 import contextlib
+import pathlib
 from pilot.exc import (RequiredUploadFields, HTTPSClientException,
                        InvalidField, ExitCodes)
 from pilot.search_parse import get_size
@@ -190,19 +191,24 @@ def download(path, overwrite, range):
     try:
         ent = pc.get_search_entry(path, resolve_collections=True,
                                   precise=False)
-        base_path = os.path.dirname(pc.get_globus_http_url(path))
         if not ent:
-            click.secho('No record exists for {}, you may want to register it.'
-                        .format(path), fg='yellow')
+            click.secho('No record exists for {}.'.format(path), fg='yellow')
             sys.exit(pilot.exc.ExitCodes.NO_RECORD_EXISTS)
-        if len(ent['files']) > 1:
+        http_path = pc.get_globus_http_url(path)
+        to_download = [f for f in ent['files'] if http_path in f['url']]
+        if len(to_download) > 1:
             click.secho('Downloading {} files, totalling {}'.format(
-                len(ent['files']), get_size(ent)))
-        for file_ent in ent['files']:
-            dest = file_ent['url'].lstrip(base_path).lstrip('/')
+                len(to_download), get_size({'files': to_download})))
+        for file_ent in to_download:
+            base_path = os.path.dirname(http_path)
+            dest = file_ent['url'].replace(base_path, '').lstrip('/')
+            if file_ent.get('length') == 0:
+                click.secho('{} is an empty file'.format(dest))
+                pathlib.Path(dest).touch()
+                continue
             r_content = pc.download_parts(file_ent['url'], dest=dest,
                                           project=None, range=range)
-            params = {'label': 'Downloading {}'.format(file_ent['filename']),
+            params = {'label': 'Downloading {}'.format(dest),
                       'length': file_ent['length'], 'show_pos': True}
             with click.progressbar(**params) as bar:
                 for bytes_written in r_content:
