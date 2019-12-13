@@ -83,6 +83,6 @@ cli.add_command(analyze.analyze)
 cli.add_command(transfer_commands.download)
 cli.add_command(transfer_commands.mkdir)
 cli.add_command(transfer_commands.register)
-cli.add_command(status_commands.status)
+cli.add_command(status_commands.status_command)
 
 cli.add_command(version)

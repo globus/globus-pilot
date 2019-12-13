@@ -63,11 +63,12 @@ def get_location_info(entry):
 
 
 @click.command(name='list', help='List known records in Globus Search')
+@click.argument('path', type=click.Path(), required=False, default='')
 @click.option('--json/--no-json', 'output_json', default=False,
               help='Output as JSON.')
 @click.option('--limit', type=int, default=100,
               help='Limit returned results to the number provided')
-def list_command(output_json, limit):
+def list_command(path, output_json, limit):
     # Should require login if there are publicly visible records
     pc = commands.get_pilot_client()
     project = pc.project.current
@@ -75,14 +76,17 @@ def list_command(output_json, limit):
     if output_json:
         click.echo(json.dumps(search_results, indent=4))
         return
+    path_sub = pc.get_subject_url(path)
+    curated_results = [r for r in search_results['gmeta']
+                       if path_sub in r['subject']]
 
     results = 'Showing {}/{} of total results for "{}"'.format(
-        search_results['count'], search_results['total'], project)
+        len(curated_results), search_results['total'], project)
     items = ['title', 'data', 'dataframe', 'rows', 'columns', 'size']
     titles = get_titles(items) + ['Path']
     fmt = '{:21.20}{:11.10}{:10.9}{:7.6}{:7.6}{:7.6}{}'
-    output = [results, fmt.format(*titles)]
-    for result in search_results['gmeta']:
+    output = []
+    for result in curated_results:
         # If this path refers to a result in a different base location, skip
         # it, it isn't part of this project
         if pc.get_path('') not in result['subject']:
@@ -94,14 +98,30 @@ def list_command(output_json, limit):
         parsed = [str(p) for p in parsed]
 
         output.append(fmt.format(*parsed))
-    click.echo('\n'.join(output))
+    if not output:
+        click.secho('No results to display for "{}"'.format(path or '/'),
+                    fg='yellow')
+    else:
+        output = [results, fmt.format(*titles)] + output
+        click.echo('\n'.join(output))
+
+    result_names = [os.path.basename(r['subject']) for r in curated_results]
+    path_info = pc.ls(path, extended=True)
+    dirs = [name for name, info in path_info.items()
+            if info['type'] == 'dir' and name not in result_names]
+    if dirs:
+        click.echo('\nDirectories:\n\t{}'.format('\n\t'.join(dirs)))
+    else:
+        click.echo('\nNo Directories in {}'.format(path or '/'))
 
 
 @click.command(help='Output info about a dataset')
 @click.argument('path', type=click.Path())
 @click.option('--json/--no-json', 'output_json', default=False,
               help='Output as JSON.')
-def describe(path, output_json):
+@click.option('--limit', type=int, default=10,
+              help='Limit number of entities displayed')
+def describe(path, output_json, limit):
     pc = commands.get_pilot_client()
     entry = pc.get_search_entry(path)
     if not entry:
@@ -119,7 +139,7 @@ def describe(path, output_json):
                 'data', 'dataframe', 'rows', 'columns',
                 'formats', 'version', 'size', 'description']
         output = '\n'.join(
-            get_formatted_fields(entry, cols) +
+            get_formatted_fields(entry, cols, limit=limit) +
             [''] +
             get_single_file_info(entry, single_file_entry) +
             ['', ''] +
@@ -130,7 +150,7 @@ def describe(path, output_json):
                 'formats', 'version', 'combined_size', 'description',
                 'files']
         output = '\n'.join(
-            get_formatted_fields(entry, cols) +
+            get_formatted_fields(entry, cols, limit=limit) +
             [''] +
             get_location_info(entry)
         )

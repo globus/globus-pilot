@@ -145,6 +145,22 @@ You can add a metadata JSON document with the ``-j`` flag.
 You can find more info about what to include in ``my_metadata.json`` in the `Reference Guide
 <https://github.com/globusonline/pilot1-tools/blob/master/docs/reference.rst>`_.
 
+Uploading Directories
+---------------------
+
+In addition to files, you can also upload entire directories. In this mode, every
+file within the directory is treated as the same record. `pilot describe` and
+`pilot download` will behave differently to show/act on the files contained
+in the result instead of the result itself, but all command invocations remain
+the same.
+
+.. code-block:: bash
+
+   (pilot1-env) $ pilot upload my_folder /
+
+The above results in the `my_folder` record containing metadata on all files
+inside the local folder. All files in the folder are then uploaded to the
+destination.
 
 Deleting Datasets
 -----------------

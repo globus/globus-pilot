@@ -842,6 +842,9 @@ class PilotClient(NativeClient):
           https://globus-sdk-python.readthedocs.io/en/stable/clients/transfer/#globus_sdk.TransferClient.submit_transfer  # noqa
         """
         tc = self.get_transfer_client()
+        log.debug('Activating {} and {}'.format(src_ep, dest_ep))
+        tc.endpoint_autoactivate(src_ep)
+        tc.endpoint_autoactivate(dest_ep)
         g_defaults = {
             'label': '{} Transfer'.format(self.context.get_value('app_name')),
             'notify_on_succeeded': False,
