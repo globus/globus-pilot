@@ -143,12 +143,12 @@ def add():
     project['base_path'] = os.path.join(base_path, short_name)
 
     click.secho('Updating global project list... ', nl=False)
-    pc.project.set_project(short_name, project)
+    pc.project.add_project(short_name, project)
     tc = pc.get_transfer_client()
     tc.operation_mkdir(project['endpoint'], project['base_path'])
     pc.context.push()
     click.secho('Success', fg='green')
-    pc.project.current = short_name
+    pc.project.set_project(short_name)
     click.secho('Switched to project {}'.format(short_name))
     click.secho('Your new project "{}" has been added! '
                 'Users will be notified within 24 hours next time they use '
