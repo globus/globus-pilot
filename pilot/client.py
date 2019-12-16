@@ -3,7 +3,6 @@ import time
 import globus_sdk
 import urllib
 import logging
-from globus_sdk import AuthClient, SearchClient, TransferClient
 from fair_research_login import NativeClient, LoadError, ScopesMismatch
 from pilot import (
     profile, config, globus_clients, exc, logging_cfg, context, search,
@@ -42,7 +41,9 @@ class PilotClient(NativeClient):
     *  :py:meth:`.ls`
     *  :py:meth:`.mkdir`
     *  :py:meth:`.get_search_entry`
-    *  :py:meth:`.ingest_entry`
+    *  :py:meth:`.ingest`
+    *  :py:meth:`.ingest_many`
+    *  :py:meth:`.ingest_gmeta`
     *  :py:meth:`.delete_entry`
     *  :py:meth:`.upload`
     *  :py:meth:`.download`
@@ -142,14 +143,14 @@ class PilotClient(NativeClient):
         :return:
         """
         authorizer = self.get_authorizers()['auth.globus.org']
-        return AuthClient(authorizer=authorizer)
+        return globus_sdk.AuthClient(authorizer=authorizer)
 
     def get_search_client(self):
         """Returns a live Search Client based on user login info
         https://globus-sdk-python.readthedocs.io/en/stable/clients/search/
         """
         authorizer = self.get_authorizers()['search.api.globus.org']
-        return SearchClient(authorizer=authorizer)
+        return globus_sdk.SearchClient(authorizer=authorizer)
 
     def get_transfer_client(self):
         """
@@ -157,7 +158,7 @@ class PilotClient(NativeClient):
         https://globus-sdk-python.readthedocs.io/en/stable/clients/transfer/
         """
         authorizer = self.get_authorizers()['transfer.api.globus.org']
-        return TransferClient(authorizer=authorizer)
+        return globus_sdk.TransferClient(authorizer=authorizer)
 
     def get_nexus_client(self):
         """
@@ -577,7 +578,9 @@ class PilotClient(NativeClient):
         >>> pc.ingest('bar/foo.txt', content)
         """
         sub = self.get_subject_url(path, project=project, relative=relative)
-        gmeta = search.gen_gmeta(sub, [group or self.get_group()], content)
+        content = [{'subject': sub, 'content': content}]
+        gmeta = search.get_gmeta_list(content, default_visible_to=group,
+                                      validate=True)
         if dry_run:
             return gmeta
         return self.ingest_gmeta(gmeta, index)
@@ -618,7 +621,7 @@ class PilotClient(NativeClient):
                                             relative=relative),
             'content': entry_content
         } for path, entry_content in content_map.items()]
-        gmeta = search.get_gmeta_list(content, group)
+        gmeta = search.get_gmeta_list(content, group, validate=True)
         if dry_run:
             log.info('{} entry ingest ABORTED due to dry run.'
                      ''.format(len(content)))
@@ -788,7 +791,7 @@ class PilotClient(NativeClient):
             return stats
         if dry_run:
             return stats
-        stats['ingest'] = self.ingest_entry(short_path, new_metadata)
+        stats['ingest'] = self.ingest(short_path, new_metadata)
         return stats
 
     def upload(self, dataframe, destination, metadata=None, globus=True,
@@ -1070,9 +1073,7 @@ class PilotClient(NativeClient):
             new_files = search.prune_files(entry, full_path)
             del_num = len(entry['files']) - len(new_files)
             entry['files'] = new_files
-            group = self.get_group(project=project)
-            gmeta = search.gen_gmeta(sub, [group], entry)
-            self.ingest_entry(gmeta)
+            self.ingest(path, entry)
             return del_num
         search_cli = self.get_search_client()
         if full_subject:

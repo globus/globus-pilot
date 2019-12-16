@@ -1,6 +1,5 @@
 import logging
 import click
-import globus_sdk
 
 from fair_research_login import ScopesMismatch
 
@@ -71,9 +70,9 @@ def set_context(ctx, index_name):
         example = '''
         [[default-project]]
         base_path = /
-        description = 
-        endpoint = 
-        group = 
+        description =
+        endpoint =
+        group =
         resource_server = petrel_https_server
         search_index = {}
         title = default-project

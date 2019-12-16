@@ -45,7 +45,7 @@ class Context(config.ConfigSection):
             if not self.get_context(self.DEFAULT_CONTEXT):
                 log.debug('No context set and no default context!')
                 log.debug('Setting context default.')
-                self.set_context(self.DEFAULT_CONTEXT, DEFAULT_PILOT_CONTEXT)
+                self.add_context(self.DEFAULT_CONTEXT, DEFAULT_PILOT_CONTEXT)
             self.current = self.DEFAULT_CONTEXT
 
     @property
@@ -82,8 +82,8 @@ class Context(config.ConfigSection):
             if sapie.code == 'NotFound.Generic':
                 self.client.project.purge()
                 raise exc.PilotClientException(
-                    'No existing context data found for {}.'.format(
-                    self.get_value('manifest_subject')))
+                    'No existing context data found for {}.'
+                    ''.format(self.get_value('manifest_subject')))
             else:
                 log.exception(sapie)
                 raise exc.PilotClientException('Unexpected Error {}'.format(

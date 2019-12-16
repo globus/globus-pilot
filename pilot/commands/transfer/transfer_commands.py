@@ -9,8 +9,7 @@ import pilot
 import traceback
 import contextlib
 import pathlib
-from pilot.exc import (RequiredUploadFields, HTTPSClientException,
-                       InvalidField, ExitCodes)
+from pilot.exc import HTTPSClientException, InvalidField, ExitCodes
 from pilot.search_parse import get_size
 from pilot.commands.endpoint_utils import test_local_endpoint
 from jsonschema.exceptions import ValidationError
@@ -136,7 +135,7 @@ def pilot_code_handler(dataframe, destination, verbose):
                     if d['type'] == 'dir']
             raise pilot.exc.NoDestinationProvided(fmt=[dirs])
         yield
-    except (RequiredUploadFields, ValidationError, InvalidField) as e:
+    except (ValidationError, InvalidField) as e:
         log.exception(e)
         click.secho('Error Validating Metadata: {}'.format(e), fg='red')
         sys.exit(ExitCodes.INVALID_METADATA)

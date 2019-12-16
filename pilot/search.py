@@ -16,7 +16,7 @@ import logging
 
 from pilot.validation import validate_dataset, validate_user_provided_metadata
 from pilot import analysis
-from pilot.exc import RequiredUploadFields, InvalidField
+from pilot.exc import InvalidField
 
 DEFAULT_HASH_ALGORITHMS = ['sha256', 'md5']
 DEFAULT_PUBLISHER = 'Argonne National Laboratory'
@@ -346,6 +346,7 @@ def gen_gmeta(subject, visible_to, content, validate=True):
         'content': content
     }], validate=validate)
 
+
 def get_gmeta_list(content_list, default_visible_to=None, validate=True):
     default_visible_to = default_visible_to or 'public'
     gmeta_entries = []
@@ -356,8 +357,9 @@ def get_gmeta_list(content_list, default_visible_to=None, validate=True):
             log.error('Error processing subject {}'.format(ent['subject']))
             if not validate:
                 log.exception(ve)
-                log.warning('Validation Disabled! Make sure you really want '
-                            'to ingest {}'.format(ent['subject']))
+                log.warning('Validation FAILED, but validation is disabled!'
+                            'Make sure you really want to ingest {}'
+                            ''.format(ent['subject']))
             else:
                 raise
         visible_to = ent.get('visible_to', default_visible_to)
