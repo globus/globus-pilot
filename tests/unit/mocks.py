@@ -135,9 +135,20 @@ MOCK_PROFILE = {
 }
 
 
-class GlobusTransferTaskResponse(object):
+class GlobusResponse(object):
+    DEFAULT_CLASS_DATA = {}
 
     def __init__(self, *args, **kwargs):
+        self.data = self.DEFAULT_CLASS_DATA
+
+    def __getitem__(self, item):
+        return self.data[item]
+
+
+class GlobusTransferTaskResponse(GlobusResponse):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__()
         task_uuid = str(uuid.uuid4())
         self.data = {
             'DATA_TYPE': 'transfer_result',
@@ -156,9 +167,6 @@ class GlobusTransferTaskResponse(object):
                 'title': 'related task'
             }
         }
-
-    def __getitem__(self, item):
-        return self.data[item]
 
 
 class MemoryStorage(object):

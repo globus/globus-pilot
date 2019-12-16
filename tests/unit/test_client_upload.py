@@ -20,14 +20,16 @@ INVALID_METADATA = os.path.join(COMMANDS_FILE_BASE_DIR,
                                 'invalid_metadata.json')
 
 
-def test_file_upload(mock_cli, mock_transfer_log):
+def test_file_upload(mock_cli, mock_transfer_log, mock_search_client):
     # Should not raise errors
     metadata = mock_cli.upload(EMPTY_TEST_FILE, 'my_folder')
     assert set(metadata['new_metadata']) == {'files', 'dc', 'project_metadata'}
     assert metadata['files_modified'] is True
     assert metadata['metadata_modified'] is True
     assert metadata['protocol'] == 'globus'
-    assert mock_cli.ingest_entry.called
+    from pprint import pprint
+    pprint(metadata)
+    assert mock_search_client.ingest.called
     # This is a nice way to ensure the transfer was initiated
     assert mock_transfer_log.called
 
@@ -138,14 +140,15 @@ def test_upload_validation_error(mock_cli, mock_transfer_log):
         mock_cli.upload(EMPTY_TEST_FILE, 'my_folder', metadata=invalid_m)
 
 
-def test_no_update_needed(mock_cli, mock_transfer_log):
+def test_no_update_needed(mock_cli, mock_transfer_log, mock_search_client):
     basen = os.path.basename(EMPTY_TEST_FILE)
     url = mock_cli.get_globus_http_url(basen)
-    meta = scrape_metadata(EMPTY_TEST_FILE, url, mock_cli.profile, 'foo')
+    meta = scrape_metadata(EMPTY_TEST_FILE, url, mock_cli.profile,
+                           'foo-project')
     entry = {'content': [meta], 'subject': mock_cli.get_subject_url(basen)}
     mock_cli.list_entries = Mock(return_value=[entry])
     mock_cli.upload(EMPTY_TEST_FILE, '/', update=True)
-    assert not mock_cli.ingest_entry.called
+    assert not mock_search_client.ingest.called
     assert not mock_transfer_log.called
 
 
