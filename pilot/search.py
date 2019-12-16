@@ -357,7 +357,7 @@ def get_gmeta_list(content_list, default_visible_to=None, validate=True):
             log.error('Error processing subject {}'.format(ent['subject']))
             if not validate:
                 log.exception(ve)
-                log.warning('Validation FAILED, but validation is disabled!'
+                log.warning('Validation FAILED, but validation is disabled! '
                             'Make sure you really want to ingest {}'
                             ''.format(ent['subject']))
             else:
