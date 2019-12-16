@@ -183,7 +183,7 @@ class Context(config.ConfigSection):
         }
         gmeta = gen_gmeta(context_info['manifest_subject'], ['public'],
                           manifest, validate=False)
-        self.client.ingest(gmeta, index=context_info['manifest_index'])
+        self.client.ingest_gmeta(gmeta, index=context_info['manifest_index'])
 
     def fetch_subgroups(self, group=None):
         nc = self.client.get_nexus_client()
