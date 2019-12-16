@@ -550,7 +550,7 @@ class PilotClient(NativeClient):
             return entry['content'][0]
 
     def ingest(self, path, content, group=None, project=None,
-               relative=None, index=None, dry_run=False):
+               relative=True, index=None, dry_run=False):
         """
         Ingest content into search. The content is validated against Pilot's
         built-in schema.
