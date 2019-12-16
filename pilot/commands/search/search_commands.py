@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 def get_short_path(result):
     pc = commands.get_pilot_client()
     sub = urllib.parse.urlparse(result['subject'])
-    return sub.path.lstrip(pc.get_path(''))
+    return sub.path.replace(pc.get_path(''), '').lstrip('/')
 
 
 def get_relative_path_from_entries(entry, file_info):
