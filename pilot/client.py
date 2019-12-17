@@ -1065,8 +1065,8 @@ class PilotClient(NativeClient):
         >>> pc.download('bar/moo.txt', range='0-100,150-200')
         """
         dest = dest or os.path.basename(path)
-        return sum(self.download_parts(path, dest=dest, project=project,
-                                       range=range))
+        return sum(self.download_parts(self.get_path(path), dest=dest,
+                                       project=project, range=range))
 
     def download_globus(self, path, globus_args=None):
         result = self.transfer_file(
