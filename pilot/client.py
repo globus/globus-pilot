@@ -207,6 +207,9 @@ class PilotClient(NativeClient):
         project = project or self.project.current
         return self.project.get_info(project)['endpoint']
 
+    def get_project(self, project=None):
+        return self.project.get_info(project or self.project.current)
+
     def get_index(self, project=None):
         """
         Get the configured search index for the given project. Project defaults
@@ -216,6 +219,43 @@ class PilotClient(NativeClient):
           The project to fetch info for. Defaults to current project
         """
         return self.project.get_info(project)['search_index']
+
+    def get_short_path(self, url, project=None):
+        """Given a globus HTTP URL, Globus Search subject URL, Globus URL,
+        full path or short_path, resolve the short_path for a given project.
+        Will raise PilotInvalidProject exception if the url resolved does not
+        match the project provided or the current project (if None is given).
+        If the base path cannot be resolved, it's assumed the given path was
+        a short path and is returned without exception.
+        **Parameters**
+        ``url`` (*url string*)
+          A url to parse into a short path. Pilot mostly uses shortpaths to
+          do various operations, relying on the context of the project to save
+          the basepath, endpoint, and search index.
+        ``project`` (*string* or None)
+          Project to use instead of the current project. Use "None" to use the
+          current project.
+        """
+        project = project or self.project.current
+        project_info = self.get_project(project)
+        purl = urllib.parse.urlparse(url)
+        ep = ''
+        if purl.scheme not in ['globus', 'http', 'https', '']:
+            raise exc.PilotInvalidProject('Invalid protocol '
+                                          '{}'.format(purl.scheme))
+        if purl.scheme == 'globus':
+            ep = purl.netloc
+        elif purl.scheme in ['http', 'https']:
+            if purl.netloc.endswith('.e.globus.org'):
+                ep = purl.netloc.replace('.e.globus.org', '')
+        if ep and project_info.get('endpoint') != ep:
+            raise exc.PilotInvalidProject(
+                'URL {} endpoint does not match the given project {} ({} != {}'
+                ''.format(url, project, ep, project_info.get('endpoint')))
+        if purl.path.startswith(project_info.get('base_path')):
+            return purl.path.replace(project_info.get('base_path'),
+                                     '').lstrip('/')
+        return purl.path.lstrip('/')
 
     def get_path(self, path, project=None, relative=True):
         """

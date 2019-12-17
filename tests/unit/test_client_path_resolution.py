@@ -95,3 +95,32 @@ def test_get_portal_url(mock_projects, mock_context):
     del cfg['contexts']['test-context']['projects_portal_url']
     mock_context.save(cfg)
     assert pc.get_portal_url('foo') is None
+
+
+def test_get_short_path_valid_urls(mock_cli):
+    short_path = 'test_path'
+    paths = [
+        short_path,
+        mock_cli.get_path(short_path),
+        mock_cli.get_subject_url(short_path),
+        mock_cli.get_globus_http_url(short_path),
+    ]
+    for path in paths:
+        assert mock_cli.get_short_path(path) == short_path
+
+    # This WORKS, even though its the wrong project, since we can't
+    # resolve the base path for the project
+    bar_path = mock_cli.get_path(short_path, project='bar-project')
+    assert bar_path.endswith(short_path)
+
+
+def test_get_short_path_invalid_urls(mock_cli):
+    short_path = 'test_path'
+    invalid = [
+        f'ftp://{mock_cli.get_endpoint(project="bar-project")}/{short_path}',
+        mock_cli.get_subject_url(short_path, project='bar-project'),
+        mock_cli.get_globus_http_url(short_path, project='bar-project'),
+    ]
+    for i in invalid:
+        with pytest.raises(PilotInvalidProject):
+            mock_cli.get_short_path(i)
