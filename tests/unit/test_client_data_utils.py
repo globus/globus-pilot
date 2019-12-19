@@ -87,7 +87,7 @@ def test_download_http(monkeypatch, mixed_tsv, mock_cli_basic, mock_projects):
     with patch("builtins.open", m_open):
         mock_cli_basic.download('a.tsv')
     assert get.called
-    assert get.call_args == call('a.tsv', range=None)
+    assert get.call_args == call('/foo_folder/a.tsv', range=None)
 
 
 def test_ingest(monkeypatch, mock_cli_basic, mock_sdk_response):

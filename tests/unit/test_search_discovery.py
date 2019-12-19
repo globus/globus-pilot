@@ -78,6 +78,7 @@ def test_get_sub_in_collection_similar_file(mock_cli):
     # Precise match required, returns None
     assert get_sub_in_collection(foo, entries, precise=True) is None
 
+
 def test_get_sub_with_dirs(mock_multi_file_result, mock_cli):
     gmeta = mock_multi_file_result['gmeta']
     gmeta[0]['subject'] = mock_cli.get_subject_url('dir/file1.txt')
