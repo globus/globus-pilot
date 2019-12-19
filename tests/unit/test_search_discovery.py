@@ -34,6 +34,50 @@ def test_get_sub_in_collection_none_on_non_single(mock_multi_file_result,
     assert get_sub_in_collection(sub2, gmeta, precise=True) == content2
 
 
+def test_get_sub_in_collection_similar_subs(mock_multi_file_result, mock_cli):
+    """
+    Test for regression where similar subjects would match one another. For
+    example:
+    globus://foo-project-endpoint/foo_folder/foo
+    globus://foo-project-endpoint/foo_folder/foofoo
+
+    Searching for 'globus://foo-project-endpoint/foo_folder/foo' would match
+    both above, resulting in the subject not being returned at all.
+    """
+    subs = ['foo', 'foofoo', 'bar']
+    entries = [
+        {
+            'subject': mock_cli.get_subject_url(s),
+            'content': [{'files': [{'url': mock_cli.get_globus_http_url(s)}]}]
+        } for s in subs
+    ]
+    foofoo = mock_cli.get_subject_url('foofoo')
+    foo = mock_cli.get_subject_url('foo')
+    assert get_sub_in_collection(foofoo, entries, precise=True) is not None
+    assert get_sub_in_collection(foofoo, entries, precise=False) is not None
+    assert get_sub_in_collection(foo, entries, precise=True) is not None
+    assert get_sub_in_collection(foo, entries, precise=False) is not None
+
+
+def test_get_sub_in_collection_similar_file(mock_cli):
+    files = ['foofoo']
+    entries = [
+        {
+            'subject': mock_cli.get_subject_url('ent'),
+            'content': [
+                {'files': [
+                    {'url': mock_cli.get_globus_http_url(f)} for f in files
+                ]
+                }
+            ]
+        }
+    ]
+    foo = mock_cli.get_subject_url('ent/foo')
+    # File does not exist, but still produces match
+    assert get_sub_in_collection(foo, entries, precise=False) is not None
+    # Precise match required, returns None
+    assert get_sub_in_collection(foo, entries, precise=True) is None
+
 def test_get_sub_with_dirs(mock_multi_file_result, mock_cli):
     gmeta = mock_multi_file_result['gmeta']
     gmeta[0]['subject'] = mock_cli.get_subject_url('dir/file1.txt')

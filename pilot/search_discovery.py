@@ -7,7 +7,7 @@ log = logging.getLogger(__name__)
 
 def get_sub_in_collection(subject, entries, precise=True):
     """
-    Look for a subject or a partial match subject in a bunch of search entries.
+    Look for a subject in a bunch of search entries.
     If 'subject' refers to a file, this looks for an exact subject match in
     entries and returns the content if it exists. If 'subject' is a multi-file
     collection subject must either match the top level folder or a file within
@@ -27,29 +27,44 @@ def get_sub_in_collection(subject, entries, precise=True):
       returned. If precise=False and the path is my_dir/foo4.txt, the
       "my_dir" record will still be returned.
     """
-    match_entries = get_subs_in_gmetas(subject, entries)
-    log.debug('Sub Matches: {}'.format([s['subject'] for s in match_entries]))
-    if len(match_entries) != 1:
-        log.debug('Match Fail: Sub {} matched {}/{} subs, not 1.'
-                  ''.format(subject, len(match_entries), len(entries)))
-        return None
-    content = match_entries[0]
-    if precise is False:
-        return content
-    urls = [m.get('url') for m in content['content'][0].get('files', [])]
+    entry = get_entry_with_matching_subject(entries, subject)
+    if entry is None or precise is False:
+        return entry
+    urls = [m.get('url') for m in entry['content'][0].get('files', [])]
     sub_path = urllib.parse.urlparse(subject).path
     for url in urls:
         log.debug('Checking {}'.format(url))
         if sub_path in url:
             log.debug('Found specific file in entry: {}'.format(url))
-            return content
+            return entry
 
 
-def get_subs_in_gmetas(subject, entries):
+def get_entry_with_matching_subject(entries, subject):
+    """
+    Get an entry with a matching subject. A matching subject is both an exact
+    match and a path to a file within the subject. For example, given the
+    subject:
+      globus://foo-project-endpoint/foo_subject
+    These would all be valid matches:
+      globus://foo-project-endpoint/foo_subject
+      globus://foo-project-endpoint/foo_subject/foo.txt
+      globus://foo-project-endpoint/foo_subject/bar.txt
+      globus://foo-project-endpoint/foo_subject/sub_folder/foo.txt
+    NOTE! The actual file inside a subject does not need to exist for a match
+    to happen. globus://foo-project-endpoint/foo_subject/bar.txt will return
+    a match whether or not 'bar.txt' exists in the 'files' manifest.
+    """
     sub_map, directory = {ent['subject']: ent for ent in entries}, subject
+    # If the given subject is a path within a search entry, this will derive
+    # which subject its part of.
     while directory and directory not in sub_map.keys():
         directory = os.path.dirname(directory)
-    return [sub_map[s] for s in sub_map.keys() if directory and directory in s]
+
+    matches = list(filter(lambda sub: sub == directory, sub_map.keys()))
+    if len(matches) == 1:
+        return sub_map[matches[0]]
+    log.debug('Match Fail: Sub {} matched {}/{} subs, not 1: {}'
+              ''.format(subject, len(matches), len(entries), matches))
 
 
 def get_matching_file(url, entry):
