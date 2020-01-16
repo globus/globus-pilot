@@ -11,8 +11,8 @@ log = logging.getLogger(__name__)
 @click.argument('path', type=click.Path())
 @click.option('--entry-id', default='metadata', help=('Delete a specific entry'
               ' within the search subject, or "null" for a null entry id.'))
-@click.option('--subject', default=False, help=('Delete the entire subject '
-              'comprising all of its associated entry ids'))
+@click.option('--subject', default=False, is_flag=True, help=('Delete the'
+              ' entire subject comprising all of its associated entry ids'))
 @click.option('--dry-run', is_flag=True, default=False,
               help="Show report, but don't actually delete entry/file")
 @click.option('--data', 'data_only', is_flag=True,

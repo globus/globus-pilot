@@ -873,6 +873,7 @@ class PilotClient(NativeClient):
             subject, prev_candidates, precise=False)
         prev_metadata = {}
         if prev_entry:
+            log.debug('Previous entry exists: {}'.format(subject))
             if not update and not dry_run:
                 raise exc.RecordExists(prev_entry['content'][0],
                                        fmt=[short_path])
@@ -1170,19 +1171,18 @@ class PilotClient(NativeClient):
         sub = entry['subject']
         entry = entry['content'][0]
         full_path = self.get_path(path, project=project, relative=relative)
-        if not search_discovery.is_top_level(entry, full_path):
+        search_cli = self.get_search_client()
+        if full_subject:
+            search_cli.delete_subject(index, sub)
+        elif not search_discovery.is_top_level(entry, full_path):
             log.info('Pruning {} from multi-file-entry'.format(path))
             new_files = search.prune_files(entry, full_path)
             del_num = len(entry['files']) - len(new_files)
             entry['files'] = new_files
             self.ingest(path, entry)
             return del_num
-        search_cli = self.get_search_client()
-        if full_subject:
-            search_cli.delete_subject(index, sub)
         else:
             search_cli.delete_entry(index, sub, entry_id=entry_id)
-        return 1
 
     def delete(self, path, project=None, relative=True, recursive=False):
         """
