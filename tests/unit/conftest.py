@@ -3,6 +3,7 @@ from configobj import ConfigObj
 import os
 import json
 import copy
+import time
 import globus_sdk
 from unittest.mock import Mock
 from .mocks import (MemoryStorage, MOCK_TOKEN_SET, GlobusTransferTaskResponse,
@@ -53,6 +54,15 @@ def mock_profile(mock_config):
 def mock_projects(mock_config):
     cfg = mock_config.load()
     cfg['projects'] = MOCK_PROJECTS
+    mock_config.save(cfg)
+    return mock_config
+
+
+@pytest.fixture
+def mock_contexts(mock_config):
+    cfg = mock_config.load()
+    cfg['contexts'] = MOCK_CONTEXT
+    cfg['context'] = {'current': 'test-context', 'last_updated': time.time()}
     mock_config.save(cfg)
     return mock_config
 
@@ -155,7 +165,7 @@ def mock_sdk_response():
 
 
 @pytest.fixture
-def mock_cli_basic(monkeypatch, mock_config, mock_projects):
+def mock_cli_basic(monkeypatch, mock_config, mock_projects, mock_contexts):
     pc = client.PilotClient()
 
     def load_tokens(*args, **kwargs):
@@ -202,3 +212,14 @@ def mock_cli(mock_cli_basic, mock_transfer_client, mock_search_client,
     mock_cli_basic.get_auth_client = Mock()
     mock_cli_basic.get_http_client = Mock()
     return mock_cli_basic
+
+
+@pytest.fixture
+def mock_paths(mock_cli):
+    short_path = 'test_path'
+    return {
+        'short_path': short_path,
+        'full_path': mock_cli.get_path(short_path),
+        'subject': mock_cli.get_subject_url(short_path),
+        'http': mock_cli.get_globus_http_url(short_path),
+    }

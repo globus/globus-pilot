@@ -210,6 +210,9 @@ class PilotClient(NativeClient):
     def get_project(self, project=None):
         return self.project.get_info(project or self.project.current)
 
+    def get_context(self, context=None):
+        return self.context.get_context(context or self.context.current)
+
     def get_index(self, project=None):
         """
         Get the configured search index for the given project. Project defaults
@@ -219,6 +222,73 @@ class PilotClient(NativeClient):
           The project to fetch info for. Defaults to current project
         """
         return self.project.get_info(project)['search_index']
+
+    def resolve_endpoint(self, url):
+        """
+        Given an http url or subject, resolve the endpoint within the URL.
+        Supports pertel style url suffix with '.e.globus.org'.
+        Raises PilotInvalidProject if protocol is not globus, http, or https
+        Example URLS:
+            globus://foo-endpoint/foo_folder/test_path
+            https://foo-endpoint/foo_folder/test_path
+            https://foo-endpoint.e.globus.org/foo_folder/test_path
+        **Parameters**
+        ``url`` (*string*)
+          The URL To resolve. Cannot be a short path or fullpath, or None will
+          be returned.
+        """
+        ep = None
+        purl = urllib.parse.urlparse(url)
+        if purl.scheme not in ['globus', 'http', 'https', '']:
+            raise exc.PilotInvalidProject('Invalid protocol '
+                                          '{}'.format(purl.scheme))
+        if purl.scheme == 'globus':
+            ep = purl.netloc
+        elif purl.scheme in ['http', 'https']:
+            if purl.netloc.endswith('.e.globus.org'):
+                ep = purl.netloc.replace('.e.globus.org', '')
+        return ep
+
+    def resolve_context(self, url):
+        """
+        Given a URL, resolve the context to which it belongs. This only works
+        for a given context that has a unique endpoint associated with the URL.
+        If multiple contexts have the same url, the first context that matches
+        will be returned.
+        **Parameters**
+        ``url`` (*string*)
+          The URL To resolve. Cannot be a short path or fullpath, or None will
+          be returned.
+        """
+        ep = self.resolve_endpoint(url)
+        if ep:
+            for name, cdata in self.context.load_all().items():
+                if cdata['projects_endpoint'] == ep:
+                    cdata['name'] = name
+                    log.debug('Resolved {} to context {}'.format(url, name))
+                    return cdata
+        log.debug('Failed to resolve context {}'.format(url))
+        return None
+
+    def resolve_project(self, url):
+        """
+        Given a URL, resolve the project to which it belongs. Returns a dict
+        containing info about the project.
+        **Parameters**
+        ``url`` (*string*)
+          The URL To resolve. Cannot be a short path or fullpath, or None will
+          be returned.
+        """
+        ep, path = self.resolve_endpoint(url), urllib.parse.urlparse(url).path
+        if ep and path:
+            for name, pdata in self.project.load_all().items():
+                if pdata['endpoint'] == ep and pdata['base_path'] in path:
+                    pdata['name'] = name
+                    log.debug('Resolved {} to project {}'.format(
+                        url, pdata['title']))
+                    return pdata
+        log.debug('Failed to resolve project {}'.format(url))
+        return None
 
     def get_short_path(self, url, project=None):
         """Given a globus HTTP URL, Globus Search subject URL, Globus URL,
@@ -238,20 +308,12 @@ class PilotClient(NativeClient):
         """
         project = project or self.project.current
         project_info = self.get_project(project)
-        purl = urllib.parse.urlparse(url)
-        ep = ''
-        if purl.scheme not in ['globus', 'http', 'https', '']:
-            raise exc.PilotInvalidProject('Invalid protocol '
-                                          '{}'.format(purl.scheme))
-        if purl.scheme == 'globus':
-            ep = purl.netloc
-        elif purl.scheme in ['http', 'https']:
-            if purl.netloc.endswith('.e.globus.org'):
-                ep = purl.netloc.replace('.e.globus.org', '')
+        ep = self.resolve_endpoint(url)
         if ep and project_info.get('endpoint') != ep:
             raise exc.PilotInvalidProject(
                 'URL {} endpoint does not match the given project {} ({} != {}'
                 ''.format(url, project, ep, project_info.get('endpoint')))
+        purl = urllib.parse.urlparse(url)
         if purl.path.startswith(project_info.get('base_path')):
             return purl.path.replace(project_info.get('base_path'),
                                      '').lstrip('/')

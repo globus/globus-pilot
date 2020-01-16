@@ -97,15 +97,9 @@ def test_get_portal_url(mock_projects, mock_context):
     assert pc.get_portal_url('foo') is None
 
 
-def test_get_short_path_valid_urls(mock_cli):
-    short_path = 'test_path'
-    paths = [
-        short_path,
-        mock_cli.get_path(short_path),
-        mock_cli.get_subject_url(short_path),
-        mock_cli.get_globus_http_url(short_path),
-    ]
-    for path in paths:
+def test_get_short_path_valid_urls(mock_cli, mock_paths):
+    short_path = mock_paths['short_path']
+    for path in mock_paths.values():
         assert mock_cli.get_short_path(path) == short_path
 
     # This WORKS, even though its the wrong project, since we can't
@@ -124,3 +118,21 @@ def test_get_short_path_invalid_urls(mock_cli):
     for i in invalid:
         with pytest.raises(PilotInvalidProject):
             mock_cli.get_short_path(i)
+
+
+def test_resolve_project(mock_cli, mock_paths):
+    paths = mock_paths['short_path'], mock_paths['full_path']
+    urls = mock_paths['subject'], mock_paths['http']
+    for path in paths:
+        assert mock_cli.resolve_project(path) is None
+    for url in urls:
+        assert mock_cli.resolve_project(url) == mock_cli.get_project()
+
+
+def test_resolve_context(mock_cli, mock_paths):
+    paths = mock_paths['short_path'], mock_paths['full_path']
+    urls = mock_paths['subject'], mock_paths['http']
+    for path in paths:
+        assert mock_cli.resolve_context(path) is None
+    for url in urls:
+        assert mock_cli.resolve_context(url) == mock_cli.get_context()
