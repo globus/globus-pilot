@@ -207,6 +207,12 @@ class PilotClient(NativeClient):
         project = project or self.project.current
         return self.project.get_info(project)['endpoint']
 
+    def get_project(self, project=None):
+        return self.project.get_info(project or self.project.current)
+
+    def get_context(self, context=None):
+        return self.context.get_context(context or self.context.current)
+
     def get_index(self, project=None):
         """
         Get the configured search index for the given project. Project defaults
@@ -216,6 +222,102 @@ class PilotClient(NativeClient):
           The project to fetch info for. Defaults to current project
         """
         return self.project.get_info(project)['search_index']
+
+    def resolve_endpoint(self, url):
+        """
+        Given an http url or subject, resolve the endpoint within the URL.
+        Supports pertel style url suffix with '.e.globus.org'.
+        Raises PilotInvalidProject if protocol is not globus, http, or https
+        Example URLS:
+            globus://foo-endpoint/foo_folder/test_path
+            https://foo-endpoint/foo_folder/test_path
+            https://foo-endpoint.e.globus.org/foo_folder/test_path
+        **Parameters**
+        ``url`` (*string*)
+          The URL To resolve. Cannot be a short path or fullpath, or None will
+          be returned.
+        """
+        ep = None
+        purl = urllib.parse.urlparse(url)
+        if purl.scheme not in ['globus', 'http', 'https', '']:
+            raise exc.PilotInvalidProject('Invalid protocol '
+                                          '{}'.format(purl.scheme))
+        if purl.scheme == 'globus':
+            ep = purl.netloc
+        elif purl.scheme in ['http', 'https']:
+            if purl.netloc.endswith('.e.globus.org'):
+                ep = purl.netloc.replace('.e.globus.org', '')
+        return ep
+
+    def resolve_context(self, url):
+        """
+        Given a URL, resolve the context to which it belongs. This only works
+        for a given context that has a unique endpoint associated with the URL.
+        If multiple contexts have the same url, the first context that matches
+        will be returned.
+        **Parameters**
+        ``url`` (*string*)
+          The URL To resolve. Cannot be a short path or fullpath, or None will
+          be returned.
+        """
+        ep = self.resolve_endpoint(url)
+        if ep:
+            for name, cdata in self.context.load_all().items():
+                if cdata['projects_endpoint'] == ep:
+                    cdata['name'] = name
+                    log.debug('Resolved {} to context {}'.format(url, name))
+                    return cdata
+        log.debug('Failed to resolve context {}'.format(url))
+        return None
+
+    def resolve_project(self, url):
+        """
+        Given a URL, resolve the project to which it belongs. Returns a dict
+        containing info about the project.
+        **Parameters**
+        ``url`` (*string*)
+          The URL To resolve. Cannot be a short path or fullpath, or None will
+          be returned.
+        """
+        ep, path = self.resolve_endpoint(url), urllib.parse.urlparse(url).path
+        if ep and path:
+            for name, pdata in self.project.load_all().items():
+                if pdata['endpoint'] == ep and pdata['base_path'] in path:
+                    pdata['name'] = name
+                    log.debug('Resolved {} to project {}'.format(
+                        url, pdata['title']))
+                    return pdata
+        log.debug('Failed to resolve project {}'.format(url))
+        return None
+
+    def get_short_path(self, url, project=None):
+        """Given a globus HTTP URL, Globus Search subject URL, Globus URL,
+        full path or short_path, resolve the short_path for a given project.
+        Will raise PilotInvalidProject exception if the url resolved does not
+        match the project provided or the current project (if None is given).
+        If the base path cannot be resolved, it's assumed the given path was
+        a short path and is returned without exception.
+        **Parameters**
+        ``url`` (*url string*)
+          A url to parse into a short path. Pilot mostly uses shortpaths to
+          do various operations, relying on the context of the project to save
+          the basepath, endpoint, and search index.
+        ``project`` (*string* or None)
+          Project to use instead of the current project. Use "None" to use the
+          current project.
+        """
+        project = project or self.project.current
+        project_info = self.get_project(project)
+        ep = self.resolve_endpoint(url)
+        if ep and project_info.get('endpoint') != ep:
+            raise exc.PilotInvalidProject(
+                'URL {} endpoint does not match the given project {} ({} != {}'
+                ''.format(url, project, ep, project_info.get('endpoint')))
+        purl = urllib.parse.urlparse(url)
+        if purl.path.startswith(project_info.get('base_path')):
+            return purl.path.replace(project_info.get('base_path'),
+                                     '').lstrip('/')
+        return purl.path.lstrip('/')
 
     def get_path(self, path, project=None, relative=True):
         """
@@ -771,6 +873,7 @@ class PilotClient(NativeClient):
             subject, prev_candidates, precise=False)
         prev_metadata = {}
         if prev_entry:
+            log.debug('Previous entry exists: {}'.format(subject))
             if not update and not dry_run:
                 raise exc.RecordExists(prev_entry['content'][0],
                                        fmt=[short_path])
@@ -1025,8 +1128,8 @@ class PilotClient(NativeClient):
         >>> pc.download('bar/moo.txt', range='0-100,150-200')
         """
         dest = dest or os.path.basename(path)
-        return sum(self.download_parts(path, dest=dest, project=project,
-                                       range=range))
+        return sum(self.download_parts(self.get_path(path), dest=dest,
+                                       project=project, range=range))
 
     def download_globus(self, path, globus_args=None):
         result = self.transfer_file(
@@ -1068,19 +1171,18 @@ class PilotClient(NativeClient):
         sub = entry['subject']
         entry = entry['content'][0]
         full_path = self.get_path(path, project=project, relative=relative)
-        if not search_discovery.is_top_level(entry, full_path):
+        search_cli = self.get_search_client()
+        if full_subject:
+            search_cli.delete_subject(index, sub)
+        elif not search_discovery.is_top_level(entry, full_path):
             log.info('Pruning {} from multi-file-entry'.format(path))
             new_files = search.prune_files(entry, full_path)
             del_num = len(entry['files']) - len(new_files)
             entry['files'] = new_files
             self.ingest(path, entry)
             return del_num
-        search_cli = self.get_search_client()
-        if full_subject:
-            search_cli.delete_subject(index, sub)
         else:
             search_cli.delete_entry(index, sub, entry_id=entry_id)
-        return 1
 
     def delete(self, path, project=None, relative=True, recursive=False):
         """

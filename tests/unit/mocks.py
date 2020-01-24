@@ -37,7 +37,7 @@ MOCK_CONTEXT = {'test-context': {
     'projects_cache_timeout': '86400',
     'projects_default_resource_server': 'petrel_https_server',
     'projects_default_search_index': '195a17c1-37cc-45b4-9b72-f0f7a154b143',
-    'projects_endpoint': 'cc852eda-d60b-4e3d-afbe-1f3a61688082',
+    'projects_endpoint': 'foo-project-endpoint',
     'projects_group': '',
     'scopes': ['profile', 'openid',
                'urn:globus:auth:scope:search.api.globus.org:all',
