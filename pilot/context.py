@@ -1,5 +1,6 @@
 import time
 import logging
+import globus_sdk
 from pilot import config, exc
 from pilot.search import gen_gmeta
 
@@ -44,7 +45,7 @@ class Context(config.ConfigSection):
             if not self.get_context(self.DEFAULT_CONTEXT):
                 log.debug('No context set and no default context!')
                 log.debug('Setting context default.')
-                self.set_context(self.DEFAULT_CONTEXT, DEFAULT_PILOT_CONTEXT)
+                self.add_context(self.DEFAULT_CONTEXT, DEFAULT_PILOT_CONTEXT)
             self.current = self.DEFAULT_CONTEXT
 
     @property
@@ -65,11 +66,28 @@ class Context(config.ConfigSection):
     def load_all(self):
         return self.config.load().get('contexts', {})
 
-    def set_context(self, name, context):
+    def add_context(self, name, context):
         self.save_option(name, context, section='contexts')
 
     def get_context(self, context=None):
         return self.load_option(context or self.current, section='contexts')
+
+    def set_context(self, context):
+        if self.current == context:
+            return
+        try:
+            self.current = context
+            self.update()
+        except globus_sdk.exc.SearchAPIError as sapie:
+            if sapie.code == 'NotFound.Generic':
+                self.client.project.purge()
+                raise exc.PilotClientException(
+                    'No existing context data found for {}.'
+                    ''.format(self.get_value('manifest_subject')))
+            else:
+                log.exception(sapie)
+                raise exc.PilotClientException('Unexpected Error {}'.format(
+                                               str(sapie)))
 
     def get_value(self, field, context=None):
         return self.get_context(context).get(field)
@@ -164,8 +182,8 @@ class Context(config.ConfigSection):
             'context': dict(context_info)
         }
         gmeta = gen_gmeta(context_info['manifest_subject'], ['public'],
-                          manifest)
-        self.client.ingest_entry(gmeta, index=context_info['manifest_index'])
+                          manifest, validate=False)
+        self.client.ingest_gmeta(gmeta, index=context_info['manifest_index'])
 
     def fetch_subgroups(self, group=None):
         nc = self.client.get_nexus_client()

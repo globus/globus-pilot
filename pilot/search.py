@@ -1,36 +1,40 @@
+"""
+search.py is primarily concerned with analyzing local files, generating
+metadata, combining metadata, and preparing gmeta entries for ingest into
+Globus Search.
+"""
+
 import os
 import copy
 import hashlib
 import urllib
+import difflib
 import pytz
 import datetime
-import json
 import jsonschema
 import logging
 
 from pilot.validation import validate_dataset, validate_user_provided_metadata
 from pilot import analysis
-from pilot.exc import RequiredUploadFields, InvalidField
+from pilot.exc import InvalidField
 
 DEFAULT_HASH_ALGORITHMS = ['sha256', 'md5']
-FOREIGN_KEYS_FILE = os.path.join(os.path.dirname(__file__),
-                                 'foreign_keys.json')
 DEFAULT_PUBLISHER = 'Argonne National Laboratory'
 # Previously users were required to add certain fields. If we want to add those
 # back, add them here.
 MINIMUM_USER_REQUIRED_FIELDS = []
 
 GMETA_LIST = {
-    "@version": "2016-11-09",
+    # "@version": "2016-11-09",
     "ingest_type": "GMetaList",
     "ingest_data": {
-        "@version": "2016-11-09",
+        # "@version": "2016-11-09",
         "gmeta": []
     }
 }
 
 GMETA_ENTRY = {
-    "@version": "2016-11-09",
+    # "@version": "2016-11-09",
     "visible_to": [],
     "content": '',
     "subject": ''
@@ -54,28 +58,61 @@ def get_formatted_date():
     return datetime.datetime.now(pytz.utc).isoformat().replace('+00:00', 'Z')
 
 
-def get_foreign_keys(filename=FOREIGN_KEYS_FILE, pilot_client=None):
-    if not pilot_client:
-        return {}
-    with open(filename) as fh:
-        fkeys = json.load(fh)
-    for fkey_data in fkeys.values():
-        sub = pilot_client.get_subject_url(fkey_data['reference']['resource'],
-                                           project=pilot_client.project)
-        fkey_data['reference']['resource'] = sub
-    return fkeys
+def suggest_shortname(existing_shortnames, non_existent_shortname):
+
+    matches = {
+        difflib.SequenceMatcher(None, es, non_existent_shortname).ratio(): es
+        for es in existing_shortnames
+    }
+    suggestion = ''
+    if matches:
+        suggestion = 'Did you mean {}?'.format(
+            matches.get(max(matches.keys()))
+        )
+    return suggestion
 
 
-def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True):
-    name = pilot_client.profile.name.split(' ')
-    if len(name) > 1 and ',' not in pilot_client.profile.name:
+def get_foreign_keys(entry_files, foreign_keys, existing_paths):
+    files = copy.deepcopy(entry_files)
+    for filem in files:
+        defs = filem.get('field_metadata', {}).get('field_definitions')
+        if not defs:
+            continue
+        for field_def in defs:
+            foreign_f = field_def.get('name')
+            if not foreign_keys.get(foreign_f):
+                continue
+            ref = copy.deepcopy(foreign_keys[foreign_f]['reference'])
+            if ref['resource'] in existing_paths:
+                field_def['reference'] = ref
+            else:
+                sug = suggest_shortname(existing_paths,
+                                        os.path.basename(ref['resource']))
+                raise Exception('Reference {} did not resolve. {}'
+                                .format(ref['resource'], sug))
+    return files
+
+
+def scrape_metadata(dataframe, url, profile, project, skip_analysis=True):
+    """
+    Gather metadata on 'dataframe', including generati
+    :param dataframe:
+    :param url:
+    :param profile:
+    :param project:
+    :param foreign_keys:
+    :param skip_analysis:
+    :return:
+    """
+    name = profile.name.split(' ')
+    if len(name) > 1 and ',' not in profile.name:
         # If the persons name is ['Samuel', 'L.', 'Jackson'], produces:
         # "Jackson, Samuel L."
         formal_name = '{}, {}'.format(name[-1:][0], ' '.join(name[:-1]))
     else:
-        formal_name = pilot_client.profile.name
+        formal_name = profile.name
     remote_file_manifest = gen_remote_file_manifest(
-        dataframe, url, pilot_client, skip_analysis=skip_analysis
+        dataframe, url, skip_analysis=skip_analysis
     )
     return {
         'dc': {
@@ -98,8 +135,7 @@ def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True):
                 }
             ],
             'publicationYear': str(datetime.datetime.now().year),
-            'publisher': (pilot_client.profile.organization or
-                          DEFAULT_PUBLISHER),
+            'publisher': (profile.organization or DEFAULT_PUBLISHER),
             'resourceType': {
                 'resourceType': 'Dataset',
                 'resourceTypeGeneral': 'Dataset'
@@ -117,7 +153,7 @@ def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True):
         },
         'files': remote_file_manifest,
         'project_metadata': {
-            'project-slug': pilot_client.project.current
+            'project-slug': project
         },
     }
 
@@ -302,24 +338,48 @@ def gather_metadata_stats(new_metadata, previous_metadata):
     }
 
 
-def gen_gmeta(subject, visible_to, content):
-    try:
-        validate_dataset(content)
-    except jsonschema.exceptions.ValidationError as ve:
-        if any([m in ve.message for m in MINIMUM_USER_REQUIRED_FIELDS]):
-            raise RequiredUploadFields(ve.message,
-                                       MINIMUM_USER_REQUIRED_FIELDS) from None
-    visible_to = [vt if vt == 'public' else GROUP_URN_PREFIX.format(vt)
-                  for vt in visible_to]
-    log.debug('visible_to for {} set to {}'.format(subject, visible_to))
-    entry = GMETA_ENTRY.copy()
-    entry['visible_to'] = visible_to
-    entry['subject'] = subject
-    entry['content'] = content
-    entry['id'] = 'metadata'
-    gmeta = GMETA_LIST.copy()
-    gmeta['ingest_data']['gmeta'].append(entry)
-    return gmeta
+def gen_gmeta(subject, visible_to, content, validate=True):
+    log.warning('Deprecated. Please use pilot.search.get_gmeta_list instead.')
+    return get_gmeta_list([{
+        'subject': subject,
+        'visible_to': visible_to,
+        'content': content
+    }], validate=validate)
+
+
+def get_gmeta_list(content_list, default_visible_to=None, validate=True):
+    default_visible_to = default_visible_to or 'public'
+    gmeta_entries = []
+    for ent in content_list:
+        try:
+            validate_dataset(ent['content'])
+        except jsonschema.exceptions.ValidationError as ve:
+            log.error('Error processing subject {}'.format(ent['subject']))
+            if not validate:
+                log.exception(ve)
+                log.warning('Validation FAILED, but validation is disabled! '
+                            'Make sure you really want to ingest {}'
+                            ''.format(ent['subject']))
+            else:
+                raise
+        visible_to = ent.get('visible_to', default_visible_to)
+        if isinstance(visible_to, str):
+            visible_to = [visible_to]
+        vt_list = []
+        for vt in visible_to:
+            if vt == 'public' or vt.startswith('urn:globus:'):
+                vt_list.append(vt)
+            else:
+                vt_list.append(GROUP_URN_PREFIX.format(vt))
+        entry = copy.deepcopy(GMETA_ENTRY)
+        entry['visible_to'] = vt_list
+        entry['subject'] = ent['subject']
+        entry['content'] = ent['content']
+        entry['id'] = ent.get('id', 'metadata')
+        gmeta_entries.append(entry)
+    gmeta_list_doc = copy.deepcopy(GMETA_LIST)
+    gmeta_list_doc['ingest_data']['gmeta'] = gmeta_entries
+    return gmeta_list_doc
 
 
 def set_dc_field(metadata, field_name, value):
@@ -395,16 +455,14 @@ def gen_dc_formats(metadata, formats):
     metadata['dc']['formats'] = formats
 
 
-def gen_remote_file_manifest(filepath, url, pilot_client,
-                             algorithms=DEFAULT_HASH_ALGORITHMS,
+def gen_remote_file_manifest(filepath, url, algorithms=DEFAULT_HASH_ALGORITHMS,
                              skip_analysis=True):
     manifest_entries = []
     for subfile, remote_short_path in get_subdir_paths(filepath):
         rfm = {alg: compute_checksum(subfile, getattr(hashlib, alg)())
                for alg in algorithms}
-        fkeys = get_foreign_keys(pilot_client)
         mimetype = analysis.mimetypes.detect_type(subfile)
-        metadata = (analysis.analyze_dataframe(subfile, mimetype, fkeys)
+        metadata = (analysis.analyze_dataframe(subfile, mimetype)
                     if not skip_analysis else {})
         rfm.update({
             'filename': os.path.basename(subfile),

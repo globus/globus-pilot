@@ -8,8 +8,10 @@ MIXED_FILE = os.path.join(ANALYSIS_FILE_BASE_DIR, 'mixed.tsv')
 NUMBERS_FILE = os.path.join(ANALYSIS_FILE_BASE_DIR, 'numbers.tsv')
 
 
-def test_scrape_metadata(mock_cli, mock_profile):
-    meta = scrape_metadata(MIXED_FILE, 'https://foo.com', mock_cli)
+def test_scrape_metadata(mock_cli):
+    # dataframe, url, profile, project, skip_analysis = True
+    pf = mock_cli.profile
+    meta = scrape_metadata(MIXED_FILE, 'https://foo.com', pf, 'foo-project')
     dc_content = ['titles', 'creators', 'subjects', 'publicationYear',
                   'publisher', 'resourceType', 'dates', 'formats', 'version']
 
@@ -23,15 +25,16 @@ def test_scrape_metadata(mock_cli, mock_profile):
 
 
 def test_update_metadata_new_record_w_meta(mock_cli):
-    rec = scrape_metadata(MIXED_FILE, 'https://foo.com', mock_cli)
+    pf = mock_cli.profile
+    rec = scrape_metadata(MIXED_FILE, 'https://foo.com', pf, 'foo-project')
     meta = update_metadata(rec, None, {'mime_type': 'csv'})
     assert meta['dc']['formats'] == ['csv']
 
 
 def test_update_metadata_new_file(mock_cli):
-    old = scrape_metadata(MIXED_FILE, 'globus://foo.com', mock_cli)
-    new = scrape_metadata(NUMBERS_FILE, 'globus://foo.com', mock_cli)
-
+    pf = mock_cli.profile
+    old = scrape_metadata(MIXED_FILE, 'globus://foo.com', pf, 'foo-project')
+    new = scrape_metadata(NUMBERS_FILE, 'globus://bar.com', pf, 'foo-project')
     meta = update_metadata(new, old, {})
     assert old['files'][0] in meta['files']
     assert new['files'][0] in meta['files']
@@ -54,9 +57,10 @@ def test_prune_files(mock_multi_file_result):
 
 
 def test_update_metadata_prev_record(mock_cli, mock_profile):
-    old = scrape_metadata(MIXED_FILE, 'globus://foo.com', mock_cli)
+    pf = mock_cli.profile
+    old = scrape_metadata(MIXED_FILE, 'globus://foo.com', pf, 'foo-project')
     mock_cli.profile.name = 'Marie Curie'
-    new = scrape_metadata(MIXED_FILE, 'globus://foo.com', mock_cli)
+    new = scrape_metadata(MIXED_FILE, 'globus://foo.com', pf, 'foo-project')
 
     assert new != old
     assert old['dc']['creators'][0]['creatorName'] == 'Franklin, Rosalind'
@@ -106,9 +110,11 @@ def test_carryover_unrelated_files():
 
 
 def test_update_file_version(mock_cli, mock_profile):
-
-    ver_one = scrape_metadata(MIXED_FILE, 'globus://foo.com', mock_cli)
-    ver_two = scrape_metadata(NUMBERS_FILE, 'globus://foo.com', mock_cli)
+    pf = mock_cli.profile
+    ver_one = scrape_metadata(MIXED_FILE, 'globus://foo.com', pf,
+                              'foo-project')
+    ver_two = scrape_metadata(NUMBERS_FILE, 'globus://foo.com', pf,
+                              'foo-project')
     assert ver_one['dc']['version'] == '1'
     assert ver_two['dc']['version'] == '1'
     # Pretend 'NUMBERS_FILE' is an updated version of MIXED_FILE

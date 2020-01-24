@@ -5,7 +5,6 @@
     "description": "Schema for files block in a record.",
     "properties": {
         "field_metadata": {
-            "type": "object",
             "description": "Metadata about a tabular file.",
             "properties": {
                 "numcols": {

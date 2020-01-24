@@ -5,13 +5,11 @@ from pilot.commands.auth.auth_commands import (
     login, logout, profile_command)
 
 
-def test_auth_login(monkeypatch, mock_cli, mock_config):
+def test_auth_login(monkeypatch, mock_cli, mock_config, mock_transfer_client,
+                    mock_sdk_response):
     monkeypatch.setattr(mock_cli, 'is_logged_in', Mock(return_value=False))
-    globus_response = Mock()
-    globus_response.data = {'display_name': 'my_computer'}
-    tc = Mock()
-    tc.get_endpoint.return_value = globus_response
-    mock_cli.get_transfer_client.return_value = tc
+    mock_sdk_response.data = {'display_name': 'my_computer'}
+    mock_transfer_client.get_endpoint.return_value = mock_sdk_response
     runner = CliRunner()
     result = runner.invoke(login, [])
     assert result.exit_code == 0

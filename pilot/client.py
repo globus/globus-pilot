@@ -3,7 +3,6 @@ import time
 import globus_sdk
 import urllib
 import logging
-from globus_sdk import AuthClient, SearchClient, TransferClient
 from fair_research_login import NativeClient, LoadError, ScopesMismatch
 from pilot import (
     profile, config, globus_clients, exc, logging_cfg, context, search,
@@ -42,7 +41,9 @@ class PilotClient(NativeClient):
     *  :py:meth:`.ls`
     *  :py:meth:`.mkdir`
     *  :py:meth:`.get_search_entry`
-    *  :py:meth:`.ingest_entry`
+    *  :py:meth:`.ingest`
+    *  :py:meth:`.ingest_many`
+    *  :py:meth:`.ingest_gmeta`
     *  :py:meth:`.delete_entry`
     *  :py:meth:`.upload`
     *  :py:meth:`.download`
@@ -142,14 +143,14 @@ class PilotClient(NativeClient):
         :return:
         """
         authorizer = self.get_authorizers()['auth.globus.org']
-        return AuthClient(authorizer=authorizer)
+        return globus_sdk.AuthClient(authorizer=authorizer)
 
     def get_search_client(self):
         """Returns a live Search Client based on user login info
         https://globus-sdk-python.readthedocs.io/en/stable/clients/search/
         """
         authorizer = self.get_authorizers()['search.api.globus.org']
-        return SearchClient(authorizer=authorizer)
+        return globus_sdk.SearchClient(authorizer=authorizer)
 
     def get_transfer_client(self):
         """
@@ -157,7 +158,7 @@ class PilotClient(NativeClient):
         https://globus-sdk-python.readthedocs.io/en/stable/clients/transfer/
         """
         authorizer = self.get_authorizers()['transfer.api.globus.org']
-        return TransferClient(authorizer=authorizer)
+        return globus_sdk.TransferClient(authorizer=authorizer)
 
     def get_nexus_client(self):
         """
@@ -203,6 +204,7 @@ class PilotClient(NativeClient):
         ``project`` (*string*)
           The project to fetch info for. Defaults to current project
         """
+        project = project or self.project.current
         return self.project.get_info(project)['endpoint']
 
     def get_index(self, project=None):
@@ -234,6 +236,9 @@ class PilotClient(NativeClient):
         >>> pc.get_path('/projects/goo/moo.txt', project='goo', relative=False)
         '/projects/goo/moo.txt'
         """
+        if not isinstance(path, str):
+            raise exc.PilotClientException('get_path(): "path" must be a '
+                                           'string, not {}'.format(type(path)))
         bdir = self.project.get_info(project)['base_path']
         path = path.lstrip('.')
         if relative is True:
@@ -246,7 +251,7 @@ class PilotClient(NativeClient):
             if bdir not in path:
                 log.warning(
                     'Absolute path {} not in project {} path {}'.format(
-                        path, project or self.project.current, bdir)
+                        path, project, bdir)
                 )
         log.debug('Path: {}'.format(path))
         return path
@@ -380,6 +385,10 @@ class PilotClient(NativeClient):
         """
         path = self.get_path(path, project, relative)
         endpoint = self.get_endpoint(project)
+        project = project or self.project.current
+        if not endpoint:
+            raise exc.PilotClientException('No Endpoint configured for '
+                                           'project {}'.format(project))
         r = self.get_transfer_client().operation_ls(endpoint, path=path)
         if extended:
             return {f['name']: f for f in r['DATA']}
@@ -480,7 +489,8 @@ class PilotClient(NativeClient):
         return [ent for ent in raw['gmeta'] if path in ent.get('subject')]
 
     def get_full_search_entry(self, path, project=None, relative=True,
-                              resolve_collections=True, precise=True):
+                              path_is_sub=False, resolve_collections=True,
+                              precise=True):
         """
         Get a search entry for a given resource
         **Parameters**
@@ -491,6 +501,9 @@ class PilotClient(NativeClient):
         ``relative`` (*bool*)
           If True, prepends the path to the project. If False,
           does not prepend path but ensures it's in the project's directory
+        ``path_is_sub`` (*bool*)
+          If true, the given path is expected to be the full subject, and is
+          passed through without modification
         ``resolve_collections`` (*bool*)
           If the path given points to what might be a multi-file directory
           entry, attempt to resolve the entry.
@@ -512,7 +525,10 @@ class PilotClient(NativeClient):
         """
         sc = self.get_search_client()
         project = project or self.project.current
-        subject = self.get_subject_url(path, project, relative)
+        if path_is_sub:
+            subject = path
+        else:
+            subject = self.get_subject_url(path, project, relative)
         try:
             return sc.get_subject(self.get_index(project), subject)
         except globus_sdk.exc.SearchAPIError as sapie:
@@ -524,17 +540,97 @@ class PilotClient(NativeClient):
                     return ent
 
     def get_search_entry(self, path, project=None, relative=True,
-                         resolve_collections=True, precise=True):
+                         path_is_sub=False, resolve_collections=True,
+                         precise=True):
         entry = self.get_full_search_entry(
-            path, project=project, relative=relative,
+            path, project=project, relative=relative, path_is_sub=path_is_sub,
             resolve_collections=resolve_collections, precise=precise
         )
         if entry:
             return entry['content'][0]
 
-    def ingest_entry(self, gmeta_entry, index=None):
+    def ingest(self, path, content, group=None, project=None,
+               relative=True, index=None, dry_run=False):
         """
-        Ingest a complete gmeta_entry into search.
+        Ingest content into search. The content is validated against Pilot's
+        built-in schema.
+        **Parameters**
+        ``path`` (*path string*)
+          Path to a local resource on this project
+        ``group`` (*uuid string*) Globus group to use for this ingest, if
+          different from the group configured for this project. Defaults to
+          the group configured for this project
+        ``project`` (*string*)
+          The project to fetch info for. Defaults to current project
+        ``relative`` (*bool*)
+          If True, prepends the path to the project. If False,
+          does not prepend path but ensures it's in the project's directory
+          If the path given points to a location inside a multi-file directory
+          only return the record if the location matches a file.
+          For example, given an entry containing the files:
+            my_dir/foo1.txt, my_dir/foo2.txt, my_dir/foo3.txt
+        ``index`` (*uuid string*) Index to ingest to. Defaults to index
+          configured for this project
+        ``dry_run`` Do not actually ingest, but attempt to construct a gmeta
+          entry and validate it.
+        **Examples**
+        >>> content = pc.gather_metadata('foo.txt', 'bar')
+        >>> pc.ingest('bar/foo.txt', content)
+        """
+        sub = self.get_subject_url(path, project=project, relative=relative)
+        content = [{'subject': sub, 'content': content}]
+        gmeta = search.get_gmeta_list(content, default_visible_to=group,
+                                      validate=True)
+        if dry_run:
+            return gmeta
+        return self.ingest_gmeta(gmeta, index)
+
+    def ingest_many(self, content_map, group=None, project=None, relative=None,
+                    index=None, dry_run=False):
+        """
+        Ingest many entries into search, with paths to entries mapped to
+        content.
+        built-in schema.
+        **Parameters**
+        ``content_map`` (*dict {short_path: content}*)
+          Path to a local resource on this project
+        ``group`` (*uuid string*) Globus group to use for this ingest, if
+          different from the group configured for this project. Defaults to
+          the group configured for this project
+        ``project`` (*string*)
+          The project to fetch info for. Defaults to current project
+        ``relative`` (*bool*)
+          If True, prepends the path to the project. If False,
+          does not prepend path but ensures it's in the project's directory
+          If the path given points to a location inside a multi-file directory
+          only return the record if the location matches a file.
+          For example, given an entry containing the files:
+            my_dir/foo1.txt, my_dir/foo2.txt, my_dir/foo3.txt
+        ``index`` (*uuid string*) Index to ingest to. Defaults to index
+          configured for this project
+        ``dry_run`` Do not actually ingest, but attempt to construct a gmeta
+          entry and validate it.
+        **Examples**
+        >>> content_map = {}
+        >>> content_map['bar/foo.txt'] = pc.gather_metadata('foo.txt', 'bar')
+        >>> content_map['bar/moo.txt'] = pc.gather_metadata('moo.txt', 'bar')
+        >>> pc.ingest_many(content_map)
+        """
+        content = [{
+            'subject': self.get_subject_url(path, project=project,
+                                            relative=relative),
+            'content': entry_content
+        } for path, entry_content in content_map.items()]
+        gmeta = search.get_gmeta_list(content, group, validate=True)
+        if dry_run:
+            log.info('{} entry ingest ABORTED due to dry run.'
+                     ''.format(len(content)))
+            return gmeta
+        return self.ingest_gmeta(gmeta, index)
+
+    def ingest_gmeta(self, gmeta, index=None):
+        """
+        Ingest a complete raw gmeta_entry into search.
         **Parameters**
         ``gmeta_entry`` (*dict*)
           A dict matching a Globus Search gmeta entry. An example is here:
@@ -560,7 +656,7 @@ class PilotClient(NativeClient):
         """
         sc = self.get_search_client()
         index = index or self.get_index()
-        result = sc.ingest(index, gmeta_entry)
+        result = sc.ingest(index, gmeta)
         pending_states = ['PENDING', 'PROGRESS']
         log.info('Ingesting to {}'.format(index))
         task_status = sc.get_task(result['task_id'])['state']
@@ -568,13 +664,16 @@ class PilotClient(NativeClient):
             log.debug(f'Search task still {task_status}')
             time.sleep(.2)
             task_status = sc.get_task(result['task_id'])['state']
-        if sc.get_task(result['task_id'])['state'] != 'SUCCESS':
-            raise exc.PilotClientException('Failed to ingest search subject')
+        ingest_task = sc.get_task(result['task_id'])
+        if ingest_task['state'] != 'SUCCESS':
+            log.error(ingest_task.data)
+            raise exc.PilotClientException('Failed to ingest search subject: '
+                                           '{}'.format(ingest_task['message']))
         return True
 
     def gather_metadata(self, dataframe, destination, previous_metadata=None,
-                        custom_metadata=None, skip_analysis=False, project=None
-                        ):
+                        custom_metadata=None, skip_analysis=False,
+                        project=None, foreign_keys=None):
         """Gather metadata on a local file or directory. Returns a new dict
         which combines previous metadata and custom metadata. If skip_analysis
         is True, new analytics won't be attempted and old analytics will be
@@ -601,12 +700,29 @@ class PilotClient(NativeClient):
         short_path = os.path.join(destination, os.path.basename(dataframe))
         url = self.get_globus_http_url(short_path, project=project)
         new_metadata = search.scrape_metadata(
-            dataframe, url, self, skip_analysis=skip_analysis)
+            dataframe, url, self.profile, self.project.current,
+            skip_analysis=skip_analysis
+        )
+        if foreign_keys:
+            base_sub = self.get_subject_url('', project=project)
+            existing_paths = [e['subject'].replace(base_sub, '').lstrip('/')
+                              for e in self.list_entries('', project=project)]
+            new_files = search.get_foreign_keys(new_metadata['files'],
+                                                foreign_keys, existing_paths)
+            for new_file in new_files:
+                d = new_file.get('field_metadata', {}).get('field_definitions')
+                for fdef in d:
+                    if fdef and fdef.get('reference'):
+                        fdef['reference']['resource'] = self.get_subject_url(
+                            fdef['reference']['resource'], project=project
+                        )
+            new_metadata['files'] = new_files
         return search.update_metadata(new_metadata, previous_metadata or {},
                                       custom_metadata or {})
 
     def register(self, dataframe, destination, metadata=None,
-                 update=False, dry_run=False, skip_analysis=False):
+                 update=False, dry_run=False, skip_analysis=False,
+                 foreign_keys=None):
         """
         Gather metadata on a local search record and register metadata in
         Globus Search. This method assumes either the dataframe already exists
@@ -666,20 +782,21 @@ class PilotClient(NativeClient):
             prev_metadata = prev_entry['content'][0]
         new_metadata = self.gather_metadata(
             dataframe, destination, previous_metadata=prev_metadata,
-            custom_metadata=metadata or {}, skip_analysis=skip_analysis
+            custom_metadata=metadata or {}, skip_analysis=skip_analysis,
+            foreign_keys=foreign_keys
         )
         stats = search.gather_metadata_stats(new_metadata, prev_metadata)
         stats['ingest'] = {}
         if stats['metadata_modified'] is False:
             return stats
-        gmeta = search.gen_gmeta(subject, [self.get_group()], new_metadata)
         if dry_run:
             return stats
-        stats['ingest'] = self.ingest_entry(gmeta)
+        stats['ingest'] = self.ingest(short_path, new_metadata)
         return stats
 
     def upload(self, dataframe, destination, metadata=None, globus=True,
-               update=False, dry_run=False, skip_analysis=False, project=None):
+               update=False, dry_run=False, skip_analysis=False, project=None,
+               foreign_keys=None):
         """
         Register a dataframe in Globus Search then upload it to a relative
         project directory on the configured Globus endpoint.
@@ -732,7 +849,8 @@ class PilotClient(NativeClient):
 
         stats = self.register(
             dataframe, destination, metadata=metadata, update=update,
-            dry_run=dry_run, skip_analysis=skip_analysis
+            dry_run=dry_run, skip_analysis=skip_analysis,
+            foreign_keys=foreign_keys
         )
         stats['protocol'] = 'globus' if globus else 'http'
         stats['upload'] = {}
@@ -955,9 +1073,7 @@ class PilotClient(NativeClient):
             new_files = search.prune_files(entry, full_path)
             del_num = len(entry['files']) - len(new_files)
             entry['files'] = new_files
-            group = self.get_group(project=project)
-            gmeta = search.gen_gmeta(sub, [group], entry)
-            self.ingest_entry(gmeta)
+            self.ingest(path, entry)
             return del_num
         search_cli = self.get_search_client()
         if full_subject:

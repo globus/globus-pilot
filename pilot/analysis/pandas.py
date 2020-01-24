@@ -27,27 +27,27 @@ TSV_LABELS = {
 }
 
 
-def analyze_tsv(filename, foreign_keys=None):
-    metadata = analyze(pd.read_csv(filename, sep='\t'), foreign_keys)
+def analyze_tsv(filename):
+    metadata = analyze(pd.read_csv(filename, sep='\t'))
     metadata = add_extended_metadata(filename, metadata)
     return metadata
 
 
-def analyze_csv(filename, foreign_keys=None):
-    metadata = analyze(pd.read_csv(filename), foreign_keys)
+def analyze_csv(filename):
+    metadata = analyze(pd.read_csv(filename))
     metadata = add_extended_metadata(filename, metadata)
     return metadata
 
 
-def analyze_parquet(filename, foreign_keys=None):
-    return analyze(pd.read_parquet(filename), foreign_keys)
+def analyze_parquet(filename):
+    return analyze(pd.read_parquet(filename))
 
 
-def analyze_feather(filename, foreign_keys=None):
-    return analyze(pd.read_feather(filename), foreign_keys)
+def analyze_feather(filename):
+    return analyze(pd.read_feather(filename))
 
 
-def analyze_hdf(filename, foreign_keys):
+def analyze_hdf(filename):
     log.debug('Analyzing hdf5!')
     store = pd.HDFStore(filename, 'r')
     analyses = []
@@ -61,7 +61,7 @@ def analyze_hdf(filename, foreign_keys):
             dataframe = store.get(key)
             if isinstance(dataframe, pd.Series):
                 dataframe = pd.DataFrame({key.lstrip('/'): dataframe})
-            analysis = analyze(dataframe, None)
+            analysis = analyze(dataframe)
             analysis['store_key'] = key
             analyses.append(analysis)
         except Exception as e:
@@ -71,7 +71,7 @@ def analyze_hdf(filename, foreign_keys):
     return analyses
 
 
-def analyze(pd_dataframe, foreign_keys=None):
+def analyze(pd_dataframe):
     pandas_info = pd_dataframe.describe(include='all')
 
     column_metadata = []
@@ -80,7 +80,6 @@ def analyze(pd_dataframe, foreign_keys=None):
         # col_name = column['name']
         df_metadata = {'name': column}
         df_metadata.update(get_pandas_field_metadata(pandas_info, column))
-        df_metadata.update(get_foreign_key(foreign_keys, column))
         column_metadata.append(df_metadata)
 
     dataframe_metadata = {
@@ -164,10 +163,3 @@ def get_pandas_field_metadata(pandas_col_metadata, field_name):
         if name in cleaned_metadata:
             cleaned_metadata[name] = int(cleaned_metadata[name])
     return cleaned_metadata
-
-
-def get_foreign_key(foreign_keys, column):
-    if not foreign_keys:
-        return{'reference': None}
-    ref = foreign_keys.get(column['name'], {}).get('reference') or None
-    return {'reference': ref}

@@ -6,6 +6,7 @@ import copy
 import globus_sdk
 from unittest.mock import Mock
 from .mocks import (MemoryStorage, MOCK_TOKEN_SET, GlobusTransferTaskResponse,
+                    GlobusResponse,
                     ANALYSIS_FILE_BASE_DIR, SCHEMA_FILE_BASE_DIR,
                     CLIENT_FILE_BASE_DIR,
                     MOCK_PROFILE, MOCK_PROJECTS, MOCK_CONTEXT)
@@ -108,22 +109,49 @@ def mock_search_result(mock_search_results):
 
 
 @pytest.fixture
-def mock_transfer_client(monkeypatch):
-    st = Mock()
-    monkeypatch.setattr(globus_sdk.TransferClient, 'submit_transfer', st)
-    st.return_value = GlobusTransferTaskResponse()
-    monkeypatch.setattr(globus_sdk, 'TransferData', Mock())
-    return st
+def mock_transfer_data(monkeypatch):
+    td = Mock()
+    monkeypatch.setattr(globus_sdk, 'TransferData', Mock(return_value=td))
+    return td
 
 
 @pytest.fixture
-def mock_transfer_error(monkeypatch):
-    class MockError(Exception):
+def mock_transfer_client(monkeypatch, mock_transfer_data):
+    tc = Mock()
+    monkeypatch.setattr(globus_sdk, 'TransferClient', Mock(return_value=tc))
+    tc.submit_transfer.return_value = GlobusTransferTaskResponse()
+    return tc
+
+
+@pytest.fixture
+def mock_search_client(monkeypatch):
+    sc = Mock()
+    gr = GlobusResponse()
+    gr.data = {'state': 'SUCCESS', 'message': 'a thing has been ingested'}
+    sc.get_task.return_value = gr
+    sc.ingest.return_value = {'task_id': 'mock_task_id'}
+    monkeypatch.setattr(globus_sdk, 'SearchClient', Mock(return_value=sc))
+    return sc
+
+
+@pytest.fixture
+def mock_globus_exception():
+    class MockExc(Exception):
         code = 'Error'
         message = 'A Globus SDK Transfer Error occurred! (Mock)'
+    return MockExc
 
-    monkeypatch.setattr(globus_sdk.exc, 'TransferAPIError', MockError)
-    return MockError
+
+@pytest.fixture
+def mock_transfer_error(monkeypatch, mock_globus_exception):
+    monkeypatch.setattr(globus_sdk.exc, 'TransferAPIError',
+                        mock_globus_exception)
+    return mock_globus_exception
+
+
+@pytest.fixture
+def mock_sdk_response():
+    return GlobusResponse()
 
 
 @pytest.fixture
@@ -154,30 +182,23 @@ def mock_transfer_log(monkeypatch):
 
 
 @pytest.fixture
-def mock_cli(mock_cli_basic, mock_transfer_client, mock_profile,
-             mock_transfer_log):
+def mock_cli(mock_cli_basic, mock_transfer_client, mock_search_client,
+             mock_profile, mock_transfer_log):
     """
     Returns a mock logged in pilot client. Storage is mocked with a custom
     object, so this does behave slightly differently than the real client.
     All methods that reach out to remote resources are mocked, you need to
     re-mock them to return the test data you want.
     """
-    # mock_cli_basic.upload_http = Mock()
-    # mock_cli_basic.upload_globus = Mock()
-    # mock_cli_basic.download_http = Mock()
-    # mock_cli_basic.download_globus = Mock()
     mock_cli_basic.transfer_file = Mock()
     mock_cli_basic.login = Mock()
     mock_cli_basic.logout = Mock()
-    mock_cli_basic.ingest_entry = Mock()
     mock_cli_basic.get_full_search_entry = Mock(return_value=None)
     mock_cli_basic.search = Mock(return_value={'gmeta': []})
     mock_cli_basic.ls = Mock()
     mock_cli_basic.mkdir = Mock()
     mock_cli_basic.delete = Mock()
     mock_cli_basic.delete_entry = Mock()
-    mock_cli_basic.get_search_client = Mock()
-    mock_cli_basic.get_transfer_client = Mock()
     mock_cli_basic.get_auth_client = Mock()
     mock_cli_basic.get_http_client = Mock()
     return mock_cli_basic

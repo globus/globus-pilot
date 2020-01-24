@@ -90,18 +90,20 @@ def test_download_http(monkeypatch, mixed_tsv, mock_cli_basic, mock_projects):
     assert get.call_args == call('a.tsv', range=None)
 
 
-def test_ingest(monkeypatch, mock_cli_basic):
+def test_ingest(monkeypatch, mock_cli_basic, mock_sdk_response):
     search_cli = Mock()
     search_cli.ingest.return_value = {'task_id': 'foo'}
     search_cli.get_task = Mock(return_value={'state': 'SUCCESS'})
     monkeypatch.setattr(mock_cli_basic, 'get_search_client',
                         Mock(return_value=search_cli))
-    r = mock_cli_basic.ingest_entry({'my': 'search_entry'})
+    meta = mock_cli_basic.gather_metadata(TINY_DATAFRAME, '/')
+    r = mock_cli_basic.ingest('tiny_dataframe.tsv', meta)
     assert r is True
 
-    search_cli.get_task = Mock(return_value={'state': 'FAILURE'})
+    mock_sdk_response.data = {'state': 'FAILURE', 'message': 'it failed!'}
+    search_cli.get_task.return_value = mock_sdk_response
     with pytest.raises(exc.PilotClientException):
-        mock_cli_basic.ingest_entry({'my': 'search_entry'})
+        mock_cli_basic.ingest('tiny_dataframe.tsv', meta)
 
 
 def test_get_search_entry(monkeypatch, mock_cli_basic):
@@ -180,13 +182,13 @@ def test_delete_entry_sub(monkeypatch, mock_cli_basic, mock_multi_file_result):
     assert search_cli.delete_subject.called
 
 
-def test_delete_file_in_mfe(monkeypatch, mock_cli_basic,
+def test_delete_file_in_mfe(mock_cli_basic, mock_search_client,
                             mock_multi_file_result):
-    mock_cli_basic.ingest_entry = Mock()
+    mock_cli_basic.ingest = Mock()
     mock_cli_basic.get_full_search_entry = Mock(
         return_value=mock_multi_file_result['gmeta'][0])
     mock_cli_basic.delete_entry('/multi_file/text_metadata.txt')
-    assert mock_cli_basic.ingest_entry.called
+    assert mock_cli_basic.ingest.called
 
 
 def test_delete_entry_no_result(monkeypatch, mock_cli_basic):
