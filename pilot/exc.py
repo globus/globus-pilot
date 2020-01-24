@@ -16,6 +16,7 @@ class ExitCodes(IntEnum):
     LOCAL_ENDPOINT_UNRESPONSIVE = 10
     DESTINATION_IS_RECORD = 11
     NO_RECORD_EXISTS = 12
+    INVALID_DATAFRAME_NAME = 13
 
 
 class PilotClientException(Exception):
@@ -81,6 +82,11 @@ class NoDestinationProvided(PilotCodeException):
     MESSAGE = ('No Destination Provided. Please select one from the '
                'directory or "/" for root:\n{}')
     CODE = ExitCodes.NO_DESTINATION_PROVIDED
+
+
+class InvalidDataframeName(PilotCodeException):
+    MESSAGE = 'Dataframe may not be empty or start with symbols ("/" ok): {}'
+    CODE = ExitCodes.INVALID_DATAFRAME_NAME
 
 
 class DirectoryDoesNotExist(PilotCodeException):

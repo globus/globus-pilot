@@ -81,6 +81,7 @@ class PilotClient(NativeClient):
         'urn:globus:auth:scope:transfer.api.globus.org:all',
     ]
     GROUPS_SCOPE = 'urn:globus:auth:scope:nexus.api.globus.org:groups'
+    DISALLOWED_FILENAME_SYMBOLS = '.*~$%'
 
     def __init__(self):
         self.config = config.Config()
@@ -222,6 +223,16 @@ class PilotClient(NativeClient):
           The project to fetch info for. Defaults to current project
         """
         return self.project.get_info(project)['search_index']
+
+    def get_valid_dataframe(self, dataframe):
+        if not dataframe:
+            raise exc.InvalidDataframeName(fmt=[dataframe])
+        if not isinstance(dataframe, str):
+            raise exc.InvalidDataframeName()
+        if any([dataframe.startswith(s)
+               for s in list(self.DISALLOWED_FILENAME_SYMBOLS)]):
+            raise exc.InvalidDataframeName(fmt=[dataframe])
+        return os.path.abspath(dataframe)
 
     def resolve_endpoint(self, url):
         """
@@ -858,6 +869,7 @@ class PilotClient(NativeClient):
           The project to use as the base path. Defaults to current project
         **Examples**
         """
+        dframe = self.get_valid_dataframe(dataframe)
         try:
             self.ls(destination)
         except globus_sdk.exc.TransferAPIError as tapie:
@@ -865,7 +877,7 @@ class PilotClient(NativeClient):
                 raise exc.DirectoryDoesNotExist(fmt=[destination]) from None
             else:
                 raise exc.GlobusTransferError(tapie.message) from None
-        short_path = os.path.join(destination, os.path.basename(dataframe))
+        short_path = os.path.join(destination, os.path.basename(dframe))
         subject = self.get_subject_url(short_path)
         # Get a list of all entries to check if the new record already exists
         prev_candidates = self.list_entries()
@@ -884,7 +896,7 @@ class PilotClient(NativeClient):
             subject = prev_entry['subject']
             prev_metadata = prev_entry['content'][0]
         new_metadata = self.gather_metadata(
-            dataframe, destination, previous_metadata=prev_metadata,
+            dframe, destination, previous_metadata=prev_metadata,
             custom_metadata=metadata or {}, skip_analysis=skip_analysis,
             foreign_keys=foreign_keys
         )
@@ -945,13 +957,14 @@ class PilotClient(NativeClient):
                project='your-project'
                )
         """
+        dframe = self.get_valid_dataframe(dataframe)
         if globus and not self.profile.load_option('local_endpoint'):
             raise exc.NoLocalEndpointSet()
         if not destination:
             raise exc.NoDestinationProvided(fmt=[self.ls('')])
 
         stats = self.register(
-            dataframe, destination, metadata=metadata, update=update,
+            dframe, destination, metadata=metadata, update=update,
             dry_run=dry_run, skip_analysis=skip_analysis,
             foreign_keys=foreign_keys
         )
@@ -960,7 +973,7 @@ class PilotClient(NativeClient):
         up = self.upload_globus if globus else self.upload_http
         if not dry_run and stats['files_modified'] is True:
             log.debug('Uploading using {}'.format(up))
-            stats['upload'] = up(dataframe, destination, project=project)
+            stats['upload'] = up(dframe, destination, project=project)
         return stats
 
     def upload_http(self, dataframe, destination, project=None):
