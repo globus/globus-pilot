@@ -479,8 +479,8 @@ class PilotClient(NativeClient):
         path = self.get_path(path, project=project, relative=relative)
         return [ent for ent in raw['gmeta'] if path in ent.get('subject')]
 
-    def get_search_entry(self, path, project=None, relative=True,
-                         resolve_collections=True):
+    def get_full_search_entry(self, path, project=None, relative=True,
+                              resolve_collections=True, precise=True):
         """
         Get a search entry for a given resource
         **Parameters**
@@ -494,6 +494,14 @@ class PilotClient(NativeClient):
         ``resolve_collections`` (*bool*)
           If the path given points to what might be a multi-file directory
           entry, attempt to resolve the entry.
+        ``precise`` (*bool*)
+          If the path given points to a location inside a multi-file directory
+          only return the record if the location matches a file.
+          For example, given an entry containing the files:
+            my_dir/foo1.txt, my_dir/foo2.txt, my_dir/foo3.txt
+          If precise=True and the path is my_dir/foo4.txt, None will be
+          returned. If precise=False and the path is my_dir/foo4.txt, the
+          "my_dir" record will still be returned.
         **Examples**
         >>> pc.get_search_entry('foo.txt')
           {'dc': {'creators': [{'creatorName': 'NOAA'}],
@@ -506,12 +514,23 @@ class PilotClient(NativeClient):
         project = project or self.project.current
         subject = self.get_subject_url(path, project, relative)
         try:
-            entry = sc.get_subject(self.get_index(project), subject)
-            return entry['content'][0]
+            return sc.get_subject(self.get_index(project), subject)
         except globus_sdk.exc.SearchAPIError as sapie:
             if sapie.code == 'NotFound.Generic' and resolve_collections:
-                return search_discovery.get_sub_in_collection(
-                    subject, self.list_entries())
+                ent = search_discovery.get_sub_in_collection(
+                    subject, self.list_entries(), precise=precise
+                )
+                if ent:
+                    return ent
+
+    def get_search_entry(self, path, project=None, relative=True,
+                         resolve_collections=True, precise=True):
+        entry = self.get_full_search_entry(
+            path, project=project, relative=relative,
+            resolve_collections=resolve_collections, precise=precise
+        )
+        if entry:
+            return entry['content'][0]
 
     def ingest_entry(self, gmeta_entry, index=None):
         """
@@ -552,29 +571,6 @@ class PilotClient(NativeClient):
         if sc.get_task(result['task_id'])['state'] != 'SUCCESS':
             raise exc.PilotClientException('Failed to ingest search subject')
         return True
-
-    def delete_entry(self, path, entry_id='metadata', full_subject=False):
-        """
-        Delete a search entry in Globus Search.
-        **Parameters**
-        ``path`` (*path string*)
-          Path to a local resource on this project
-        ``entry_id`` (*string*)
-          Name of the entry to delete.
-        ``full_subject`` (*bool*)
-          Delete all entries in the subject. This is typically equivalent to
-          normal deletes if only one entry exists for the given subject.
-        **Examples**
-        >>> pc.delete_entry('foo/bar.txt')
-        >>> pc.delete_entry('moo.txt', entry_id='special_metadata')
-        >>> pc.delete_entry('goo.json' full_subject=True)
-        """
-        index, subject = self.get_index(), self.get_subject_url(path)
-        search_cli = self.get_search_client()
-        if full_subject:
-            return search_cli.delete_subject(index, subject)
-        else:
-            return search_cli.delete_entry(index, subject, entry_id=entry_id)
 
     def gather_metadata(self, dataframe, destination, previous_metadata=None,
                         custom_metadata=None, skip_analysis=False, project=None
@@ -622,7 +618,7 @@ class PilotClient(NativeClient):
         * pilot.exc.DirectoryDoesNotExist - destination not found
         * pilot.exc.GlobusTransferError - unexpected transfer error
         * pilot.exc.RecordExists - Record exists and update flag was false
-        * pilot.exc.NoChangesNeeded - Record was an exact match
+        * pilot.exc.DestinationIsRecord -- Can't register record inside another
         * pilot.exc.DryRun - Everything succeeded, but ingest was aborted
 
         **Parameters**
@@ -644,7 +640,6 @@ class PilotClient(NativeClient):
           The project to use as the base path. Defaults to current project
         **Examples**
         """
-
         try:
             self.ls(destination)
         except globus_sdk.exc.TransferAPIError as tapie:
@@ -652,23 +647,32 @@ class PilotClient(NativeClient):
                 raise exc.DirectoryDoesNotExist(fmt=[destination]) from None
             else:
                 raise exc.GlobusTransferError(tapie.message) from None
-
-        if self.get_search_entry(destination):
-            raise exc.DestinationIsRecord(fmt=[destination])
         short_path = os.path.join(destination, os.path.basename(dataframe))
-        prev_metadata = self.get_search_entry(short_path)
-        if prev_metadata and not update and not dry_run:
-            raise exc.RecordExists(prev_metadata, fmt=[short_path])
+        subject = self.get_subject_url(short_path)
+        # Get a list of all entries to check if the new record already exists
+        prev_candidates = self.list_entries()
+        prev_entry = search_discovery.get_sub_in_collection(
+            subject, prev_candidates, precise=False)
+        prev_metadata = {}
+        if prev_entry:
+            if not update and not dry_run:
+                raise exc.RecordExists(prev_entry['content'][0],
+                                       fmt=[short_path])
+            # If we hit on another subject, use the previous subject. This
+            # handles two cases: 1. replacing an existing subject 2. Adding
+            # a file to an existing subject, where we should use the top level
+            # subject name of the entry.
+            subject = prev_entry['subject']
+            prev_metadata = prev_entry['content'][0]
         new_metadata = self.gather_metadata(
             dataframe, destination, previous_metadata=prev_metadata,
             custom_metadata=metadata or {}, skip_analysis=skip_analysis
         )
-        stats = search.gather_metadata_stats(new_metadata, prev_metadata or {})
+        stats = search.gather_metadata_stats(new_metadata, prev_metadata)
         stats['ingest'] = {}
         if stats['metadata_modified'] is False:
             return stats
-        gmeta = search.gen_gmeta(self.get_subject_url(short_path),
-                                 [self.get_group()], new_metadata)
+        gmeta = search.gen_gmeta(subject, [self.get_group()], new_metadata)
         if dry_run:
             return stats
         stats['ingest'] = self.ingest_entry(gmeta)
@@ -860,21 +864,28 @@ class PilotClient(NativeClient):
         downloader = self.download_globus if globus else self.download_http
         return downloader(path, project=project, relative=relative)
 
-    def download_parts(self, path, project=None, relative=True, range=None):
+    def download_parts(self, url, dest=None, project=None, range=None):
         """Download a file in parts over HTTP and yield the number of bytes
         written for each part. Yields a generator for each part."""
-        fname = os.path.basename(path)
-        url = self.get_path(path, project=project, relative=relative)
-        http_client = self.get_http_client(project=project)
+        dest = os.path.dirname(dest or '')
+        relative_dest = ''
+        for dir in dest.split('/'):
+            relative_dest = os.path.join(relative_dest, dir)
+            if relative_dest and not os.path.exists(relative_dest):
+                log.info('Making relative dir: {}'.format(relative_dest))
+                os.mkdir(relative_dest)
+        http_client = self.get_http_client(project=project or None)
         log.debug(f'Fetching item {url}')
         response = http_client.get(url, range=range)
-        with open(fname, 'wb') as fh:
+        file_dest = os.path.join(dest, os.path.basename(url))
+        with open(file_dest, 'wb') as fh:
             for part in response.iter_content:
                 yield fh.write(part)
         log.debug('Fetch Successful')
         return 0
 
-    def download_http(self, path, project=None, relative=True, range=None):
+    def download_http(self, path, dest=None, project=None, relative=True,
+                      range=None):
         """
         Download a file to the local system using HTTPS to the local filesystem
         using the 'path' basename. Returns the total number of bytes written
@@ -895,16 +906,65 @@ class PilotClient(NativeClient):
         >>> pc.download('foo.txt', project='bar', range='0-100')
         >>> pc.download('bar/moo.txt', range='0-100,150-200')
         """
-        return sum(self.download_parts(path, project, relative, range))
+        dest = dest or os.path.basename(path)
+        return sum(self.download_parts(path, dest=dest, project=project,
+                                       range=range))
 
     def download_globus(self, path, globus_args=None):
         result = self.transfer_file(
-            self.profile.load_option('local_endpoint'),
             self.get_endpoint(),
+            self.profile.load_option('local_endpoint'),
             path,
-            os.path.basename(path),
-            **globus_args)
+            os.path.join(os.getcwd(), os.path.basename(path)),
+            **(globus_args or {}))
         return result
+
+    def delete_entry(self, path, entry_id='metadata', full_subject=False,
+                     project=None, relative=True):
+        """
+        Delete a search entry in Globus Search. If the given path is a partial
+        match on a multi-file-entry, the entry is pruned and re-ingested. If
+        the delete is partial, full_subject has no effect. If the delete is
+        partial and a different entry_id is provided, the entry will be
+        re-ingested with the new entry_id.
+        **Parameters**
+        ``path`` (*path string*)
+          Path to a local resource on this project
+        ``entry_id`` (*string*)
+          Name of the entry to delete.
+        ``full_subject`` (*bool*)
+          Delete all entries in the subject. This is typically equivalent to
+          normal deletes if only one entry exists for the given subject.
+        **Examples**
+        >>> pc.delete_entry('foo/bar.txt')
+        >>> pc.delete_entry('moo.txt', entry_id='special_metadata')
+        >>> pc.delete_entry('goo.json' full_subject=True)
+        """
+        index = self.get_index(project=project)
+        entry = self.get_full_search_entry(
+            path, project=project, relative=relative, resolve_collections=True,
+            precise=True
+        )
+        if not entry:
+            raise exc.RecordDoesNotExist(path)
+        sub = entry['subject']
+        entry = entry['content'][0]
+        full_path = self.get_path(path, project=project, relative=relative)
+        if not search_discovery.is_top_level(entry, full_path):
+            log.info('Pruning {} from multi-file-entry'.format(path))
+            new_files = search.prune_files(entry, full_path)
+            del_num = len(entry['files']) - len(new_files)
+            entry['files'] = new_files
+            group = self.get_group(project=project)
+            gmeta = search.gen_gmeta(sub, [group], entry)
+            self.ingest_entry(gmeta)
+            return del_num
+        search_cli = self.get_search_client()
+        if full_subject:
+            search_cli.delete_subject(index, sub)
+        else:
+            search_cli.delete_entry(index, sub, entry_id=entry_id)
+        return 1
 
     def delete(self, path, project=None, relative=True, recursive=False):
         """

@@ -1,6 +1,7 @@
 import os
 import copy
 import hashlib
+import urllib
 import pytz
 import datetime
 import json
@@ -121,6 +122,17 @@ def scrape_metadata(dataframe, url, pilot_client, skip_analysis=True):
     }
 
 
+def prune_files(entry, path):
+    path = path.lstrip('/').rstrip('/')
+    remaining = []
+    for f in entry.get('files'):
+        url_path = urllib.parse.urlparse(f.get('url')).path.lstrip('/')
+        if not url_path.startswith(path):
+            log.debug('{} not in {}, keeping file...'.format(f['url'], path))
+            remaining.append(f)
+    return remaining
+
+
 def carryover_old_file_metadata(new_scrape_rfm, old_rfm):
     """Carries over old metadata into the new file manifest. This is
     desired if the files haven't changed and the metadata wasn't explicitly
@@ -128,21 +140,25 @@ def carryover_old_file_metadata(new_scrape_rfm, old_rfm):
     descriptive metadata. If the Remote File Manifests have different files,
     this should not be used."""
     if not old_rfm or not new_scrape_rfm:
-        return new_scrape_rfm
+        return new_scrape_rfm or old_rfm
 
     new = {f['url']: f for f in new_scrape_rfm}
     old = {f['url']: f for f in old_rfm}
 
-    if new.keys() != old.keys():
-        log.debug('Files Updated! Old: {}, New: {}'
-                  ''.format(list(old_rfm), list(new_scrape_rfm)))
-        return new_scrape_rfm
+    similar_files = set(old.keys()).intersection(set(new.keys()))
+    DO_NOT_CARRYOVER = DEFAULT_HASH_ALGORITHMS + ['filename', 'length']
+    for url in similar_files:
+        for field in old[url].keys():
+            if field in DO_NOT_CARRYOVER:
+                continue
+            if old[url].get(field):
+                if new.get(url):
+                    new[url][field] = old[url][field]
 
-    for k, v in old.items():
-        for field in ['data_type', 'mime_type']:  # 'dataframe_type'
-            if old[k].get(field):
-                if new.get(k):
-                    new[k][field] = old[k][field]
+    # Carry over old files
+    for url in old.keys():
+        if url not in new.keys():
+            new[url] = old[url]
     return list(new.values())
 
 

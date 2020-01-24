@@ -15,6 +15,8 @@ class ExitCodes(IntEnum):
     INVALID_CLIENT_CONFIGURATION = 8
     NO_LOCAL_ENDPOINT_SET = 9
     LOCAL_ENDPOINT_UNRESPONSIVE = 10
+    DESTINATION_IS_RECORD = 11
+    NO_RECORD_EXISTS = 12
 
 
 class PilotClientException(Exception):
@@ -37,6 +39,10 @@ class PilotValidator(PilotClientException):
 
     def __str__(self):
         return self.message
+
+
+class RecordDoesNotExist(PilotClientException):
+    pass
 
 
 class PilotCodeException(PilotClientException):
@@ -91,6 +97,12 @@ class GlobusTransferError(PilotCodeException):
 class NoChangesNeeded(PilotCodeException):
     MESSAGE = '"{}": Files and search entry are an exact match.'
     CODE = ExitCodes.SUCCESS
+
+
+class DestinationIsRecord(PilotCodeException):
+    MESSAGE = ('The Destination "{}" is a record. Adding records to existing '
+               'collections is not supported.')
+    CODE = ExitCodes.DESTINATION_IS_RECORD
 
 
 class RecordExists(PilotCodeException):

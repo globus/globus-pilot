@@ -76,20 +76,27 @@ def test_upload_validation_error(mock_cli):
     assert result.exit_code == ExitCodes.INVALID_METADATA
 
 
-def test_no_update_needed(mock_cli):
-    url = mock_cli.get_globus_http_url(os.path.basename(EMPTY_TEST_FILE))
+def test_no_update_needed(mock_cli, mock_search_results):
+    base_name = os.path.basename(EMPTY_TEST_FILE)
+    url = mock_cli.get_globus_http_url(base_name)
+    sub = mock_cli.get_subject_url(base_name)
     meta = scrape_metadata(EMPTY_TEST_FILE, url, mock_cli)
-    mock_cli.get_search_entry.return_value = meta
+    mock_search_results['gmeta'][0]['content'][0] = meta
+    mock_search_results['gmeta'][0]['subject'] = sub
+    mock_cli.list_entries = Mock(return_value=mock_search_results['gmeta'])
     result = CliRunner().invoke(upload, [EMPTY_TEST_FILE, '/',
                                          '--no-gcp', '-u'])
     assert result.exit_code == 0
     assert 'Files and search entry are an exact match.' in result.output
 
 
-def test_upload_record_exists(mock_cli):
-    url = mock_cli.get_globus_http_url('my_folder/test_file_zero_length.txt')
+def test_upload_record_exists(mock_cli, mock_search_results):
+    sub = mock_cli.get_subject_url('my_folder')
+    url = mock_cli.get_globus_http_url('my_folder/')
     meta = scrape_metadata(EMPTY_TEST_FILE, url, mock_cli)
-    mock_cli.get_search_entry.return_value = meta
+    mock_search_results['gmeta'][0]['content'][0] = meta
+    mock_search_results['gmeta'][0]['subject'] = sub
+    mock_cli.list_entries = Mock(return_value=mock_search_results['gmeta'])
     result = CliRunner().invoke(upload, [SMALL_TEST_FILE, 'my_folder'])
     assert result.exit_code == ExitCodes.RECORD_EXISTS
 
@@ -101,10 +108,15 @@ def test_upload_dry_run(mock_cli):
     assert 'text/plain' in result.output
 
 
-def test_dataframe_up_to_date(mock_cli, mock_transfer_log):
+def test_dataframe_up_to_date(mock_cli, mock_transfer_log,
+                              mock_search_results):
     with open(EMTPY_TEST_FILE_META) as f:
         meta = json.load(f)
-    mock_cli.get_search_entry.return_value = meta
+    base_name = os.path.basename(EMPTY_TEST_FILE)
+    sub = mock_cli.get_subject_url(base_name)
+    mock_search_results['gmeta'][0]['content'][0] = meta
+    mock_search_results['gmeta'][0]['subject'] = sub
+    mock_cli.list_entries = Mock(return_value=mock_search_results['gmeta'])
     result = CliRunner().invoke(upload, [EMPTY_TEST_FILE, '/',
                                          '-u', '-j', CUSTOM_METADATA])
     assert result.exit_code == 0
@@ -120,7 +132,6 @@ def test_upload_local_endpoint_not_set(mock_cli, mock_profile):
 
 
 def test_upload_gcp_log(mock_cli, mock_transfer_log):
-    mock_cli.get_search_entry.return_value = {}
     mock_cli.get_transfer_client().submit_transfer.return_value = {}
     result = CliRunner().invoke(upload, [EMPTY_TEST_FILE, 'my_folder'])
     assert result.exit_code == 0

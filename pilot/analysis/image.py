@@ -1,5 +1,5 @@
-import logging
 from PIL import Image
+
 
 def analyze_image(filename, foreign_keys=None):
     img = Image.open(filename)

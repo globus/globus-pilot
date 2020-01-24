@@ -8,8 +8,10 @@ import datetime
 import pilot
 import traceback
 import contextlib
+import pathlib
 from pilot.exc import (RequiredUploadFields, HTTPSClientException,
                        InvalidField, ExitCodes)
+from pilot.search_parse import get_size
 from pilot.commands.endpoint_utils import test_local_endpoint
 from jsonschema.exceptions import ValidationError
 
@@ -186,33 +188,38 @@ def pilot_code_handler(dataframe, destination, verbose):
 @click.option('--range', help='Download only part of a file. '
                               'Ex: bytes=0-1, 4-5')
 def download(path, overwrite, range):
+    # TODO -- Downloading single files within mfes is BROKEN! This instead
+    # casues all files to be downloaded
     pc = pilot.commands.get_pilot_client()
     fname = os.path.basename(path)
     if os.path.exists(fname) and not overwrite:
         click.echo('Aborted! File {} would be overwritten.'.format(fname))
         return
     try:
-        record = pc.get_search_entry(path)
-        url = pc.get_globus_http_url(path)
-        match = pilot.search_discovery.get_matching_file(url, record)
-        if not match:
-            cands = pilot.search_discovery.get_relative_filenames(url, record)
-            if cands:
-                click.secho('{} contains {} files, pick one to download:\n{}'
-                            .format(path, len(cands), cands), fg='yellow')
-            else:
-                click.secho(
-                    'No record exists for {}, you may want to register it.'
-                    .format(path), fg='yellow')
-            return 1
-        length = match.get('length', 0)
-        r_content = pc.download_parts(path, range=range)
-        params = {'label': 'Downloading {}'.format(fname), 'length': length,
-                  'show_pos': True}
-        with click.progressbar(**params) as bar:
-            for bytes_written in r_content:
-                bar.update(bytes_written)
-        click.echo('Saved {}'.format(fname))
+        ent = pc.get_search_entry(path, resolve_collections=True,
+                                  precise=False)
+        if not ent:
+            click.secho('No record exists for {}.'.format(path), fg='yellow')
+            sys.exit(pilot.exc.ExitCodes.NO_RECORD_EXISTS)
+        http_path = pc.get_globus_http_url(path)
+        to_download = [f for f in ent['files'] if http_path in f['url']]
+        if len(to_download) > 1:
+            click.secho('Downloading {} files, totalling {}'.format(
+                len(to_download), get_size({'files': to_download})))
+        for file_ent in to_download:
+            base_path = os.path.dirname(http_path)
+            dest = file_ent['url'].replace(base_path, '').lstrip('/')
+            if file_ent.get('length') == 0:
+                click.secho('{} is an empty file'.format(dest))
+                pathlib.Path(dest).touch()
+                continue
+            r_content = pc.download_parts(file_ent['url'], dest=dest,
+                                          project=None, range=range)
+            params = {'label': 'Downloading {}'.format(dest),
+                      'length': file_ent['length'], 'show_pos': True}
+            with click.progressbar(**params) as bar:
+                for bytes_written in r_content:
+                    bar.update(bytes_written)
     except HTTPSClientException as hce:
         log.exception(hce)
         if hce.http_status == 404:
