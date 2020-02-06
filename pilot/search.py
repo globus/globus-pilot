@@ -16,7 +16,7 @@ import logging
 
 from pilot.validation import validate_dataset, validate_user_provided_metadata
 from pilot import analysis
-from pilot.exc import InvalidField
+from pilot.exc import InvalidField, PilotClientException
 
 DEFAULT_HASH_ALGORITHMS = ['sha256', 'md5']
 DEFAULT_PUBLISHER = 'Argonne National Laboratory'
@@ -42,6 +42,7 @@ GMETA_ENTRY = {
 
 GROUP_URN_PREFIX = 'urn:globus:groups:id:{}'
 
+CORE_PILOT_FIELDS = ['dc', 'project_metadata', 'files']
 # Used for user provided metadata. These fields will be stripped out and used
 # in the datacite fields.
 DATACITE_FIELDS = ['title', 'description', 'creators', 'mime_type',
@@ -198,6 +199,20 @@ def carryover_old_file_metadata(new_scrape_rfm, old_rfm):
     return list(new.values())
 
 
+def overwrite_core_fields(new_metadata, old_metadata):
+    """For fields like dc and project_metadata, if overwrite the items in
+    old_metadata with the fields in new_metadata"""
+    old_metadata = copy.deepcopy(old_metadata)
+    for cat in ['dc', 'project_metadata']:
+        if cat not in new_metadata:
+            continue
+        for newk, newv in new_metadata[cat].items():
+            log.debug('Replacing old field [{}][{}] with {}'.format(cat, newk,
+                                                                    newv))
+            old_metadata[cat][newk] = newv
+    return old_metadata
+
+
 def files_modified(manifest1, manifest2):
     """Compare two remote file manifests for equality, and return true if
     the files are different. ONLY file specific properties are checked,
@@ -234,6 +249,9 @@ def metadata_modified(new_metadata, old_metadata):
     Both new_metadata and old_metadata should be dicts that match the output
     from `scrape_metadata` and can pass validation
     """
+    if not new_metadata:
+        log.debug('No new metadata, aborting...')
+        return bool(old_metadata)
     old_metadata = old_metadata or {}
     general_fields_match = [new_metadata.get(field) == old_metadata.get(field)
                             for field in ['files', 'project_metadata']]
@@ -279,17 +297,27 @@ def update_dc_version(new_metadata, old_metadata):
 
 
 def update_metadata(scraped_metadata, prev_metadata, user_metadata):
-    if prev_metadata:
+    if not scraped_metadata and not prev_metadata:
+        raise PilotClientException('No scraped or previous metadata!')
+    elif not scraped_metadata:
+        metadata = prev_metadata
+    elif not prev_metadata:
+        metadata = scraped_metadata
+    else:
         log.debug('Previous metadata detected!')
         metadata = copy.deepcopy(scraped_metadata or {})
-        metadata = update_dc_version(metadata, prev_metadata)
+        if scraped_metadata:
+            metadata = update_dc_version(metadata, prev_metadata)
         metadata['files'] = carryover_old_file_metadata(
             scraped_metadata.get('files'),
             prev_metadata.get('files')
         )
-    else:
-        metadata = scraped_metadata
     if user_metadata:
+        metadata = overwrite_core_fields(user_metadata, metadata)
+        user_metadata = copy.deepcopy(user_metadata)
+        for coref in CORE_PILOT_FIELDS:
+            if coref in user_metadata:
+                user_metadata.pop(coref)
         validate_user_provided_metadata(user_metadata)
         for field_name, value in user_metadata.items():
             if field_name in DATACITE_FIELDS:

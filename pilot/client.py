@@ -833,6 +833,17 @@ class PilotClient(NativeClient):
         return search.update_metadata(new_metadata, previous_metadata or {},
                                       custom_metadata or {})
 
+    def update(self, short_path, user_metadata, dry_run=False):
+        prev_metadata = self.get_search_entry(short_path)
+        new_metadata = search.update_metadata({}, prev_metadata, user_metadata)
+        stats = search.gather_metadata_stats(new_metadata, prev_metadata)
+        stats['ingest'] = {}
+        if stats['metadata_modified'] is False:
+            return stats
+        stats['ingest'] = self.ingest(short_path, new_metadata,
+                                      dry_run=dry_run)
+        return stats
+
     def register(self, dataframe, destination, metadata=None,
                  update=False, dry_run=False, skip_analysis=False,
                  foreign_keys=None):
