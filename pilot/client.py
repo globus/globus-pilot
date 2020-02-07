@@ -663,7 +663,7 @@ class PilotClient(NativeClient):
             return entry['content'][0]
 
     def ingest(self, path, content, group=None, project=None,
-               relative=True, index=None, dry_run=False):
+               relative=True, index=None, dry_run=False, force=False):
         """
         Ingest content into search. The content is validated against Pilot's
         built-in schema.
@@ -691,6 +691,8 @@ class PilotClient(NativeClient):
         >>> pc.ingest('bar/foo.txt', content)
         """
         sub = self.get_subject_url(path, project=project, relative=relative)
+        if force is False:
+            self.validate_subject(sub)
         content = [{'subject': sub, 'content': content}]
         gmeta = search.get_gmeta_list(content, default_visible_to=group,
                                       validate=True)
@@ -698,8 +700,8 @@ class PilotClient(NativeClient):
             return gmeta
         return self.ingest_gmeta(gmeta, index)
 
-    def ingest_many(self, content_map, group=None, project=None, relative=None,
-                    index=None, dry_run=False):
+    def ingest_many(self, content_map, group=None, project=None, relative=True,
+                    index=None, dry_run=False, force=False):
         """
         Ingest many entries into search, with paths to entries mapped to
         content.
@@ -729,15 +731,17 @@ class PilotClient(NativeClient):
         >>> content_map['bar/moo.txt'] = pc.gather_metadata('moo.txt', 'bar')
         >>> pc.ingest_many(content_map)
         """
-        content = [{
-            'subject': self.get_subject_url(path, project=project,
-                                            relative=relative),
-            'content': entry_content
-        } for path, entry_content in content_map.items()]
-        gmeta = search.get_gmeta_list(content, group, validate=True)
+        content_list = []
+        for path, content in content_map.items():
+            sub = self.get_subject_url(path, project=project,
+                                       relative=relative)
+            if force is False:
+                self.validate_subject(sub)
+            content_list.append({'subject': sub, 'content': content})
+        gmeta = search.get_gmeta_list(content_list, group, validate=True)
         if dry_run:
             log.info('{} entry ingest ABORTED due to dry run.'
-                     ''.format(len(content)))
+                     ''.format(len(content_list)))
             return gmeta
         return self.ingest_gmeta(gmeta, index)
 
@@ -832,6 +836,17 @@ class PilotClient(NativeClient):
             new_metadata['files'] = new_files
         return search.update_metadata(new_metadata, previous_metadata or {},
                                       custom_metadata or {})
+
+    def update(self, short_path, user_metadata, dry_run=False):
+        prev_metadata = self.get_search_entry(short_path)
+        new_metadata = search.update_metadata({}, prev_metadata, user_metadata)
+        stats = search.gather_metadata_stats(new_metadata, prev_metadata)
+        stats['ingest'] = {}
+        if stats['metadata_modified'] is False:
+            return stats
+        stats['ingest'] = self.ingest(short_path, new_metadata,
+                                      dry_run=dry_run)
+        return stats
 
     def register(self, dataframe, destination, metadata=None,
                  update=False, dry_run=False, skip_analysis=False,
@@ -1154,7 +1169,7 @@ class PilotClient(NativeClient):
         return result
 
     def delete_entry(self, path, entry_id='metadata', full_subject=False,
-                     project=None, relative=True):
+                     project=None, relative=True, force=False):
         """
         Delete a search entry in Globus Search. If the given path is a partial
         match on a multi-file-entry, the entry is pruned and re-ingested. If
@@ -1186,6 +1201,8 @@ class PilotClient(NativeClient):
         full_path = self.get_path(path, project=project, relative=relative)
         search_cli = self.get_search_client()
         if full_subject:
+            if force is False:
+                self.validate_subject(sub)
             search_cli.delete_subject(index, sub)
         elif not search_discovery.is_top_level(entry, full_path):
             log.info('Pruning {} from multi-file-entry'.format(path))
@@ -1225,3 +1242,13 @@ class PilotClient(NativeClient):
         ddata.add_item(full_path)
         delete_result = tc.submit_delete(ddata)
         log.debug(delete_result)
+
+    def validate_subject(self, subject):
+        pdata = self.resolve_project(subject)
+        if pdata is None:
+            raise exc.InvalidProject('No project associated with subject'
+                                     ': {}'.format(subject))
+        if pdata['name'] != self.project.current:
+            raise exc.SubjectOutsideProject(
+                'Subject outside of current project "{}": Subject: {}'
+                ''.format(pdata['base_path'], subject))

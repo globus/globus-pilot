@@ -23,6 +23,14 @@ class PilotClientException(Exception):
     pass
 
 
+class InvalidProject(PilotClientException):
+    pass
+
+
+class SubjectOutsideProject(PilotClientException):
+    pass
+
+
 class PilotContextException(Exception):
     pass
 
