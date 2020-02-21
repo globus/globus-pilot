@@ -569,6 +569,7 @@ class PilotClient(NativeClient):
             },
             'limit': 100,
             'offset': 0,
+            'result_format_version': '2017-09-01',
         }
         search_data.update(custom_params or {})
         return sc.post_search(index, search_data).data
