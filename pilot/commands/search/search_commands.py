@@ -71,7 +71,9 @@ def get_location_info(entry):
               help='Only list results relative to project')
 @click.option('--all', 'all_recs', default=False, is_flag=True,
               help='Do not filter on project')
-def list_command(path, output_json, limit, relative, all_recs):
+@click.option('--entry-id', 'entry_id', default='metadata',
+              help='GS Entry id to use for search data.')
+def list_command(path, output_json, limit, relative, all_recs, entry_id):
     # Should require login if there are publicly visible records
     pc = commands.get_pilot_client()
     project = pc.project.current
@@ -79,7 +81,6 @@ def list_command(path, output_json, limit, relative, all_recs):
     if all_recs:
         search_params['filters'], relative = [], False
     search_results = pc.search(project=project, custom_params=search_params)
-    log.debug(search_results)
     if output_json:
         click.echo(json.dumps(search_results, indent=4))
         return
@@ -100,7 +101,7 @@ def list_command(path, output_json, limit, relative, all_recs):
             log.debug('Skipping result {}'.format(result['subject']))
             continue
 
-        data = dict(parse_result(result['content'][0], items))
+        data = dict(parse_result(result['entries'][entry_id], items))
         parsed = [data.get(name) for name in items]
         parsed += [get_short_path(result) if relative else result['subject']]
         parsed = [str(p) for p in parsed]

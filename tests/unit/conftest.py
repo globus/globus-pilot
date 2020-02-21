@@ -97,7 +97,8 @@ def mock_search_data():
 def mock_search_results(mock_search_data):
     return {'@datatype': 'GSearchResult', '@version': '2017-09-01', 'count': 1,
             'gmeta': [{'@datatype': 'GMetaResult', '@version': '2017-09-01',
-                       'content': [mock_search_data],
+                       'entries': [{'content': mock_search_data,
+                                    'entry_id': 'metadata'}],
                        'subject': 'foo_folder'}],
             'offset': 0, 'total': 1}
 
@@ -109,8 +110,22 @@ def mock_multi_file_result(mock_search_results):
     with open(mf_filename) as f:
         multi_file = json.load(f)
     sub = 'globus://foo-project-endpoint/foo_folder/multi_file'
-    data['gmeta'] = [{'content': [multi_file], 'subject': sub}]
+    data['gmeta'] = [
+        {'entries': [{'content': multi_file, 'entry_id': 'metadata'}],
+         'subject': sub}
+    ]
     return data
+
+
+@pytest.fixture
+def mock_subject_data(mock_multi_file_result):
+    content = mock_multi_file_result['gmeta'][0]['entries'][0]['content']
+    mmfe = {
+        'entry_ids': ['metadata'],
+        'content': [content],
+        'subject': mock_multi_file_result['gmeta'][0]['subject']
+    }
+    return mmfe
 
 
 @pytest.fixture

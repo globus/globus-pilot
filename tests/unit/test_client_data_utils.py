@@ -108,9 +108,11 @@ def test_ingest(monkeypatch, mock_cli_basic, mock_sdk_response):
 
 def test_get_search_entry(monkeypatch, mock_cli_basic):
     search_cli = Mock()
-    search_cli.get_subject.return_value = {'content': ['myresult']}
+    search_cli.get_subject.return_value = {'content': ['myresult'],
+                                           'entry_ids': ['metadata']}
     mock_cli_basic.get_search_client = Mock(return_value=search_cli)
 
+    print(mock_cli_basic.get_search_entry('foo'))
     assert mock_cli_basic.get_search_entry('foo') == 'myresult'
     search_cli.get_subject.assert_called_with(
         'foo-search-index',
@@ -160,33 +162,31 @@ def test_get_search_entry_dir(monkeypatch, mock_cli_basic,
     ps_response.data = mock_multi_file_result
     search_cli.post_search.return_value = ps_response
     entry = mock_cli_basic.get_search_entry('multi_file/text_metadata.txt')
-    assert entry == mock_multi_file_result['gmeta'][0]['content'][0]
+    assert entry == mock_multi_file_result['gmeta'][0]['entries'][0]['content']
 
 
-def test_delete_entry_sub(monkeypatch, mock_cli_basic, mock_multi_file_result):
-    search_cli = Mock()
+def test_delete_entry_sub(mock_cli_basic, mock_search_client,
+                          mock_subject_data):
     mock_cli_basic.ingest_entry = Mock()
-    monkeypatch.setattr(mock_cli_basic, 'get_search_client',
-                        Mock(return_value=search_cli))
-    ment = Mock(return_value=mock_multi_file_result['gmeta'][0])
-    mock_cli_basic.get_full_search_entry = ment
+    mock_subject_data['entry_ids'] = ['my_id']
+    mock_search_client.get_subject.return_value = mock_subject_data
+
     mock_cli_basic.delete_entry('/multi_file', entry_id='my_id')
     assert not mock_cli_basic.ingest_entry.called
-    assert search_cli.delete_entry.call_args == call(
+    assert mock_search_client.delete_entry.call_args == call(
         'foo-search-index',
         'globus://foo-project-endpoint/foo_folder/multi_file',
         entry_id='my_id'
     )
-    mock_cli_basic.delete_entry('/multi_file', 'my_custom_id',
+    mock_cli_basic.delete_entry('/multi_file', 'my_id',
                                 full_subject=True)
-    assert search_cli.delete_subject.called
+    assert mock_search_client.delete_subject.called
 
 
 def test_delete_file_in_mfe(mock_cli_basic, mock_search_client,
-                            mock_multi_file_result):
+                            mock_subject_data):
     mock_cli_basic.ingest = Mock()
-    mock_cli_basic.get_full_search_entry = Mock(
-        return_value=mock_multi_file_result['gmeta'][0])
+    mock_search_client.get_subject.return_value = mock_subject_data
     mock_cli_basic.delete_entry('/multi_file/text_metadata.txt')
     assert mock_cli_basic.ingest.called
 
