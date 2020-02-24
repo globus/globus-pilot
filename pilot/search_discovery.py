@@ -30,7 +30,8 @@ def get_sub_in_collection(subject, entries, precise=True):
     entry = get_entry_with_matching_subject(entries, subject)
     if entry is None or precise is False:
         return entry
-    urls = [m.get('url') for m in entry['content'][0].get('files', [])]
+    urls = [m.get('url') for m in entry['entries']['metadata'].get('files',
+                                                                   [])]
     sub_path = urllib.parse.urlparse(subject).path
     for url in urls:
         log.debug('Checking {}'.format(url))
@@ -99,3 +100,13 @@ def get_paths(entry):
 def is_top_level(entry, subject):
     sub_path = urllib.parse.urlparse(subject).path
     return all([f_path.startswith(sub_path) for f_path in get_paths(entry)])
+
+
+def key_entries_by_entry_id(entries):
+    return [
+        {
+            'subject': ent.get('subject'),
+            'entries': {e['entry_id']: e['content']
+                        for e in ent['entries']}
+        } for ent in entries
+    ]

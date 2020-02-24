@@ -55,8 +55,10 @@ def test_update_mfe_with_file(mock_cli, mock_transfer_log,
                               mock_multi_file_result):
     sub = mock_cli.get_subject_url('my_folder/multi_file')
     mock_multi_file_result['gmeta'][0]['subject'] = sub
-    gse = Mock(return_value=mock_multi_file_result['gmeta'])
-    mock_cli.list_entries = gse
+    gse = Mock(return_value=mock_multi_file_result)
+    from pprint import pprint
+    pprint(gse)
+    mock_cli.search = gse
     metadata = mock_cli.upload(EMPTY_TEST_FILE, 'my_folder/multi_file',
                                update=True)['new_metadata']
     assert len(mock_multi_file_result['gmeta'][0]['content'][0]['files']) == 4

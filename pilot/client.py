@@ -525,7 +525,8 @@ class PilotClient(NativeClient):
         tc = self.get_transfer_client()
         tc.operation_mkdir(self.get_endpoint(project), rpath)
 
-    def search(self, project=None, index=None, custom_params=None):
+    def search(self, project=None, index=None, custom_params=None,
+               key_entries=True):
         """
         Perform a search for records in a given project and index, optionally
         with custom_parameters. Returns the raw response from the Globus SDK
@@ -533,9 +534,8 @@ class PilotClient(NativeClient):
         **Parameters**
         ``project`` (*string*)
           The project to fetch info for. Defaults to current project
-        ``index`` (*bool*)
-          If True, prepends the path to the project. If False,
-          does not prepend path but ensures it's in the project's directory
+        ``index`` (*string*)
+          Index to use for search. Defaults to current index
         ``custom_params`` (*dict*)
           Allows setting custom parameters for modifying results returned.
           Standard params include the following:
@@ -551,6 +551,13 @@ class PilotClient(NativeClient):
           }
           Custom params will override these params (this may result in
           unexpected results from other projects if 'filters' is overrided).
+        ``key_entries`` (*bool*)
+          Map entries to be a dict keyed by entry_id instead of a list of dicts
+          containing content and entry_id. Example:
+          Instead of:
+            'entries': [{'entry_id': 'myid', 'content': {...}}]
+          Data will be returned as:
+            'entries': {'myid': {...}}
         **Examples**
         Fetch all results in this project:
         >>> pc.list_entries()
@@ -569,12 +576,19 @@ class PilotClient(NativeClient):
             },
             'limit': 100,
             'offset': 0,
-            'result_format_version': '2017-09-01',
+            'result_format_version': '2019-08-27',
         }
         search_data.update(custom_params or {})
-        return sc.post_search(index, search_data).data
+        ps = sc.post_search(index, search_data).data
+        if key_entries is True:
+            keyed_results = ps.copy()
+            eids = search_discovery.key_entries_by_entry_id(ps['gmeta'])
+            keyed_results['gmeta'] = eids
+            return keyed_results
+        return ps
 
-    def list_entries(self, path='', project=None, relative=True):
+    def list_entries(self, path='', project=None, relative=True,
+                     entry_id='metadata'):
         """Search for files in the given project that match the given path.
         Returns a list of Globus Search GMetaEntries for any matches it finds.
         Paths for files in multi-file collections will return no results,
@@ -600,6 +614,8 @@ class PilotClient(NativeClient):
         log.info('Fetching entry list for project {} path {}'.format(project,
                                                                      path))
         path = self.get_path(path, project=project, relative=relative)
+        # return [ent['entries'].get(entry_id, {})
+        #         for ent in raw['gmeta'] if path in ent.get('subject')]
         return [ent for ent in raw['gmeta'] if path in ent.get('subject')]
 
     def get_full_search_entry(self, path, project=None, relative=True,
@@ -644,7 +660,11 @@ class PilotClient(NativeClient):
         else:
             subject = self.get_subject_url(path, project, relative)
         try:
-            return sc.get_subject(self.get_index(project), subject)
+            sdata = sc.get_subject(self.get_index(project), subject)
+            return {
+                'entries': dict(zip(sdata['entry_ids'], sdata['content'])),
+                'subject': subject
+            }
         except globus_sdk.exc.SearchAPIError as sapie:
             if sapie.code == 'NotFound.Generic' and resolve_collections:
                 ent = search_discovery.get_sub_in_collection(
@@ -655,13 +675,13 @@ class PilotClient(NativeClient):
 
     def get_search_entry(self, path, project=None, relative=True,
                          path_is_sub=False, resolve_collections=True,
-                         precise=True):
+                         precise=True, entry_id='metadata'):
         entry = self.get_full_search_entry(
             path, project=project, relative=relative, path_is_sub=path_is_sub,
             resolve_collections=resolve_collections, precise=precise
         )
         if entry:
-            return entry['content'][0]
+            return entry['entries'][entry_id]
 
     def ingest(self, path, content, group=None, project=None,
                relative=True, index=None, dry_run=False, force=False):
@@ -910,7 +930,9 @@ class PilotClient(NativeClient):
             # a file to an existing subject, where we should use the top level
             # subject name of the entry.
             subject = prev_entry['subject']
-            prev_metadata = prev_entry['content'][0]
+            from pprint import pprint
+            pprint(prev_entry)
+            prev_metadata = prev_entry['entries']['metadata']
         new_metadata = self.gather_metadata(
             dframe, destination, previous_metadata=prev_metadata,
             custom_metadata=metadata or {}, skip_analysis=skip_analysis,
@@ -1198,10 +1220,11 @@ class PilotClient(NativeClient):
         if not entry:
             raise exc.RecordDoesNotExist(path)
         sub = entry['subject']
-        entry = entry['content'][0]
+        entry = entry['entries'][entry_id]
         full_path = self.get_path(path, project=project, relative=relative)
         search_cli = self.get_search_client()
         if full_subject:
+            log.info('Deleting full subject: {}'.format(sub))
             if force is False:
                 self.validate_subject(sub)
             search_cli.delete_subject(index, sub)
@@ -1213,6 +1236,7 @@ class PilotClient(NativeClient):
             self.ingest(path, entry)
             return del_num
         else:
+            log.info('Deleting Entry {} from sub {}'.format(entry_id, sub))
             search_cli.delete_entry(index, sub, entry_id=entry_id)
 
     def delete(self, path, project=None, relative=True, recursive=False):
