@@ -99,7 +99,8 @@ class Context(config.ConfigSection):
         index = index or self.get_value('manifest_index')
         log.debug('Fetching manifest {} from index {}'.format(sub, index))
         sc = self.client.get_search_client()
-        manifest = sc.get_subject(index, sub).data['content'][0]
+        result = sc.get_subject(index, sub, result_format_version='2017-09-01')
+        manifest = result.data['content'][0]
         group = self.get_value('projects_group')
         if group and update_groups_cache is True:
             log.debug('Updating groups...')
