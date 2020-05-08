@@ -37,7 +37,7 @@ def set_context(ctx, index_name):
             click.secho('looking up {}...'.format(index_name))
             sc = pc.get_search_client()
             index_uuid = sc.get_index(index_name).data['id']
-            pc.context.set_context(index_name, {
+            pc.context.add_context(index_name, {
                 'client_id': 'e4d82438-00df-4dbd-ab90-b6258933c335',
                 'app_name': '{} app'.format(index_name),
                 'manifest_index': index_uuid,
