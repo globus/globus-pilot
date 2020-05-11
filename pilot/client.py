@@ -385,9 +385,13 @@ class PilotClient(NativeClient):
         'https://5590f6aa-a9f7-4cc3-b130-afc26e2ca0c0.e.globus.org/projects/
          myproject/foo/bar.txt'
         """
-        host = '{}.e.globus.org'.format(self.get_endpoint(project))
+        https_host = self.project.get_info().get('https_host')
+        info = {'endpoint': self.get_endpoint(project)}
+        if not https_host:
+            https_host = '{endpoint}.e.globus.org'
+        https_host = https_host.format(**info)
         path = self.get_path(path, project, relative)
-        parts = ['https', host, path, '', '', '']
+        parts = ['https', https_host, path, '', '', '']
         return urllib.parse.urlunparse(parts)
 
     def get_globus_url(self, path, project=None, relative=True):
