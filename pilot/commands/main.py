@@ -28,7 +28,7 @@ def cli(ctx):
             click.secho('Success!', fg='green')
         except Exception:
             click.secho(f'Failed! Try removing '
-                        f'{pc.config.CFG_FILENAME} and logging in '
+                        f'{pc.config_file} and logging in '
                         f'again.', fg='red')
     if pc.is_logged_in():
         if pc.context.is_cache_stale():

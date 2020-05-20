@@ -1,19 +1,16 @@
 import click
 
 from pilot.commands import get_pilot_client
-from pilot import transfer_log
 import globus_sdk
 
 INACTIVE_STATES = ['SUCCEEDED', 'FAILED', 'CANCELED']
-
-transfer_log = transfer_log.TransferLog()
 
 
 def update_tasks(transfer_tasks):
     """
     Update pending Globus Transfer tasks, and save the resulting status to
     the config. transfer tasks is a list of dicts as returned by
-    config.get_transfer_log()
+    config.get_pc.transfer_log()
 
     User must be logged in!
     """
@@ -29,7 +26,7 @@ def update_tasks(transfer_tasks):
                         fg='yellow')
         else:
             status = task_data.get('nice_status') or task_data.get('status')
-            transfer_log.update_log(task['task_id'], status)
+            pc.transfer_log.update_log(task['task_id'], status)
 
 
 @click.command(help='Check status of transfers', name='status')
@@ -37,17 +34,18 @@ def update_tasks(transfer_tasks):
 @click.option('-n', 'number', type=int, default=10,
               help='Number of tasks to list')
 def status_command(number):
+    pc = get_pilot_client()
 
     ordered_tlogs = []
     tlog_order = ['id', 'dataframe', 'status', 'start_time', 'task_id']
     # Fetch a limmited set of logs by the most recent entries
-    tlogs = transfer_log.get_log()[:number]
+    tlogs = pc.transfer_log.get_log()[:number]
 
     pending_tasks = [t for t in tlogs if t['status'] not in INACTIVE_STATES]
     if pending_tasks:
         click.secho('Updating tasks...', fg='green')
         update_tasks(pending_tasks)
-        tlogs = transfer_log.get_log()[:number]
+        tlogs = pc.transfer_log.get_log()[:number]
 
     for tlog in tlogs:
         tlog['id'] = str(tlog['id'])

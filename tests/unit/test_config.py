@@ -6,7 +6,7 @@ def test_config_section_save_load_values(mock_config):
     class TestSection(config.ConfigSection):
         SECTION = 'mysection'
 
-    cfg = TestSection()
+    cfg = TestSection('/tmp/test_pilot.cfg')
     cfg.save_option('foo', 'bar')
     assert cfg.load_option('foo') == 'bar'
 

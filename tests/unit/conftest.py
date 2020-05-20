@@ -39,7 +39,7 @@ def mock_config(monkeypatch):
     mock_cfg = MockConfig()
     monkeypatch.setattr(config.Config, 'load', mock_cfg.load)
     monkeypatch.setattr(config.Config, 'save', mock_cfg.save)
-    return config.Config()
+    return config.Config('/tmp/test_pilot.cfg')
 
 
 @pytest.fixture

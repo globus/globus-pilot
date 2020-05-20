@@ -81,8 +81,8 @@ def logout(purge):
         click.secho('You have been logged out.', fg='green')
     else:
         click.echo('No user logged in, no tokens to clear.')
-    if purge and os.path.exists(pc.config.CFG_FILENAME):
-        os.unlink(pc.config.CFG_FILENAME)
+    if purge and os.path.exists(pc.config_file):
+        os.unlink(pc.config_file)
         click.secho('All local user info and logs have been deleted.',
                     fg='green')
 
@@ -142,7 +142,8 @@ def profile_command(interactive, local_endpoint):
               ('Identity: ', pc.profile.load_option('preferred_username')),
               ('Local Endpoint:', info.get('local_endpoint_name')),
               ('Local Path:', info.get('local_endpoint_path')),
-              ('Endpoint UUID:', info.get('local_endpoint'))
+              ('Endpoint UUID:', info.get('local_endpoint')),
+              ('Config File:', pc.config_file),
               ]
     pstr = '\n'.join(['{:16}{}'.format(t, v) for t, v in pitems])
     click.echo('Your Profile: \n{}\n'.format(pstr))

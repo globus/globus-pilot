@@ -3,14 +3,14 @@ from tests.unit.mocks import MOCK_PROFILE
 
 
 def test_save_user_info(mock_config):
-    pfile = profile.Profile()
+    pfile = profile.Profile('/tmp/pilot-config.cfg')
     assert pfile.load_user_info() == {}
     pfile.save_user_info(MOCK_PROFILE)
     assert pfile.load_user_info() == MOCK_PROFILE
 
 
 def test_profile_getter_setters(mock_config):
-    pfile = profile.Profile()
+    pfile = profile.Profile('/tmp/pilot-config.cfg')
     assert pfile.load_user_info() == {}
     pfile.save_user_info(MOCK_PROFILE)
     assert pfile.organization == 'The French Government Central Laboratory'
