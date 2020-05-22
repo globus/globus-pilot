@@ -82,10 +82,12 @@ class PilotClient(NativeClient):
     ]
     GROUPS_SCOPE = 'urn:globus:auth:scope:nexus.api.globus.org:groups'
     DISALLOWED_FILENAME_SYMBOLS = '.*~$%'
+    DEFAULT_CONFIG = os.path.expanduser('~/.pilot1.cfg')
 
-    def __init__(self):
-        self.config = config.Config()
-        self.context = context.Context(self)
+    def __init__(self, config_file=DEFAULT_CONFIG):
+        self.config_file = os.getenv('PILOT_CONFIG', config_file)
+        self.config = config.Config(self.config_file)
+        self.context = context.Context(self, config_file=self.config_file)
         default_scopes = self.context.get_value('scopes')
         default_scopes = default_scopes or self.DEFAULT_SCOPES
 
@@ -93,8 +95,9 @@ class PilotClient(NativeClient):
                          token_storage=self.config,
                          default_scopes=default_scopes,
                          app_name=self.context.get_value('app_name'))
-        self.project = project_module.Project()
-        self.profile = profile.Profile()
+        self.project = project_module.Project(config_file=self.config_file)
+        self.profile = profile.Profile(config_file=self.config_file)
+        self.transfer_log = transfer_log.TransferLog(self.config_file)
 
     def login(self, *args, **kwargs):
         r"""
@@ -1038,7 +1041,7 @@ class PilotClient(NativeClient):
             paths,
             **(globus_args or {})
         )
-        tl = transfer_log.TransferLog()
+        tl = transfer_log.TransferLog(self.config_file)
         dest = os.path.join(destination, os.path.basename(dataframe))
         tl.add_log(result, dest)
         return result

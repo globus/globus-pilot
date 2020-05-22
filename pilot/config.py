@@ -11,10 +11,9 @@ log = logging.getLogger(__name__)
 
 
 class Config():
-    CFG_FILENAME = os.path.expanduser('~/.pilot1.cfg')
 
-    def __init__(self, filename=None):
-        self.filename = filename or self.CFG_FILENAME
+    def __init__(self, filename):
+        self.filename = filename
         cfg = self.load()
 
         if not cfg:
@@ -23,7 +22,7 @@ class Config():
 
     def migrate_to_configobj(self):
         cfg = self.load()
-        old_cfg = ConfigParserTokenStorage(filename=self.CFG_FILENAME)
+        old_cfg = ConfigParserTokenStorage(filename=self.filename)
         cfg['tokens'] = old_cfg.read_tokens()
         cfg['pilot'] = {'version': __version__}
         cfg.write()
@@ -84,8 +83,8 @@ class ConfigSection:
 
     SECTION = None
 
-    def __init__(self):
-        self.config = Config()
+    def __init__(self, config_file):
+        self.config = Config(config_file)
         if not self.SECTION:
             raise NotImplementedError('SECTION must be set on Config Section '
                                       'obj')

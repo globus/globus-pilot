@@ -114,7 +114,8 @@ def test_get_search_entry(monkeypatch, mock_cli_basic):
     assert mock_cli_basic.get_search_entry('foo') == 'myresult'
     search_cli.get_subject.assert_called_with(
         'foo-search-index',
-        'globus://foo-project-endpoint/foo_folder/foo'
+        'globus://foo-project-endpoint/foo_folder/foo',
+        result_format_version='2017-09-01',
     )
 
     class MockException(Exception):
