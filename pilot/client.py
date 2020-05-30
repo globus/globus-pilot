@@ -85,7 +85,9 @@ class PilotClient(NativeClient):
     DEFAULT_CONFIG = os.path.expanduser('~/.pilot1.cfg')
 
     def __init__(self, config_file=DEFAULT_CONFIG):
+        # Config precedence: User ENV --> config_file --> DEFAULT_CONFIG
         self.config_file = os.getenv('PILOT_CONFIG', config_file)
+        self.config_file = self.config_file or self.DEFAULT_CONFIG
         self.config = config.Config(self.config_file)
         self.context = context.Context(self, config_file=self.config_file)
         default_scopes = self.context.get_value('scopes')
