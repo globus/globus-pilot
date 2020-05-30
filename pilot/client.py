@@ -1114,7 +1114,7 @@ class PilotClient(NativeClient):
         for src_path, dest_path in paths:
             log.debug('Transferring {} to {}'.format(src_path, dest_path))
             tdata.add_item(src_path, dest_path)
-        transfer_result = tc.submit_transfer(tdata)
+        transfer_result = tc.submit_transfer(tdata).data
         log.debug('Submitted Transfer')
         return transfer_result
 
