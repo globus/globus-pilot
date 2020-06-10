@@ -82,10 +82,13 @@ class PilotClient(NativeClient):
     ]
     GROUPS_SCOPE = 'urn:globus:auth:scope:nexus.api.globus.org:groups'
     DISALLOWED_FILENAME_SYMBOLS = '.*~$%'
-    DEFAULT_CONFIG = os.path.expanduser('~/.pilot1.cfg')
+    DEFAULT_CONFIG = '~/.pilot1.cfg'
 
     def __init__(self, config_file=DEFAULT_CONFIG):
-        self.config_file = os.getenv('PILOT_CONFIG', config_file)
+        # Config precedence: config_file --> User ENV --> DEFAULT_CONFIG
+        self.config_file = os.path.expanduser(
+            config_file or os.getenv('PILOT_CONFIG') or self.DEFAULT_CONFIG
+        )
         self.config = config.Config(self.config_file)
         self.context = context.Context(self, config_file=self.config_file)
         default_scopes = self.context.get_value('scopes')
