@@ -196,8 +196,10 @@ def info(project=None):
 
 
 @project_command.command(help='Delete a project')
+@click.option('--keep-context', is_flag=True, default=False,
+              help='Continue to track the empty project in pilot after delete')
 @click.argument('project', required=True)
-def delete(project):
+def delete(project, keep_context):
     pc = commands.get_pilot_client()
     if project not in pc.project.load_all():
         click.secho('{} is not a valid project'.format(project), fg='red')
@@ -233,9 +235,14 @@ def delete(project):
     transfer_client.submit_delete(ddata)
     click.echo('Deleting Search Records...')
     search_client.delete_by_query(pinfo['search_index'], search_query)
-    click.echo('Removing project...')
-    pc.project.delete_project(project)
-    pc.context.push()
+    if keep_context:
+        click.secho('Keeping now empty pilot project {}'.format(project),
+                    fg='blue')
+        pc.mkdir('/')
+    else:
+        click.echo('Removing project...')
+        pc.project.delete_project(project)
+        pc.context.push()
     click.secho('Project {} has been deleted successfully.'.format(project),
                 fg='green')
 
