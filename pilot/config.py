@@ -59,9 +59,7 @@ class Config():
                 int(tokens[tset]['expires_at_seconds'])
             rt = tokens[tset]['refresh_token']
             tokens[tset]['refresh_token'] = None if rt == 'None' else rt
-        if frl_version.__version__ < '0.2.0.dev':
-            return tokens
-        return [tokens] if tokens else []
+        return tokens
 
     def write_tokens(self, tokens):
         cfg = self.load()
