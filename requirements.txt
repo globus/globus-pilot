@@ -1,10 +1,8 @@
 pytz
-fair-research-login>=0.1.5
+fair-research-login>=0.2.0
 click>=7.0
 colorama>=0.4.1
-jsonschema>=3.0.0
-pandas
-tableschema
+jsonschema>=3.2.0
 configobj
 python-slugify
 requests-toolbelt

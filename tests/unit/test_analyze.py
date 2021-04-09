@@ -62,6 +62,7 @@ ANALYZABLE_MIXED_FILES = [(f, mtype) for f, mtype in ANALYSIS_MIXED_FILES
                           if mtype in ANALYZABLE_MIMETYPES]
 
 
+@pytest.mark.skip
 @pytest.mark.parametrize("filename,mimetype", ANALYZABLE_MIXED_FILES)
 def test_analyze_filetypes(filename, mimetype):
     ana = analyze_dataframe(filename, mimetype)
@@ -93,6 +94,7 @@ def test_analyze_filetypes(filename, mimetype):
             assert field['format'] == 'default'
 
 
+@pytest.mark.skip
 def test_preview_bytes(mixed_tsv):
     ana = analyze_dataframe(mixed_tsv, 'text/tab-separated-values')
     with open(mixed_tsv) as fp:
@@ -109,6 +111,7 @@ def test_analyze_dataframe_with_unknown_mimetype(mixed_tsv):
     assert analyze_dataframe(mixed_tsv, 'completely_unknown_mimetype') == {}
 
 
+@pytest.mark.skip
 def test_analyze_unexpected_error():
     with pytest.raises(exc.AnalysisException):
         analyze_dataframe('does-not-exist', 'text/csv')
