@@ -1,7 +1,10 @@
 import logging
 import mimetypes
 import puremagic
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
 
 log = logging.getLogger(__name__)
 

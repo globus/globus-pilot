@@ -3,7 +3,6 @@ import stat
 import logging
 from configobj import ConfigObj
 from fair_research_login import ConfigParserTokenStorage
-from fair_research_login import version as frl_version
 
 from pilot.version import __version__
 
