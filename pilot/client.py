@@ -938,7 +938,7 @@ class PilotClient(NativeClient):
 
     def upload(self, dataframe, destination, metadata=None, globus=True,
                update=False, dry_run=False, skip_analysis=False, project=None,
-               foreign_keys=None):
+               foreign_keys=None, transfer_logging=True):
         """
         Register a dataframe in Globus Search then upload it to a relative
         project directory on the configured Globus endpoint.
@@ -1000,7 +1000,14 @@ class PilotClient(NativeClient):
         up = self.upload_globus if globus else self.upload_http
         if not dry_run and stats['files_modified'] is True:
             log.debug('Uploading using {}'.format(up))
-            stats['upload'] = up(dframe, destination, project=project)
+            if globus is True:
+                result = self.upload_globus(dframe, destination,
+                                            project=project,
+                                            transfer_logging=transfer_logging)
+            else:
+                result = self.upload_http(dframe, destination,
+                                          project=project)
+            stats['upload'] = result
         return stats
 
     def upload_http(self, dataframe, destination, project=None):
@@ -1017,7 +1024,7 @@ class PilotClient(NativeClient):
         return return_values
 
     def upload_globus(self, dataframe, destination, project=None,
-                      globus_args=None):
+                      globus_args=None, transfer_logging=False):
         """Upload a dataframe to a project using a Globus Transfer. A local
         endpoint must be configured.
         ** parameters **
@@ -1032,6 +1039,8 @@ class PilotClient(NativeClient):
           Other arguments to pass to Globus Transfer. Overwrites any defaults.
           See ``transfer_file`` for more info.
           https://globus-sdk-python.readthedocs.io/en/stable/clients/transfer/#globus_sdk.TransferClient.submit_transfer  # noqa
+        ``transfer_logging`` (*boolean*)
+          Log this in pilots transfer config log? Note: This is NOT thread safe.
         """
         log.info('Uploading (Globus) {} to {}'.format(dataframe, destination))
         paths = []
@@ -1044,9 +1053,10 @@ class PilotClient(NativeClient):
             paths,
             **(globus_args or {})
         )
-        tl = transfer_log.TransferLog(self.config_file)
-        dest = os.path.join(destination, os.path.basename(dataframe))
-        tl.add_log(result, dest)
+        if transfer_logging is True:
+            tl = transfer_log.TransferLog(self.config_file)
+            dest = os.path.join(destination, os.path.basename(dataframe))
+            tl.add_log(result, dest)
         return result
 
     def transfer_file(self, src_ep, dest_ep, src_path, dest_path,
