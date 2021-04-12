@@ -25,6 +25,7 @@ def test_auth_logout(mock_cli):
 
 def test_auth_logout_purge(monkeypatch, mock_cli):
     monkeypatch.setattr(os, 'unlink', Mock())
+    monkeypatch.setattr(os.path, 'exists', Mock(return_value=True))
     runner = CliRunner()
     result = runner.invoke(logout, ['--purge'])
     assert result.exit_code == 0
