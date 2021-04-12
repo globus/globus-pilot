@@ -15,7 +15,8 @@ MIXED_MIMETYPES = [
     ('csv', 'text/csv'),
     ('tsv', 'text/tab-separated-values'),
     ('pdf', 'application/pdf'),
-    ('hdf', 'application/x-hdf'),
+    # Disabled
+    # ('hdf', 'application/x-hdf'),
     ('feather', 'application/x-feather'),
     ('parquet', 'application/x-parquet'),
 ]
