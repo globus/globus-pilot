@@ -1,5 +1,5 @@
-pilot1-tools Reference
-======================
+Reference
+---------
 
 .. contents:: Table of Contents
 
@@ -12,7 +12,7 @@ Datacite Metadata
 
 Here is a list of supported Datacite fields you can modify for your file.
 
-.. code-block:: json
+.. code-block::
 
     {
       "description":
@@ -30,7 +30,7 @@ Here is a list of supported Datacite fields you can modify for your file.
 
 Example my_metadata.json:
 
-.. code-block:: json
+.. code-block::
 
     {
         "description": "This is tabular data for a skewt plot.",
@@ -84,7 +84,7 @@ Here are an example of supported fields which can be added to your project:
 
 Example my_metadata.json:
 
-.. code-block:: json
+.. code-block::
 
     {
         "data_type": "Metadata",

@@ -1,49 +1,14 @@
-pilot1-tools User Guide
+User Guide
 =======================
-
-.. contents:: Table of Contents
-
-Introduction
-------------
-
-NCI Pilot Tools are a suite of command line utilities for quickly uploading data
-and publicizing it on Globus Search for easy accessibility and discovery. You can
-view the current list of projects by going to `petreldata.net<https://petreldata.net/nci-pilot1/>`_.
-
-By following the guide below, you will be able to use the NCI Pilot tools to discover,
-and access files from the projects you can see on the portal above.
 
 Installation
 ------------
 
-These tools are available on Conda for Python 3.6, you can install them with the following:
+Pilot requires python 3.7 or above
 
 .. code-block:: bash
 
-    conda create -n pilot1-env -c conda-forge -c nickolaussaint pilot1-tools
-
-
-You can see the `Developer Guide Installation
-<https://github.com/globusonline/pilot1-tools/blob/master/docs/developer-guide.rst>`_ for more options.
-
-Uninstall
----------
-
-
-.. code-block:: bash
-
-    conda uninstall pilot1-tools
-
-
-Updates
--------
-
-Updating uses the same command as installation. Conda will ask if you would
-like to upgrade to the latest version.
-
-.. code-block:: bash
-
-    conda install -c conda-forge -c nickolaussaint pilot1-tools
+    pip install globus-pilot
 
 
 The Pilot Client
@@ -54,16 +19,17 @@ to list all of the available commands:
 
 .. code-block:: bash
 
-    (pilot1-env) $ pilot
+    (pilot-env) $ pilot
     Usage: pilot [OPTIONS] COMMAND [ARGS]...
 
     Options:
       --help  Show this message and exit.
 
     Commands:
-      delete    Delete a search entry
+      delete    Delete file and search record
       describe  Output info about a dataset
       download  Download a file to your local directory.
+      index     Set or display index information
       list      List known records in Globus Search
       login     Login with Globus
       logout    Revoke local tokens
@@ -81,7 +47,7 @@ valid commands:
 
 - ``pilot --help``
 - ``pilot login --help``
-- ``pilot project set --help``
+- ``pilot index set --help``
 
 Listing Version
 ---------------
@@ -91,7 +57,7 @@ List the current version with:
 
 .. code-block:: bash
 
-   (pilot1-env) $ pilot version
+   (pilot-env) $ pilot version
 
 
 Logging In
@@ -101,11 +67,11 @@ Login with the following command:
 
 .. code-block:: bash
 
-   (pilot1-env) $ pilot login
+   (pilot-env) $ pilot login
    You have been logged in.
    Your personal info has been saved as:
-   Name:          Rick Wagner
-   Organization:  Globus
+   Name:          Jean-Luc Picard
+   Organization:  Star Fleet
 
 
    You can update these with "pilot profile -i"
@@ -116,7 +82,7 @@ public location, you can use the following:
 
 .. code-block:: bash
 
-   (pilot1-env) $ pilot login --no-refresh-tokens
+   (pilot-env) $ pilot login --no-refresh-tokens
 
 These credentials will expire in 48 hours.
 
@@ -128,7 +94,7 @@ public systems.
 
 .. code-block:: bash
 
-   (pilot1-env) $ pilot logout
+   (pilot-env) $ pilot logout
    You have been logged out.
 
 This will keep all other settings and profile information for the next time
@@ -137,7 +103,7 @@ option.
 
 .. code-block:: bash
 
-   (pilot1-env) $ pilot logout --purge
+   (pilot-env) $ pilot logout --purge
    You have been logged out.
    All local user info and logs have been deleted.
 
@@ -149,11 +115,11 @@ List your information with the following
 
 .. code-block:: bash
 
-   (pilot1-env) $ pilot profile
+   (pilot-env) $ pilot profile
    You have been logged in.
    Your personal info has been saved as:
-   Name:          Rick Wagner
-   Organization:  Globus
+   Name:          Jean-Luc Picard
+   Organization:  Star Fleet
 
 
    You can update these with "pilot profile -i"
@@ -165,17 +131,16 @@ Configuring Your Profile
 
 The command ``pilot profile -i`` will walk you through the settings for your
 profile. Your profile is used to create default information about the dataset
-you create or update. For this example, I need to change my organization,
-since this work is part of Argonne. We'll see a note about projects that we'll
-cover next.
+you create or update. For this example, the user will update their organization
+from "USS Enterprise" to "Star Fleet Academy"
 
 .. code-block:: bash
 
-   (pilot1-env) $ pilot profile -i
+   (pilot-env) $ pilot profile -i
    Projects have updated. Use "pilot project update" to get the newest changes.
    No project set, use "pilot project set <myproject>" to set your project
-   Name (Rick Wagner)> 
-   Organization (Globus)> Argonne National Laboratory
+   Name (Wesley Crusher)>
+   Organization (USS Enterprise)> Star Fleet Academy
    Your information has been updated
 
 
@@ -187,11 +152,11 @@ of a GCP client. You can set this with the ``--local-endpoint`` option.
 
 .. code-block:: bash
 
-    (pilot1-env) $ pilot profile --local-endpoint ddb59af0-6d04-11e5-ba46-22000b92c6ec
+    (pilot-env) $ pilot profile --local-endpoint ddb59af0-6d04-11e5-ba46-22000b92c6ec
     Your local endpoint has been set!
     Your Profile:
-    Name:           Nickolaus Saint
-    Organization:   Globus
+    Name:           Jean-Luc Picard
+    Organization:   Star Fleet
     Local Endpoint: My GCS Endpoint
     Local Path:     None
 
@@ -200,18 +165,48 @@ can also be explicitly stated. You can add a colon separated by your path:
 
 .. code-block:: bash
 
-    (pilot1-env) $ pilot profile --local-endpoint ddb59af0-6d04-11e5-ba46-22000b92c6ec:~/my-subfolder
+    (pilot-env) $ pilot profile --local-endpoint ddb59af0-6d04-11e5-ba46-22000b92c6ec:~/my-subfolder
 
 Please note: You should only use this if your session is local to the endpoint. You may
 encounter strange behavior with the ``upload`` and ``download`` commands placing files
 in unexpected locations if your endpoint is remote to where you're actually working.
 
-Working with Projects
----------------------
+Search Indices and Projects
+---------------------------
+
+
+Search Indices
+^^^^^^^^^^^^^^
+
+
+Use ``pilot index`` to list Search Indices you have previously used. Indices
+will show up as a list of display names. Only indices you have previously
+used with pilot will show up here. See ``pilot index set`` for setting new pilot
+search indices.
+
+.. code-block:: bash
+
+    (pilot-env) $ pilot index
+    Set index with "pilot index set <index_uuid>|<index_name>"
+    * captains-log
+      search-index-1
+      search-index-2
+
+Use ``pilot index set`` to set a new search index. You need to use the UUID if
+your Search index does not show up in the list when running ``pilot index``
+
+.. code-block:: bash
+
+    (pilot-env) $ pilot index set be69a351-f893-4268-8647-70bcb06fcd00
+
+For information on any of your search indices, you can also use the
+``pilot index info <index>`` command.
+
+
 
    
 List Update & Projects
-^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Use ``pilot project`` to list available projects. An asterisk (*) marks
 your currently selected project. Other commands, such as ``pilot list``, will
@@ -219,7 +214,7 @@ automatically use the project you select.
 
 .. code-block:: bash
 
-   (pilot1-env) $ pilot project
+   (pilot-env) $ pilot project
    Set project with "pilot project set <myproject>"
      project1
      project2
@@ -232,7 +227,7 @@ but you can check any time with the following:
 
 .. code-block:: bash
 
-   (pilot1-env) $ pilot project update
+   (pilot-env) $ pilot project update
    Added:
       > new-project
 
@@ -243,7 +238,7 @@ Use the ``info`` subcommand for more detailed info.
 
 .. code-block:: bash
 
-    (pilot1-env) $ pilot project info
+    (pilot-env) $ pilot project info
     Project 3
     Endpoint                 petrel#ncipilot
     Group                    Project 3 Group
@@ -255,7 +250,7 @@ You can also query other projects:
 
 .. code-block:: bash
 
-    (pilot1-env) $ pilot project info pilot-tutorial
+    (pilot-env) $ pilot project info pilot-tutorial
     Pilot Tutorial
     Endpoint                 petrel#ncipilot
     Group                    Public
@@ -271,13 +266,13 @@ Change your project with the ``project set`` subcommand:
 
 .. code-block:: bash
 
-   (pilot1-env) $ pilot project set pilot-tutorial
+   (pilot-env) $ pilot project set pilot-tutorial
    Current project set to pilot-tutorial
 
 
 .. code-block:: bash
 
-   (pilot1-env) $ pilot project
+   (pilot-env) $ pilot project
    Set project with "pilot project set <myproject>"
      project1
      project2
@@ -301,7 +296,7 @@ Use the list command to see all of the datasets for this project:
 
 .. code-block:: bash
 
-   (pilot1-env) $ pilot list
+   (pilot-env) $ pilot list
    Title                Data       Dataframe Rows   Column Size   Path
    Raw tabular data for Meteorolog List      61     6      2 k    tabular/chicago_skewt.csv
    Raw tabular data for Meteorolog List      61     6      2 k    tabular/chicago_skewt.tsv
@@ -324,7 +319,7 @@ output:
 
 .. code-block:: bash
 
-  (pilot1-env) $ pilot describe tabular/chicago_skewt.csv
+  (pilot-env) $ pilot describe tabular/chicago_skewt.csv
   Title                Raw tabular data for skewt plot of air above Chicago
   Authors              NOAA
   Publisher            NOAA
@@ -373,7 +368,7 @@ Checking Status of Transfers
 If you have transferred data using Globus, you can check the status of the transfer
 with the ``pilot status`` command.
 
-(pilot1-env) $ pilot status
+(pilot-env) $ pilot status
 ID  Dataframe                     Status    Start Time        Task ID
 0   /chicago_skewt.csv                   SUCCEEDED 2019-07-01 09:04  da1ffbdc-9c19-11e9-8219-02b7a92d8e58
 

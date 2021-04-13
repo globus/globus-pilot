@@ -3,16 +3,26 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to globus-pilot's documentation!
-========================================
+Globus Pilot
+============
 
-This is a Read-The-Docs TEST!!!
+
+Introduction
+------------
+
+Globus pilot is an SDK and command line utility for coupling records in Globus Search
+with data on a Globus Endpoint. One single pilot command will both do the data upload
+and the publication, without the need to talk to both services individually to ensure
+search records and data are in sync.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Contents:
 
-
+   user-guide
+   uploading-data
+   projects
+   reference
 
 Indices and tables
 ==================
