@@ -8,7 +8,7 @@ from pilot.version import __version__
 from pilot.commands.auth import auth_commands
 from pilot.commands.search import search_commands, delete
 from pilot.commands.transfer import transfer_commands, status_commands, analyze
-from pilot.commands.project import project, context
+from pilot.commands.project import project, index
 
 log = logging.getLogger(__name__)
 
@@ -73,7 +73,7 @@ cli.add_command(auth_commands.logout)
 cli.add_command(auth_commands.profile_command)
 
 cli.add_command(project.project_command)
-cli.add_command(context.context_command)
+cli.add_command(index.index_command)
 
 cli.add_command(search_commands.list_command)
 cli.add_command(search_commands.describe)

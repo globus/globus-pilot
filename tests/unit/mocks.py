@@ -28,6 +28,12 @@ ANALYSIS_BLIND_FILES = [(os.path.join(BLIND_BASE, ext), mt)
 
 DEFAULT_EXPIRE = int(time.time()) + 60 * 60 * 48
 
+MOCK_INDEX_RECORD = {
+    'context': {},
+    'projects': {},
+    'groups': {},
+}
+
 MOCK_CONTEXT = {'test-context': {
     'app_name': 'my app',
     'client_id': 'e6a8d7ab-9087-4f5f-99f1-974446a64a10',

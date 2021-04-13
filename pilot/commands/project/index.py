@@ -1,22 +1,26 @@
 import logging
+import uuid
+import sys
 import click
 
 from fair_research_login import ScopesMismatch
 
 from pilot import commands, exc
+from pilot.commands.project.project import project_command
 from pilot.context import DEFAULT_PROJECTS_CACHE_TIMEOUT
 
 log = logging.getLogger(__name__)
 
 
-@click.group(name='context', help='Set or display context information',
-             invoke_without_command=True, hidden=True)
+@click.group(name='index', help='Set or display index information',
+             invoke_without_command=True)
 @click.pass_context
-def context_command(ctx):
+def index_command(ctx):
     pc = commands.get_pilot_client()
 
     if ctx.invoked_subcommand is None:
-        click.echo('Set project with "pilot project set <myproject>"')
+        click.echo('Set index with "pilot index set <index_uuid>|'
+                   '<index_name>"')
         contexts = pc.context.load_all()
         fmt = '{} {}'
         for context in contexts:
@@ -26,20 +30,27 @@ def context_command(ctx):
                 click.echo(fmt.format(' ', context))
 
 
-@context_command.command(help='Update stored list of projects.', name='set')
-@click.argument('index_name', required=False)
-# @click.option('-u', '--index-uuid', 'index_uuid', help='Use this index uuid')
+@index_command.command(help='Set Pilot to use a different search index',
+                       name='set')
+@click.argument('index_name')
 @click.pass_context
-def set_context(ctx, index_name):
+def set_index(ctx, index_name):
     pc = commands.get_pilot_client()
     if not pc.context.get_context(index_name):
+        log.debug(f'No local context "{index_name}", attempting lookup...')
         try:
-            click.secho('looking up {}...'.format(index_name))
+            # Ensure we're using the index UUID, lookup by name is no longer
+            # possible
+            uuid.UUID(index_name)
+            index_uuid = index_name
+
+            click.secho('looking up {}...'.format(index_uuid))
             sc = pc.get_search_client()
-            index_uuid = sc.get_index(index_name).data['id']
-            pc.context.add_context(index_name, {
+            index_info = sc.get_index(index_uuid)
+            display_name = index_info['display_name']
+            pc.context.add_context(display_name, {
                 'client_id': 'e4d82438-00df-4dbd-ab90-b6258933c335',
-                'app_name': '{} app'.format(index_name),
+                'app_name': '{} app'.format(display_name),
                 'manifest_index': index_uuid,
                 'manifest_subject': 'globus://project-manifest.json',
                 'scopes': pc.DEFAULT_SCOPES,
@@ -50,20 +61,29 @@ def set_context(ctx, index_name):
                 'projects_default_search_index': index_uuid,
                 'projects_default_resource_server': 'petrel_https_server',
             })
+            index_name = display_name
+        except ValueError:
+            click.secho(f'"{index_name}": must be a UUID when adding a new '
+                        f'un-tracked search index.', fg='red')
+            sys.exit(1)
         except Exception as e:
             log.exception(e)
             click.secho('Unable to find index {}'.format(index_name))
-            return
+            sys.exit(2)
     pc.context.set_context(index_name)
+    log.debug('Updating index...')
     pc.context.update()
-    ctx.invoke(info, context=index_name)
-    ctx.invoke(commands.project.project.project_command)
+    # If there is only one project, automatically set pilot to that one
+    if len(pc.project.load_all()) == 1:
+        projects = pc.project.load_all()
+        pc.project.current = list(projects.keys())[0]
+    log.debug('Context set! Fetching general info for user...')
+    ctx.invoke(info, index=index_name)
+    ctx.invoke(project_command)
     try:
         pc.load_tokens(requested_scopes=pc.context.get_value('scopes'))
-        click.secho('Current credentials are sufficient, no need to login '
-                    'again.', fg='green')
     except ScopesMismatch:
-        click.secho('Scopes do not match for this context, please login '
+        click.secho('Scopes do not match for this index, please login '
                     'again.', fg='red')
     log.debug(pc.context.get_value('projects_default_search_index'))
     if not pc.project.load_all():
@@ -81,17 +101,17 @@ def set_context(ctx, index_name):
                     'config under [projects]\n{}'.format(example))
 
 
-@context_command.command(help='Print Context Details')
-@click.argument('context', required=False)
-def info(context=None):
+@index_command.command(help='Print Info for index')
+@click.argument('index', required=False)
+def info(index=None):
     pc = commands.get_pilot_client()
-    context = context or pc.context.current
-    if context is None:
-        click.echo('Use "pilot context info <context>" to list info about a '
+    index = index or pc.context.current
+    if index is None:
+        click.echo('Use "pilot index info <context>" to list info about a '
                    'project.')
         return
     try:
-        info = pc.context.get_context(context)
+        info = pc.context.get_context(index)
     except exc.PilotInvalidProject as pip:
         click.secho(str(pip), fg='red')
         return
@@ -103,7 +123,7 @@ def info(context=None):
     click.echo()
 
 
-@context_command.command(help='Update a context')
+@index_command.command(help='Update a context')
 def push():
     pc = commands.get_pilot_client()
     pc.context.push()

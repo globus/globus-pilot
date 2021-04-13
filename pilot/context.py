@@ -113,6 +113,7 @@ class Context(config.ConfigSection):
                     'No groups returned, user may not have access to '
                     'subgroups for this group.')
         if dry_run is False:
+            log.debug('Writing fresh context to config.')
             cfg = self.config.load()
             index_name = sc.get_index(index).data['display_name']
             context = manifest.get('context')
