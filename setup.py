@@ -18,9 +18,10 @@ with open('requirements.txt') as reqs:
         install_requires.append(req)
 
 setup(
-    name='pilot1-tools',
+    name='globus-pilot',
     description='A CLI tool for cataloging pilot 1 data',
     long_description=long_description,
+    long_description_content_type='text/x-rst',
     url='https://github.com/globusonline/pilot1-tools/tree/master',
     maintainer='globus',
     maintainer_email='support@globus.org',
@@ -42,7 +43,8 @@ setup(
         'Operating System :: POSIX',
         'Operating System :: MacOS :: MacOS X',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7'
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
     ]
 )
