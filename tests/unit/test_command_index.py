@@ -2,7 +2,7 @@ import copy
 import uuid
 from click.testing import CliRunner
 from tests.unit.mocks import MOCK_INDEX_RECORD, GlobusResponse
-from pilot.commands.project.index import set_index, info, push
+from pilot.commands.project.index import set_index, info
 
 
 def test_set_index_with_prev_fetched_index(monkeypatch, mock_cli, mock_config,
@@ -35,8 +35,8 @@ def test_set_index_with_non_uuid(mock_cli):
 
 
 def test_set_index_with_new_index(monkeypatch, mock_cli, mock_config,
-                                           mock_search_client,
-                                           mock_search_result):
+                                  mock_search_client,
+                                  mock_search_result):
     # Result when pilot context calls get_subject on the manifest record
     manifest = copy.deepcopy(mock_search_result)
     manifest['content'][0] = MOCK_INDEX_RECORD

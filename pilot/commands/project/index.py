@@ -19,7 +19,8 @@ def index_command(ctx):
     pc = commands.get_pilot_client()
 
     if ctx.invoked_subcommand is None:
-        click.echo('Set index with "pilot index set <index_uuid>|<index_name>"')
+        click.echo('Set index with "pilot index set <index_uuid>|'
+                   '<index_name>"')
         contexts = pc.context.load_all()
         fmt = '{} {}'
         for context in contexts:
@@ -29,7 +30,8 @@ def index_command(ctx):
                 click.echo(fmt.format(' ', context))
 
 
-@index_command.command(help='Set Pilot to use a different search index', name='set')
+@index_command.command(help='Set Pilot to use a different search index',
+                       name='set')
 @click.argument('index_name')
 @click.pass_context
 def set_index(ctx, index_name):
@@ -37,7 +39,8 @@ def set_index(ctx, index_name):
     if not pc.context.get_context(index_name):
         log.debug(f'No local context "{index_name}", attempting lookup...')
         try:
-            # Ensure we're using the index UUID, lookup by name is no longer possible
+            # Ensure we're using the index UUID, lookup by name is no longer
+            # possible
             uuid.UUID(index_name)
             index_uuid = index_name
 
@@ -74,7 +77,7 @@ def set_index(ctx, index_name):
     if len(pc.project.load_all()) == 1:
         projects = pc.project.load_all()
         pc.project.current = list(projects.keys())[0]
-    log.debug(f'Context set! Fetching general info for user...')
+    log.debug('Context set! Fetching general info for user...')
     ctx.invoke(info, index=index_name)
     ctx.invoke(project_command)
     try:
