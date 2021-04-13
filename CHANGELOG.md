@@ -1,11 +1,16 @@
-# Changes in Pilot1 Tools
+# Changes in Globus Pilot
 
 
 Below are major changes for each version Release. For detailed information,
 see the list of commits from the last version or use `git log`.
 
-### 0.4.2 - 2019-09-24
+### 0.5.0 - 2021-04-13
 
+ - Released on PyPi!
+ - Renamed 'context' command to 'index'
+ - Changed 'index/context' command to be public
+ 
+ - Fixed config bug when setting index by UUID
  - Fixed exception in `project push` and `project edit` commands
  - Fixed regression, added test for improper file versioning
  - Fixed bug with version being reset when metadata changed but file didn't
