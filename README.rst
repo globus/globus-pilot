@@ -1,8 +1,19 @@
-pilot1-tools
+Globus Pilot
 ------------
-.. image:: https://anaconda.org/nickolaussaint/pilot1-tools/badges/version.svg
-  :target: https://anaconda.org/nickolaussaint/pilot1-tools
+.. image:: https://readthedocs.org/projects/globus-pilot/badge/?version=latest&style=flat
 
+.. image:: https://github.com/globusonline/globus-pilot/actions/workflows/tests.yml/badge.svg
+    :target: https://github.com/globusonline/globus-pilot/actions/workflows/
+
+.. image:: https://img.shields.io/pypi/v/globus-pilot.svg
+    :target: https://pypi.python.org/pypi/globus-pilot
+
+.. image:: https://img.shields.io/pypi/wheel/globus-pilot.svg
+    :target: https://pypi.python.org/pypi/globus-pilot
+
+.. image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
+    :alt: License
+    :target: https://opensource.org/licenses/Apache-2.0
 
 A Command Line tool for managing data in Globus Search as well as transferring corresponding data to and from a Globus Endpoint.
 
@@ -10,39 +21,15 @@ A Command Line tool for managing data in Globus Search as well as transferring c
 Installation
 ------------
 
-These tools are available on Conda for Python 3.6, you can install them with the following:
+Pilot requires python 3.6+, you can install with the following:
 
 .. code-block:: bash
 
-    conda create -n pilot1-env -c conda-forge -c nickolaussaint pilot1-tools
+    pip install globus-pilot
 
 
-You can see the `Developer Guide Installation
-<https://github.com/globusonline/pilot1-tools/blob/master/docs/developer-guide.rst>`_ for more options.
-
-
-Setting Your Local
-^^^^^^^^^^^^^^^^^^
-
-The first time you run `pilot`, you may encounter an error an error like the one below:
-
-.. code-block::
-
-    RuntimeError: Click will abort further execution because Python 3 was
-      configured to use ASCII as encoding for the environment.
-
-
-This can happen if on systems with custom configured UTF-8 settings. You should
-see a list of encodings your system supports, simply choose one and set it.
-For example:
-
-.. code-block::
-
-    export LC_ALL=en_US.utf-8
-    export LANG=en_US.utf-8
-
-
-Replace ``en_US.utf-8`` with an encoding your system supports.
+See the `Read-The-Docs Page
+<https://globus-pilot.readthedocs.io/en/latest/index.html>`_ for more options.
 
 
 Quick Start
@@ -60,6 +47,13 @@ First, login using Globus:
 .. code-block:: bash
 
     pilot login
+
+Set your Search Index:
+
+.. code-block:: bash
+
+    pilot index set <myindex>
+
 
 Then choose your project. See ``pilot project info`` for info on any listed project:
 
@@ -129,17 +123,4 @@ And for coverage:
 
     pytest --cov pilot
 
-
-Building for Conda
-------------------
-
-Currently, the tableschema package has not been built for python 3.7, so this only
-lists instructions for python 3.6. Two channels must be used, nickolaussaint and
-conda-forge. The nickolaussaint channel contains fair-research-login, and conda-forge
-contains various other packages we need including the globus-sdk.
-
-
-.. code-block:: bash
-
-    conda build -c nickolaussaint -c conda-forge --python 3.6 .
 
