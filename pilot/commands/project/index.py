@@ -74,7 +74,8 @@ def set_index(ctx, index_name):
     if len(pc.project.load_all()) == 1:
         projects = pc.project.load_all()
         pc.project.current = list(projects.keys())[0]
-    ctx.invoke(info, context=index_name)
+    log.debug(f'Context set! Fetching general info for user...')
+    ctx.invoke(info, index=index_name)
     ctx.invoke(project_command)
     try:
         pc.load_tokens(requested_scopes=pc.context.get_value('scopes'))

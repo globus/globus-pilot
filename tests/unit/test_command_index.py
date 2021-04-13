@@ -23,6 +23,8 @@ def test_set_index_with_prev_fetched_index(monkeypatch, mock_cli, mock_config,
     runner = CliRunner()
     result = runner.invoke(set_index, ['test-context'])
     assert result.exit_code == 0
+    assert mock_search_client.get_subject.called
+    assert mock_search_client.get_subject
 
 
 def test_set_index_with_non_uuid(mock_cli):

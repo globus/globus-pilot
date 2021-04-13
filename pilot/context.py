@@ -102,7 +102,6 @@ class Context(config.ConfigSection):
         result = sc.get_subject(index, sub, result_format_version='2017-09-01')
         manifest = result.data['content'][0]
         group = self.get_value('projects_group')
-        log.debug(f'Fetched manifest')
         if group and update_groups_cache is True:
             log.debug('Updating groups...')
             subgroups = self.fetch_subgroups(group=group)
@@ -114,6 +113,7 @@ class Context(config.ConfigSection):
                     'No groups returned, user may not have access to '
                     'subgroups for this group.')
         if dry_run is False:
+            log.debug(f'Writing fresh context to config.')
             cfg = self.config.load()
             index_name = sc.get_index(index).data['display_name']
             context = manifest.get('context')
