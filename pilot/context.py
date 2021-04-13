@@ -102,6 +102,7 @@ class Context(config.ConfigSection):
         result = sc.get_subject(index, sub, result_format_version='2017-09-01')
         manifest = result.data['content'][0]
         group = self.get_value('projects_group')
+        log.debug(f'Fetched manifest')
         if group and update_groups_cache is True:
             log.debug('Updating groups...')
             subgroups = self.fetch_subgroups(group=group)
