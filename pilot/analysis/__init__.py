@@ -17,7 +17,7 @@ try:
     }
 except ImportError:
     log.debug('Dependency not found, pandas analysis disabled',
-              exec_info=True)
+              exc_info=True)
     pandas_map = {}
 
 try:
