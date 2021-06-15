@@ -204,6 +204,7 @@ def delete(project, keep_context):
     if project not in pc.project.load_all():
         click.secho('{} is not a valid project'.format(project), fg='red')
         return 1
+    pc.project.current = project
     results = pc.search(project=project)
     pinfo = pc.project.get_info(project)
     search_query = {

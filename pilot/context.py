@@ -1,4 +1,5 @@
 import time
+import copy
 import logging
 import globus_sdk
 from pilot import config, exc
@@ -12,9 +13,9 @@ DEFAULT_PROJECTS_CACHE_TIMEOUT = 60 * 60 * 24
 
 DEFAULT_PILOT_CONTEXT = {
     'client_id': 'e4d82438-00df-4dbd-ab90-b6258933c335',
-    'app_name': 'NCI Pilot 1 Dataframe Manager',
+    'app_name': 'Globus Pilot',
+    'manifest_index': None,
     'manifest_subject': 'globus://project-manifest.json',
-    'manifest_index': '889729e8-d101-417d-9817-fa9d964fdbc9',
     'scopes': [
         'profile',
         'openid',
@@ -22,13 +23,12 @@ DEFAULT_PILOT_CONTEXT = {
         'urn:globus:auth:scope:transfer.api.globus.org:all',
         'https://auth.globus.org/scopes/'
         '56ceac29-e98a-440a-a594-b41e7a084b62/all',
-        'urn:globus:auth:scope:nexus.api.globus.org:groups',
     ],
     'projects_cache_timeout': DEFAULT_PROJECTS_CACHE_TIMEOUT,
-    'projects_endpoint': 'ebf55996-33bf-11e9-9fa4-0a06afd4a22e',
-    'projects_base_path': '/projects',
-    'projects_group': '679d11e1-5c7d-11e9-8ab8-0e4a32f5e3b8',
-    'projects_default_search_index': '889729e8-d101-417d-9817-fa9d964fdbc9',
+    'projects_endpoint': '',
+    'projects_base_path': '',
+    'projects_group': '',
+    'projects_default_search_index': None,
     'projects_default_resource_server': 'petrel_https_server',
 }
 
@@ -38,19 +38,18 @@ class Context(config.ConfigSection):
     SECTION = 'context'
     DEFAULT_CONTEXT = 'candle-pilot1'
 
-    def __init__(self, client, *args, **kwargs):
+    def __init__(self, client, *args, index_uuid=None, **kwargs):
         self.client = client
+        self._current = None
         super().__init__(*args, **kwargs)
-        if not self.load_option('current'):
-            if not self.get_context(self.DEFAULT_CONTEXT):
-                log.debug('No context set and no default context!')
-                log.debug('Setting context default.')
-                self.add_context(self.DEFAULT_CONTEXT, DEFAULT_PILOT_CONTEXT)
-            self.current = self.DEFAULT_CONTEXT
+        if index_uuid:
+            display_name = self.add_context_by_uuid(index_uuid)
+            self.current = display_name
+            self.update()
 
     @property
     def current(self):
-        curr = self.load_option('current')
+        curr = self.load_option('current') or self._current
         if curr is None:
             raise exc.PilotContextException('No current context configured')
         return curr
@@ -60,14 +59,24 @@ class Context(config.ConfigSection):
         contexts = self.load_option('contexts') or {}
         ctx_names = list(contexts.keys())
         if ctx_names and value not in ctx_names and value is not None:
-            raise ValueError(f'Project must be one of: {", ".join(contexts)}')
+            raise ValueError(f'Context must be one of: {", ".join(contexts)}')
         self.save_option('current', value)
 
     def load_all(self):
         return self.config.load().get('contexts', {})
 
+    def add_context_by_uuid(self, index_uuid):
+        ctx = copy.deepcopy(DEFAULT_PILOT_CONTEXT)
+        index_info = self.get_index(index_uuid)
+        display_name = index_info['display_name']
+        ctx['manifest_index'] = index_uuid
+        self.add_context(display_name, ctx)
+        return display_name
+
     def add_context(self, name, context):
-        self.save_option(name, context, section='contexts')
+        ctx = copy.deepcopy(DEFAULT_PILOT_CONTEXT)
+        ctx.update(context)
+        self.save_option(name, ctx, section='contexts')
 
     def get_context(self, context=None):
         return self.load_option(context or self.current, section='contexts')
