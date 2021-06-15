@@ -94,12 +94,25 @@ class Context(config.ConfigSection):
                     'No existing context data found for {}.'
                     ''.format(self.get_value('manifest_subject')))
             else:
-                log.exception(sapie)
+                log.debug(f'Encountered error setting context to {context}',
+                          exc_info=True)
                 raise exc.PilotClientException('Unexpected Error {}'.format(
                                                str(sapie)))
 
     def get_value(self, field, context=None):
         return self.get_context(context).get(field)
+
+    def get_index(self, index_uuid):
+        return self.get_search_client().get_index(index_uuid).data
+
+    def get_search_client(self):
+        try:
+            sc = self.client.get_search_client()
+        except Exception:
+            log.debug(f'Failed to get authenticated search client, '
+                      f'fetching unauthenticated one instead.', exc_info=True)
+            sc = globus_sdk.SearchClient()
+        return sc
 
     def update(self, index=None, dry_run=False, update_groups_cache=True):
         """Update the local list of projects and groups."""
@@ -107,9 +120,13 @@ class Context(config.ConfigSection):
         sub = self.get_value('manifest_subject')
         index = index or self.get_value('manifest_index')
         log.debug('Fetching manifest {} from index {}'.format(sub, index))
-        sc = self.client.get_search_client()
-        result = sc.get_subject(index, sub, result_format_version='2017-09-01')
-        manifest = result.data['content'][0]
+        try:
+            sc = self.get_search_client()
+            result = sc.get_subject(index, sub, result_format_version='2019-08-27')
+            manifest = result.data['entries'][0]['content']
+        except Exception:
+            log.debug(f'Unknown error when fetching manifest', exc_info=True)
+            raise exc.PilotContextException(f'Failed to get context')
         group = self.get_value('projects_group')
         if group and update_groups_cache is True:
             log.debug('Updating groups...')

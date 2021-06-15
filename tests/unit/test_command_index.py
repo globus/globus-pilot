@@ -10,9 +10,12 @@ def test_set_index_with_prev_fetched_index(monkeypatch, mock_cli, mock_config,
                                            mock_search_result):
     # Result when pilot context calls get_subject on the manifest record
     manifest = copy.deepcopy(mock_search_result)
-    manifest['content'][0] = MOCK_INDEX_RECORD
+    # This should be removed when we upgrade to the newer style search results
+    manifest.pop('content')
+    manifest['entries'] = [{'content': MOCK_INDEX_RECORD}]
+
     sub_resp = GlobusResponse()
-    sub_resp.data = mock_search_result
+    sub_resp.data = manifest
     mock_search_client.get_subject.return_value = sub_resp
 
     # Result when pilot fetches the general index_data
@@ -39,9 +42,10 @@ def test_set_index_with_new_index(monkeypatch, mock_cli, mock_config,
                                   mock_search_result):
     # Result when pilot context calls get_subject on the manifest record
     manifest = copy.deepcopy(mock_search_result)
-    manifest['content'][0] = MOCK_INDEX_RECORD
+    manifest.pop('content')
+    manifest['entries'] = [{'content': MOCK_INDEX_RECORD}]
     sub_resp = GlobusResponse()
-    sub_resp.data = mock_search_result
+    sub_resp.data = manifest
     mock_search_client.get_subject.return_value = sub_resp
 
     # Result when pilot fetches the general index_data
