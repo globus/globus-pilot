@@ -220,22 +220,38 @@ def delete(project, keep_context):
     transfer_client = pc.get_transfer_client()
     log.debug('Base path for delete is: {}'.format(project_base_path))
     dz = '\n{}\nDANGER ZONE\n{}'.format('/' * 80, '/' * 80)
-    click.secho('{dz}\nThis will delete all data and search results in your '
-                'project.\n{tot} datasets will be deleted for {project}'
-                '{dz}'.format(dz=dz, tot=results['total'], project=project),
+    click.secho('{dz}\n'
+                'This will delete all data and search results in your '
+                'project.\n{tot} datasets will be deleted for {project}\n\n'
+                'Base Directory "{project_base_path}" will be deleted.'
+                '{dz}'
+                ''.format(dz=dz, tot=results['total'], project=project,
+                          project_base_path=project_base_path),
                 bg='red')
     click.echo('Please type the name ({}) of your project to delete it> '
                .format(project), nl=False)
     if input() != project:
         click.secho('Names do not match, aborting...')
         return 1
-    click.echo('Deleting Data...')
-    ddata = globus_sdk.DeleteData(transfer_client, pinfo['endpoint'],
-                                  recursive=True, notify_on_succeeded=False)
-    ddata.add_item(project_base_path)
-    transfer_client.submit_delete(ddata)
-    click.echo('Deleting Search Records...')
-    search_client.delete_by_query(pinfo['search_index'], search_query)
+    click.echo(f'Deleting Data: {project_base_path}')
+    try:
+        ddata = globus_sdk.DeleteData(transfer_client, pinfo['endpoint'],
+                                      recursive=True, notify_on_succeeded=False)
+        ddata.add_item(project_base_path)
+        transfer_client.submit_delete(ddata)
+    except globus_sdk.exc.TransferAPIError as tapie:
+        log.debug('Error deleting base folder', exc_info=tapie)
+        click.secho(f'Error deleting project base folder {project_base_path}: '
+                    f'{str(tapie)}', fg='red')
+
+    try:
+        click.echo(f'Deleting Search Records: {pinfo["search_index"]}')
+        log.debug(f'Search Query: {search_query}')
+        search_client.delete_by_query(pinfo['search_index'], search_query)
+    except globus_sdk.exc.SearchAPIError as sapie:
+        log.debug('Error deleting test data', exc_info=sapie)
+        click.secho(f'Error deleting search data {pinfo["search_index"]}: '
+                    f'{str(sapie)}', fg='red')
     if keep_context:
         click.secho('Keeping now empty pilot project {}'.format(project),
                     fg='blue')
