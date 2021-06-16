@@ -81,23 +81,21 @@ class Context(config.ConfigSection):
     def get_context(self, context=None):
         return self.load_option(context or self.current, section='contexts')
 
+    def update_context(self, new_context_info, context=None):
+        nci_ks = set(new_context_info.keys())
+        key_diff = nci_ks.difference(set(DEFAULT_PILOT_CONTEXT.keys()))
+        if key_diff:
+            raise exc.PilotContextException(f'Invalid context keys set: {key_diff}')
+        ctx_name = context or self.current
+        ctx = self.get_context(ctx_name)
+        ctx.update(new_context_info)
+        self.save_option(ctx_name, ctx, section='contexts')
+
     def set_context(self, context):
         if self.current == context:
             return
-        try:
-            self.current = context
-            self.update()
-        except globus_sdk.exc.SearchAPIError as sapie:
-            if sapie.code == 'NotFound.Generic':
-                self.client.project.purge()
-                raise exc.PilotClientException(
-                    'No existing context data found for {}.'
-                    ''.format(self.get_value('manifest_subject')))
-            else:
-                log.debug(f'Encountered error setting context to {context}',
-                          exc_info=True)
-                raise exc.PilotClientException('Unexpected Error {}'.format(
-                                               str(sapie)))
+        self.current = context
+        self.update()
 
     def get_value(self, field, context=None):
         return self.get_context(context).get(field)
@@ -124,20 +122,17 @@ class Context(config.ConfigSection):
             sc = self.get_search_client()
             result = sc.get_subject(index, sub, result_format_version='2019-08-27')
             manifest = result.data['entries'][0]['content']
-        except Exception:
-            log.debug(f'Unknown error when fetching manifest', exc_info=True)
-            raise exc.PilotContextException(f'Failed to get context')
-        group = self.get_value('projects_group')
-        if group and update_groups_cache is True:
-            log.debug('Updating groups...')
-            subgroups = self.fetch_subgroups(group=group)
-            groups = {sg['name']: sg['id'] for sg in subgroups}
-            if groups:
-                manifest['groups'] = groups
+        except globus_sdk.exc.SearchAPIError as sapie:
+            if sapie.code == 'NotFound.Generic':
+                self.client.project.purge()
+                raise exc.NoManifestException(
+                    'No existing context data found for {}.'
+                    ''.format(self.get_value('manifest_subject')))
             else:
-                log.warning(
-                    'No groups returned, user may not have access to '
-                    'subgroups for this group.')
+                log.debug(f'Encountered error updating context',
+                          exc_info=True)
+                raise exc.PilotClientException('Unexpected Error {}'.format(
+                    str(sapie)))
         if dry_run is False:
             log.debug('Writing fresh context to config.')
             cfg = self.config.load()

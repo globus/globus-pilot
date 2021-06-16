@@ -2,12 +2,14 @@ import logging
 import uuid
 import sys
 import click
+from slugify import slugify
 
 from fair_research_login import ScopesMismatch
 
 from pilot import commands, exc
 from pilot.commands.project.project import project_command
 from pilot.context import DEFAULT_PROJECTS_CACHE_TIMEOUT
+from pilot.commands import input_validation
 
 log = logging.getLogger(__name__)
 
@@ -71,8 +73,14 @@ def set_index(ctx, index_name):
             click.secho('Unable to find index {}'.format(index_name))
             sys.exit(2)
     pc.context.set_context(index_name)
-    log.debug('Updating index...')
-    pc.context.update()
+    try:
+        log.debug('Updating index...')
+        pc.context.update()
+    except exc.NoManifestException:
+        click.secho(f'Pilot has not been setup for this index. Run '
+                    f'"pilot index setup" to do so.', fg='red')
+        sys.exit(3)
+
     # If there is only one project, automatically set pilot to that one
     if len(pc.project.load_all()) == 1:
         projects = pc.project.load_all()
@@ -121,6 +129,44 @@ def info(index=None):
     output = '\n'.join([fmt.format(*i) for i in info.items()])
     click.echo(output)
     click.echo()
+
+
+@index_command.command(help='Setup pilot on a search index')
+def setup():
+    PROJECT_QUERIES = {
+        'projects_endpoint': {
+            'prompt': 'Set a Globus UUID where your data should be stored.',
+            'default': '',
+            'help': 'visit "https://app.globus.org/file-manager/collections" '
+                    'to find Globus endpoint to store your data.',
+            'validation': [input_validation.validate_is_uuid,
+                           input_validation.validate_is_globus_endpoint],
+        },
+        'projects_base_path': {
+            'prompt': 'Pick a base path.',
+            'default': '/',
+            'help': 'All data will be saved under this directory',
+            'validation': [input_validation.validate_no_spaces],
+        },
+        'projects_group': {
+            'prompt': 'Pick a Globus Group to secure Globus Search records',
+            'default': 'public',
+            'help': 'The group determines who can view records in search. People '
+                    'not in this group will not see records in Globus Search. "public" '
+                    'allows anyone to see these records.',
+            'validation': [input_validation.validate_is_valid_globus_group],
+        },
+    }
+    pc = commands.get_pilot_client()
+    order = ['projects_endpoint', 'projects_base_path', 'projects_group']
+
+    iv = input_validation.InputValidator(queries=PROJECT_QUERIES, order=order)
+    new_ctx = iv.ask_all()
+    pc.context.update_context(new_ctx)
+    pc.context.push()
+    click.secho('Your index has been setup successfully. Now see `pilot project add`.',
+                fg='green')
+    return
 
 
 @index_command.command(help='Update a context')

@@ -34,14 +34,6 @@ PROJECT_QUERIES = {
                 'project does, at a glance',
         'validation': [],
     },
-    'group': {
-        'prompt': '',
-        'groups': [],
-        'default': '',
-        'help': 'The group determines who has read/write access to files, '
-                'and who can view records in search',
-        'validation': [input_validation.validate_project_group],
-    },
 }
 
 
@@ -112,18 +104,7 @@ def set_command(project):
 @project_command.command(help='Add a new project')
 def add():
     pc = commands.get_pilot_client()
-    order = ['title', 'short_name', 'description', 'group']
-
-    if pc.project.load_groups():
-        PROJECT_QUERIES['group']['groups'] = list(pc.project.load_groups())
-        PROJECT_QUERIES['group']['prompt'] = (
-            'Available Groups: {}\nSet your group'
-            ''.format(', '.join(PROJECT_QUERIES['group']['groups']))
-        )
-    else:
-        PROJECT_QUERIES['group']['validation'] = (
-            input_validation.validate_is_uuid
-        )
+    order = ['title', 'short_name', 'description']
     base_path = pc.context.get_value('projects_base_path')
     PROJECT_QUERIES['short_name']['prompt'] = \
         PROJECT_QUERIES['short_name']['prompt'].format(base_path)
@@ -138,7 +119,7 @@ def add():
             pc.context.get_value('projects_default_resource_server')}
     )
     project['endpoint'] = pc.context.get_value('projects_endpoint')
-    project['group'] = pc.project.load_groups().get(project['group'], 'public')
+    project['group'] = pc.context.get_value('projects_group')
     short_name = project.pop('short_name')
     project['base_path'] = os.path.join(base_path, short_name)
 
