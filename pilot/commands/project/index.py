@@ -133,6 +133,12 @@ def info(index=None):
 
 @index_command.command(help='Setup pilot on a search index')
 def setup():
+    """Setup a brand new pilot config for a new index.
+
+    NOTE: Paths with tilde '~' DO NOT WORK. These cause problems for resolving
+    paths that look like /~/foo/bar, which sometimes translate as ~/foo/bar
+    instead. These are disabled to prevent that from happening.
+    """
     PROJECT_QUERIES = {
         'projects_endpoint': {
             'prompt': 'Set a Globus UUID where your data should be stored.',
@@ -146,7 +152,9 @@ def setup():
             'prompt': 'Pick a base path.',
             'default': '/',
             'help': 'All data will be saved under this directory',
-            'validation': [input_validation.validate_no_spaces],
+            'validation': [input_validation.validate_no_spaces,
+                           input_validation.validate_absolute_path,
+                           input_validation.validate_no_tilde],
         },
         'projects_group': {
             'prompt': 'Pick a Globus Group to secure Globus Search records',

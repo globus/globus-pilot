@@ -1,4 +1,5 @@
 import sys
+import os
 import uuid
 import logging
 import click
@@ -61,6 +62,16 @@ class InputValidator:
 def validate_no_spaces(v, string):
     if ' ' in string:
         raise exc.PilotValidator(f'"{string}" cannot contain spaces')
+
+
+def validate_absolute_path(v, string):
+    if not os.path.isabs(string):
+        raise exc.PilotValidator(f'Path must be absolute')
+
+
+def validate_no_tilde(v, string):
+    if '~' in string:
+        raise exc.PilotValidator(f'No "~" allowed in path')
 
 
 def validate_project_title_unique(v, title):
