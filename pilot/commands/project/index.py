@@ -158,6 +158,12 @@ def setup():
         },
     }
     pc = commands.get_pilot_client()
+    projects = pc.project.load_all().keys()
+    if projects:
+        click.secho(
+            f'Index is already setup with the following projects: {projects}. '
+            f'Please delete them before setting up your index.', fg='red')
+        return
     order = ['projects_endpoint', 'projects_base_path', 'projects_group']
 
     iv = input_validation.InputValidator(queries=PROJECT_QUERIES, order=order)
