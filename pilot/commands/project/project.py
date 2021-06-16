@@ -217,7 +217,8 @@ def delete(project, keep_context):
     click.echo(f'Deleting Data: {project_base_path}')
     try:
         ddata = globus_sdk.DeleteData(transfer_client, pinfo['endpoint'],
-                                      recursive=True, notify_on_succeeded=False)
+                                      recursive=True,
+                                      notify_on_succeeded=False)
         ddata.add_item(project_base_path)
         transfer_client.submit_delete(ddata)
     except globus_sdk.exc.TransferAPIError as tapie:

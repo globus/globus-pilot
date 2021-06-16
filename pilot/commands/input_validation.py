@@ -66,12 +66,12 @@ def validate_no_spaces(v, string):
 
 def validate_absolute_path(v, string):
     if not os.path.isabs(string):
-        raise exc.PilotValidator(f'Path must be absolute')
+        raise exc.PilotValidator('Path must be absolute')
 
 
 def validate_no_tilde(v, string):
     if '~' in string:
-        raise exc.PilotValidator(f'No "~" allowed in path')
+        raise exc.PilotValidator('No "~" allowed in path')
 
 
 def validate_project_title_unique(v, title):
@@ -130,8 +130,9 @@ def validate_is_globus_endpoint(v, entity):
         tc.get_endpoint(entity)
     except globus_sdk.exc.TransferAPIError:
         log.debug(f'Failed to fetch endpoint {entity}', exc_info=True)
-        raise exc.PilotValidator(f'Failed to get endpoint {entity}, please choose '
-                                 f'a valid Globus Endpoint') from None
+        raise exc.PilotValidator(
+            f'Failed to get endpoint {entity}, please choose '
+            'a valid Globus Endpoint') from None
 
 
 def validate_project_endpoint(v, ep):

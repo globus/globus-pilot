@@ -2,7 +2,6 @@ import logging
 import uuid
 import sys
 import click
-from slugify import slugify
 
 from fair_research_login import ScopesMismatch
 
@@ -77,8 +76,8 @@ def set_index(ctx, index_name):
         log.debug('Updating index...')
         pc.context.update()
     except exc.NoManifestException:
-        click.secho(f'Pilot has not been setup for this index. Run '
-                    f'"pilot index setup" to do so.', fg='red')
+        click.secho('Pilot has not been setup for this index. Run '
+                    '"pilot index setup" to do so.', fg='red')
         sys.exit(3)
 
     # If there is only one project, automatically set pilot to that one
@@ -159,9 +158,9 @@ def setup():
         'projects_group': {
             'prompt': 'Pick a Globus Group to secure Globus Search records',
             'default': 'public',
-            'help': 'The group determines who can view records in search. People '
-                    'not in this group will not see records in Globus Search. "public" '
-                    'allows anyone to see these records.',
+            'help': 'The group determines who can view records in search. '
+                    'People not in this group will not see records in Globus '
+                    'Search. "public" allows anyone to see these records.',
             'validation': [input_validation.validate_is_valid_globus_group],
         },
     }
@@ -178,8 +177,8 @@ def setup():
     new_ctx = iv.ask_all()
     pc.context.update_context(new_ctx)
     pc.context.push()
-    click.secho('Your index has been setup successfully. Now see `pilot project add`.',
-                fg='green')
+    click.secho('Your index has been setup successfully. Now see '
+                '`pilot project add`.', fg='green')
     return
 
 

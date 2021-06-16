@@ -85,7 +85,8 @@ class Context(config.ConfigSection):
         nci_ks = set(new_context_info.keys())
         key_diff = nci_ks.difference(set(DEFAULT_PILOT_CONTEXT.keys()))
         if key_diff:
-            raise exc.PilotContextException(f'Invalid context keys set: {key_diff}')
+            raise exc.PilotContextException(f'Invalid context keys set: '
+                                            f'{key_diff}')
         ctx_name = context or self.current
         ctx = self.get_context(ctx_name)
         ctx.update(new_context_info)
@@ -107,8 +108,8 @@ class Context(config.ConfigSection):
         try:
             sc = self.client.get_search_client()
         except Exception:
-            log.debug(f'Failed to get authenticated search client, '
-                      f'fetching unauthenticated one instead.', exc_info=True)
+            log.debug('Failed to get authenticated search client, '
+                      'fetching unauthenticated one instead.', exc_info=True)
             sc = globus_sdk.SearchClient()
         return sc
 
@@ -120,7 +121,8 @@ class Context(config.ConfigSection):
         log.debug('Fetching manifest {} from index {}'.format(sub, index))
         try:
             sc = self.get_search_client()
-            result = sc.get_subject(index, sub, result_format_version='2019-08-27')
+            result = sc.get_subject(index, sub,
+                                    result_format_version='2019-08-27')
             manifest = result.data['entries'][0]['content']
         except globus_sdk.exc.SearchAPIError as sapie:
             if sapie.code == 'NotFound.Generic':
@@ -129,7 +131,7 @@ class Context(config.ConfigSection):
                     'No existing context data found for {}.'
                     ''.format(self.get_value('manifest_subject')))
             else:
-                log.debug(f'Encountered error updating context',
+                log.debug('Encountered error updating context',
                           exc_info=True)
                 raise exc.PilotClientException('Unexpected Error {}'.format(
                     str(sapie)))

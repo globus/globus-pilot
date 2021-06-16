@@ -95,7 +95,8 @@ class PilotClient(NativeClient):
         self.config_file = os.path.expanduser(self.config_file)
         log.debug(f'Set config to {self.config_file}')
         self.config = config.Config(self.config_file)
-        self.context = context.Context(self, config=self.config, index_uuid=index_uuid)
+        self.context = context.Context(self, config=self.config,
+                                       index_uuid=index_uuid)
         default_scopes = self.context.get_value('scopes')
         default_scopes = default_scopes or self.DEFAULT_SCOPES
 
