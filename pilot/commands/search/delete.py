@@ -76,10 +76,10 @@ def delete_command(path, entry_id, subject, dry_run, data_only,
             click.echo('The Directory {} has been removed'.format(path))
             return
         if not metadata_only:
-            click.echo('Removing data... ')
+            click.echo(f'Removing {path}... ')
             pc.delete(path)
         if not data_only:
-            click.echo('Removing search record...')
+            click.echo(f'Removing search record {path}...')
             pc.delete_entry(path, entry_id=entry_id, full_subject=subject)
         click.secho('{} has been deleted successfully'.format(path),
                     fg='green')
