@@ -92,7 +92,8 @@ class PilotClient(NativeClient):
         if env_conf:
             self.config_file = env_conf
             log.info(f'Pilot Config ENV overrided by {env_conf}')
-        self.config_file = os.path.expanduser(self.config_file)
+        if config_file is not None:
+            self.config_file = os.path.expanduser(self.config_file)
         log.debug(f'Set config to {self.config_file}')
         self.config = config.Config(self.config_file)
         self.context = context.Context(self, config=self.config,
