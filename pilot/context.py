@@ -178,7 +178,7 @@ class Context(config.ConfigSection):
                 else:
                     changed = [pk for pk in set(old[k]).union(set(new[k]))
                                if old[k].get(pk) != new[k].get(pk)]
-                    changed_str = [f'{old[k][c]} --> {new[k][c]}'
+                    changed_str = [f'{old[k].get(c)} --> {new[k].get(c)}'
                                    for c in changed]
                     diff['changed'][k] = dict(zip(changed, changed_str))
         return {k: v for k, v in diff.items() if v}
