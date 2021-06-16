@@ -712,6 +712,7 @@ class PilotClient(NativeClient):
         if force is False:
             self.validate_subject(sub)
         content = [{'subject': sub, 'content': content}]
+        group = group or self.get_group(project)
         gmeta = search.get_gmeta_list(content, default_visible_to=group,
                                       validate=True)
         if dry_run:
