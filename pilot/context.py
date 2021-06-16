@@ -1,4 +1,5 @@
 import time
+import copy
 import logging
 import globus_sdk
 from pilot import config, exc
@@ -12,9 +13,9 @@ DEFAULT_PROJECTS_CACHE_TIMEOUT = 60 * 60 * 24
 
 DEFAULT_PILOT_CONTEXT = {
     'client_id': 'e4d82438-00df-4dbd-ab90-b6258933c335',
-    'app_name': 'NCI Pilot 1 Dataframe Manager',
+    'app_name': 'Globus Pilot',
+    'manifest_index': None,
     'manifest_subject': 'globus://project-manifest.json',
-    'manifest_index': '889729e8-d101-417d-9817-fa9d964fdbc9',
     'scopes': [
         'profile',
         'openid',
@@ -22,13 +23,12 @@ DEFAULT_PILOT_CONTEXT = {
         'urn:globus:auth:scope:transfer.api.globus.org:all',
         'https://auth.globus.org/scopes/'
         '56ceac29-e98a-440a-a594-b41e7a084b62/all',
-        'urn:globus:auth:scope:nexus.api.globus.org:groups',
     ],
     'projects_cache_timeout': DEFAULT_PROJECTS_CACHE_TIMEOUT,
-    'projects_endpoint': 'ebf55996-33bf-11e9-9fa4-0a06afd4a22e',
-    'projects_base_path': '/projects',
-    'projects_group': '679d11e1-5c7d-11e9-8ab8-0e4a32f5e3b8',
-    'projects_default_search_index': '889729e8-d101-417d-9817-fa9d964fdbc9',
+    'projects_endpoint': '',
+    'projects_base_path': '',
+    'projects_group': '',
+    'projects_default_search_index': None,
     'projects_default_resource_server': 'petrel_https_server',
 }
 
@@ -38,19 +38,18 @@ class Context(config.ConfigSection):
     SECTION = 'context'
     DEFAULT_CONTEXT = 'candle-pilot1'
 
-    def __init__(self, client, *args, **kwargs):
+    def __init__(self, client, *args, index_uuid=None, **kwargs):
         self.client = client
+        self._current = None
         super().__init__(*args, **kwargs)
-        if not self.load_option('current'):
-            if not self.get_context(self.DEFAULT_CONTEXT):
-                log.debug('No context set and no default context!')
-                log.debug('Setting context default.')
-                self.add_context(self.DEFAULT_CONTEXT, DEFAULT_PILOT_CONTEXT)
-            self.current = self.DEFAULT_CONTEXT
+        if index_uuid:
+            display_name = self.add_context_by_uuid(index_uuid)
+            self.current = display_name
+            self.update()
 
     @property
     def current(self):
-        curr = self.load_option('current')
+        curr = self.load_option('current') or self._current
         if curr is None:
             raise exc.PilotContextException('No current context configured')
         return curr
@@ -60,37 +59,58 @@ class Context(config.ConfigSection):
         contexts = self.load_option('contexts') or {}
         ctx_names = list(contexts.keys())
         if ctx_names and value not in ctx_names and value is not None:
-            raise ValueError(f'Project must be one of: {", ".join(contexts)}')
+            raise ValueError(f'Context must be one of: {", ".join(contexts)}')
         self.save_option('current', value)
 
     def load_all(self):
         return self.config.load().get('contexts', {})
 
+    def add_context_by_uuid(self, index_uuid):
+        ctx = copy.deepcopy(DEFAULT_PILOT_CONTEXT)
+        index_info = self.get_index(index_uuid)
+        display_name = index_info['display_name']
+        ctx['manifest_index'] = index_uuid
+        self.add_context(display_name, ctx)
+        return display_name
+
     def add_context(self, name, context):
-        self.save_option(name, context, section='contexts')
+        ctx = copy.deepcopy(DEFAULT_PILOT_CONTEXT)
+        ctx.update(context)
+        self.save_option(name, ctx, section='contexts')
 
     def get_context(self, context=None):
         return self.load_option(context or self.current, section='contexts')
 
+    def update_context(self, new_context_info, context=None):
+        nci_ks = set(new_context_info.keys())
+        key_diff = nci_ks.difference(set(DEFAULT_PILOT_CONTEXT.keys()))
+        if key_diff:
+            raise exc.PilotContextException(f'Invalid context keys set: {key_diff}')
+        ctx_name = context or self.current
+        ctx = self.get_context(ctx_name)
+        ctx.update(new_context_info)
+        self.save_option(ctx_name, ctx, section='contexts')
+
     def set_context(self, context):
         if self.current == context:
             return
-        try:
-            self.current = context
-            self.update()
-        except globus_sdk.exc.SearchAPIError as sapie:
-            if sapie.code == 'NotFound.Generic':
-                self.client.project.purge()
-                raise exc.PilotClientException(
-                    'No existing context data found for {}.'
-                    ''.format(self.get_value('manifest_subject')))
-            else:
-                log.exception(sapie)
-                raise exc.PilotClientException('Unexpected Error {}'.format(
-                                               str(sapie)))
+        self.current = context
+        self.update()
 
     def get_value(self, field, context=None):
         return self.get_context(context).get(field)
+
+    def get_index(self, index_uuid):
+        return self.get_search_client().get_index(index_uuid).data
+
+    def get_search_client(self):
+        try:
+            sc = self.client.get_search_client()
+        except Exception:
+            log.debug(f'Failed to get authenticated search client, '
+                      f'fetching unauthenticated one instead.', exc_info=True)
+            sc = globus_sdk.SearchClient()
+        return sc
 
     def update(self, index=None, dry_run=False, update_groups_cache=True):
         """Update the local list of projects and groups."""
@@ -98,20 +118,21 @@ class Context(config.ConfigSection):
         sub = self.get_value('manifest_subject')
         index = index or self.get_value('manifest_index')
         log.debug('Fetching manifest {} from index {}'.format(sub, index))
-        sc = self.client.get_search_client()
-        result = sc.get_subject(index, sub, result_format_version='2017-09-01')
-        manifest = result.data['content'][0]
-        group = self.get_value('projects_group')
-        if group and update_groups_cache is True:
-            log.debug('Updating groups...')
-            subgroups = self.fetch_subgroups(group=group)
-            groups = {sg['name']: sg['id'] for sg in subgroups}
-            if groups:
-                manifest['groups'] = groups
+        try:
+            sc = self.get_search_client()
+            result = sc.get_subject(index, sub, result_format_version='2019-08-27')
+            manifest = result.data['entries'][0]['content']
+        except globus_sdk.exc.SearchAPIError as sapie:
+            if sapie.code == 'NotFound.Generic':
+                self.client.project.purge()
+                raise exc.NoManifestException(
+                    'No existing context data found for {}.'
+                    ''.format(self.get_value('manifest_subject')))
             else:
-                log.warning(
-                    'No groups returned, user may not have access to '
-                    'subgroups for this group.')
+                log.debug(f'Encountered error updating context',
+                          exc_info=True)
+                raise exc.PilotClientException('Unexpected Error {}'.format(
+                    str(sapie)))
         if dry_run is False:
             log.debug('Writing fresh context to config.')
             cfg = self.config.load()
@@ -157,7 +178,7 @@ class Context(config.ConfigSection):
                 else:
                     changed = [pk for pk in set(old[k]).union(set(new[k]))
                                if old[k].get(pk) != new[k].get(pk)]
-                    changed_str = [f'{old[k][c]} --> {new[k][c]}'
+                    changed_str = [f'{old[k].get(c)} --> {new[k].get(c)}'
                                    for c in changed]
                     diff['changed'][k] = dict(zip(changed, changed_str))
         return {k: v for k, v in diff.items() if v}

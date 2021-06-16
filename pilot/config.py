@@ -9,10 +9,10 @@ from pilot.version import __version__
 log = logging.getLogger(__name__)
 
 
-class Config():
-
+class Config:
     def __init__(self, filename):
         self.filename = filename
+        self.cfg = None
         cfg = self.load()
 
         if not cfg:
@@ -43,13 +43,21 @@ class Config():
         return False if self.get_migrator() else True
 
     def save(self, cfg):
+        if self.filename is None:
+            return
         cfg.write()
         # Set flags to 600, so only the USER can read and write.
         # This protects tokens from prying eyes on multi-user systems!
         os.chmod(self.filename, stat.S_IREAD | stat.S_IWRITE)
 
     def load(self):
-        return ConfigObj(self.filename)
+        if self.cfg:
+            return self.cfg
+        if self.filename:
+            self.cfg = ConfigObj(self.filename)
+        else:
+            self.cfg = ConfigObj()
+        return self.cfg
 
     def read_tokens(self):
         tokens = self.load().get('tokens', {})
@@ -77,11 +85,13 @@ class Config():
 
 
 class ConfigSection:
+    """A Config Section is a base object which carves out a section for some
+    object to use. It's currently used for context, profile, project, etc."""
 
     SECTION = None
 
-    def __init__(self, config_file):
-        self.config = Config(config_file)
+    def __init__(self, config):
+        self.config = config
         if not self.SECTION:
             raise NotImplementedError('SECTION must be set on Config Section '
                                       'obj')

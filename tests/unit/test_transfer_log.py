@@ -3,7 +3,7 @@ from pilot.transfer_log import TransferLog
 
 
 def test_add_transfer_log(mock_config):
-    tl = TransferLog('/tmp/pilot-log.cfg')
+    tl = TransferLog(mock_config)
     cfg = tl.config.load()
     assert cfg['transfer_log'] == {}
     assert tl.get_log() == []
@@ -15,7 +15,7 @@ def test_add_transfer_log(mock_config):
 
 
 def test_get_transfer_log(mock_config):
-    tl = TransferLog('/tmp/pilot-log.cfg')
+    tl = TransferLog(mock_config)
     gccr = GlobusTransferTaskResponse()
     tl.add_log(gccr, 'foo/bar')
 
@@ -27,7 +27,7 @@ def test_get_transfer_log(mock_config):
 
 
 def test_update_transfer_log(mock_config):
-    tl = TransferLog('/tmp/pilot-log.cfg')
+    tl = TransferLog(mock_config)
     gccr = GlobusTransferTaskResponse()
     tl.add_log(gccr, 'foo/bar')
     tl.update_log(gccr.data['task_id'], 'complete')

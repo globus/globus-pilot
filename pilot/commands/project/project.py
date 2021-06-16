@@ -34,14 +34,6 @@ PROJECT_QUERIES = {
                 'project does, at a glance',
         'validation': [],
     },
-    'group': {
-        'prompt': '',
-        'groups': [],
-        'default': '',
-        'help': 'The group determines who has read/write access to files, '
-                'and who can view records in search',
-        'validation': [input_validation.validate_project_group],
-    },
 }
 
 
@@ -112,18 +104,7 @@ def set_command(project):
 @project_command.command(help='Add a new project')
 def add():
     pc = commands.get_pilot_client()
-    order = ['title', 'short_name', 'description', 'group']
-
-    if pc.project.load_groups():
-        PROJECT_QUERIES['group']['groups'] = list(pc.project.load_groups())
-        PROJECT_QUERIES['group']['prompt'] = (
-            'Available Groups: {}\nSet your group'
-            ''.format(', '.join(PROJECT_QUERIES['group']['groups']))
-        )
-    else:
-        PROJECT_QUERIES['group']['validation'] = (
-            input_validation.validate_is_uuid
-        )
+    order = ['title', 'short_name', 'description']
     base_path = pc.context.get_value('projects_base_path')
     PROJECT_QUERIES['short_name']['prompt'] = \
         PROJECT_QUERIES['short_name']['prompt'].format(base_path)
@@ -138,7 +119,7 @@ def add():
             pc.context.get_value('projects_default_resource_server')}
     )
     project['endpoint'] = pc.context.get_value('projects_endpoint')
-    project['group'] = pc.project.load_groups().get(project['group'], 'public')
+    project['group'] = pc.context.get_value('projects_group')
     short_name = project.pop('short_name')
     project['base_path'] = os.path.join(base_path, short_name)
 
@@ -204,6 +185,7 @@ def delete(project, keep_context):
     if project not in pc.project.load_all():
         click.secho('{} is not a valid project'.format(project), fg='red')
         return 1
+    pc.project.current = project
     results = pc.search(project=project)
     pinfo = pc.project.get_info(project)
     search_query = {
@@ -219,22 +201,38 @@ def delete(project, keep_context):
     transfer_client = pc.get_transfer_client()
     log.debug('Base path for delete is: {}'.format(project_base_path))
     dz = '\n{}\nDANGER ZONE\n{}'.format('/' * 80, '/' * 80)
-    click.secho('{dz}\nThis will delete all data and search results in your '
-                'project.\n{tot} datasets will be deleted for {project}'
-                '{dz}'.format(dz=dz, tot=results['total'], project=project),
+    click.secho('{dz}\n'
+                'This will delete all data and search results in your '
+                'project.\n{tot} datasets will be deleted for {project}\n\n'
+                'Base Directory "{project_base_path}" will be deleted.'
+                '{dz}'
+                ''.format(dz=dz, tot=results['total'], project=project,
+                          project_base_path=project_base_path),
                 bg='red')
     click.echo('Please type the name ({}) of your project to delete it> '
                .format(project), nl=False)
     if input() != project:
         click.secho('Names do not match, aborting...')
         return 1
-    click.echo('Deleting Data...')
-    ddata = globus_sdk.DeleteData(transfer_client, pinfo['endpoint'],
-                                  recursive=True, notify_on_succeeded=False)
-    ddata.add_item(project_base_path)
-    transfer_client.submit_delete(ddata)
-    click.echo('Deleting Search Records...')
-    search_client.delete_by_query(pinfo['search_index'], search_query)
+    click.echo(f'Deleting Data: {project_base_path}')
+    try:
+        ddata = globus_sdk.DeleteData(transfer_client, pinfo['endpoint'],
+                                      recursive=True, notify_on_succeeded=False)
+        ddata.add_item(project_base_path)
+        transfer_client.submit_delete(ddata)
+    except globus_sdk.exc.TransferAPIError as tapie:
+        log.debug('Error deleting base folder', exc_info=tapie)
+        click.secho(f'Error deleting project base folder {project_base_path}: '
+                    f'{str(tapie)}', fg='red')
+
+    try:
+        click.echo(f'Deleting Search Records: {pinfo["search_index"]}')
+        log.debug(f'Search Query: {search_query}')
+        search_client.delete_by_query(pinfo['search_index'], search_query)
+    except globus_sdk.exc.SearchAPIError as sapie:
+        log.debug('Error deleting test data', exc_info=sapie)
+        click.secho(f'Error deleting search data {pinfo["search_index"]}: '
+                    f'{str(sapie)}', fg='red')
     if keep_context:
         click.secho('Keeping now empty pilot project {}'.format(project),
                     fg='blue')

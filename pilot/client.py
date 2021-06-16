@@ -84,13 +84,18 @@ class PilotClient(NativeClient):
     DISALLOWED_FILENAME_SYMBOLS = '.*~$%'
     DEFAULT_CONFIG = '~/.pilot1.cfg'
 
-    def __init__(self, config_file=DEFAULT_CONFIG):
-        # Config precedence: config_file --> User ENV --> DEFAULT_CONFIG
-        self.config_file = os.path.expanduser(
-            config_file or os.getenv('PILOT_CONFIG') or self.DEFAULT_CONFIG
-        )
+    def __init__(self, config_file=DEFAULT_CONFIG, index_uuid=None):
+        # Supplying config by Env is strongest and overrides all others
+        # Precedence: ENV --> __init__ Argument --> DEFAULT_CONFIG
+        self.config_file = config_file
+        env_conf = os.getenv('PILOT_CONFIG')
+        if env_conf:
+            self.config_file = env_conf
+            log.info(f'Pilot Config ENV overrided by {env_conf}')
+        self.config_file = os.path.expanduser(self.config_file)
+        log.debug(f'Set config to {self.config_file}')
         self.config = config.Config(self.config_file)
-        self.context = context.Context(self, config_file=self.config_file)
+        self.context = context.Context(self, config=self.config, index_uuid=index_uuid)
         default_scopes = self.context.get_value('scopes')
         default_scopes = default_scopes or self.DEFAULT_SCOPES
 
@@ -98,9 +103,9 @@ class PilotClient(NativeClient):
                          token_storage=self.config,
                          default_scopes=default_scopes,
                          app_name=self.context.get_value('app_name'))
-        self.project = project_module.Project(config_file=self.config_file)
-        self.profile = profile.Profile(config_file=self.config_file)
-        self.transfer_log = transfer_log.TransferLog(self.config_file)
+        self.project = project_module.Project(config=self.config)
+        self.profile = profile.Profile(config=self.config)
+        self.transfer_log = transfer_log.TransferLog(config=self.config)
 
     def login(self, *args, **kwargs):
         r"""
@@ -682,6 +687,7 @@ class PilotClient(NativeClient):
         **Parameters**
         ``path`` (*path string*)
           Path to a local resource on this project
+        ``content`` (*dict*) Full content dict to ingest
         ``group`` (*uuid string*) Globus group to use for this ingest, if
           different from the group configured for this project. Defaults to
           the group configured for this project
@@ -706,6 +712,7 @@ class PilotClient(NativeClient):
         if force is False:
             self.validate_subject(sub)
         content = [{'subject': sub, 'content': content}]
+        group = group or self.get_group(project)
         gmeta = search.get_gmeta_list(content, default_visible_to=group,
                                       validate=True)
         if dry_run:
@@ -1016,6 +1023,16 @@ class PilotClient(NativeClient):
             return_values.append(rv)
         return return_values
 
+    def get_globus_transfer_paths(self, dataframe, destination, project=None):
+        """Returns a list of tuples, with each tuple consisting of a src,
+        destination to be used as the 'transfer items' in starting a globus
+        transfer."""
+        paths = []
+        for file_path, remote_short_path in search.get_subdir_paths(dataframe):
+            rel_dest = os.path.join(destination, remote_short_path)
+            paths.append((file_path, self.get_path(rel_dest, project=project)))
+        return paths
+
     def upload_globus(self, dataframe, destination, project=None,
                       globus_args=None):
         """Upload a dataframe to a project using a Globus Transfer. A local
@@ -1034,17 +1051,14 @@ class PilotClient(NativeClient):
           https://globus-sdk-python.readthedocs.io/en/stable/clients/transfer/#globus_sdk.TransferClient.submit_transfer  # noqa
         """
         log.info('Uploading (Globus) {} to {}'.format(dataframe, destination))
-        paths = []
-        for file_path, remote_short_path in search.get_subdir_paths(dataframe):
-            rel_dest = os.path.join(destination, remote_short_path)
-            paths.append((file_path, self.get_path(rel_dest, project=project)))
         result = self.transfer_files(
             self.profile.load_option('local_endpoint'),
             self.get_endpoint(),
-            paths,
+            self.get_globus_transfer_paths(dataframe, destination,
+                                           project=project),
             **(globus_args or {})
         )
-        tl = transfer_log.TransferLog(self.config_file)
+        tl = transfer_log.TransferLog(self.config)
         dest = os.path.join(destination, os.path.basename(dataframe))
         tl.add_log(result, dest)
         return result

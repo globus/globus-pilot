@@ -35,6 +35,10 @@ class PilotContextException(Exception):
     pass
 
 
+class NoManifestException(PilotContextException):
+    pass
+
+
 class PilotInvalidProject(PilotClientException):
     pass
 

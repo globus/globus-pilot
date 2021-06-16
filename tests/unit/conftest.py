@@ -51,7 +51,7 @@ def mock_profile(mock_config):
 
 
 @pytest.fixture
-def mock_projects(mock_config):
+def mock_projects(mock_config, mock_contexts):
     cfg = mock_config.load()
     cfg['projects'] = MOCK_PROJECTS
     mock_config.save(cfg)
