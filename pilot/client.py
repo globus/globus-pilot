@@ -314,6 +314,23 @@ class PilotClient(NativeClient):
         log.debug('Failed to resolve project {}'.format(url))
         return None
 
+    def build_short_path(self, dataset, destination, project=None):
+        """
+        Given a source and destination, build the resulting short_path which
+        pilot will henceforth use to refer to the remote dataset.
+
+        NOTE: The destination may not exist on the remote endpoint. This only
+        give you a preview of what a short_path will look like after an
+        operation like ``.upload(dataset, destination)``
+        **Parameters**
+        ``dataset`` (*path string*)
+          A local path to a file or directory
+        ``destination`` (*path string*)
+          The desired remote location of the dataset.
+        """
+        sp = os.path.join(destination, os.path.basename(dataset.rstrip('/')))
+        return self.get_short_path(sp, project)
+
     def get_short_path(self, url, project=None):
         """Given a globus HTTP URL, Globus Search subject URL, Globus URL,
         full path or short_path, resolve the short_path for a given project.

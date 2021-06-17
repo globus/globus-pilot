@@ -25,6 +25,16 @@ def test_invalid_project_with_explicit_name(mock_projects):
         pc.get_index('does-not-exist')
 
 
+def test_build_short_path(mock_projects):
+    pc = PilotClient()
+    pc.project.current = 'foo-project'
+    assert pc.build_short_path('foo', '/') == 'foo'
+    assert pc.build_short_path('/foo/', '/') == 'foo'
+
+    assert pc.build_short_path('foo', 'bar') == 'bar/foo'
+    assert pc.build_short_path('/foo/', '/bar/') == 'bar/foo'
+
+
 def test_get_path(mock_projects):
     pc = PilotClient()
     pc.project.current = 'foo-project'
