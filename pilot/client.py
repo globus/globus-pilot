@@ -3,6 +3,7 @@ import time
 import globus_sdk
 import urllib
 import logging
+import pathlib
 from fair_research_login import NativeClient, LoadError, ScopesMismatch
 from pilot import (
     profile, config, globus_clients, exc, logging_cfg, context, search,
@@ -1281,6 +1282,13 @@ class PilotClient(NativeClient):
         endpoint = self.get_endpoint(project)
         full_path = self.get_path(path, project=project, relative=relative)
         app_name = self.context.get_value('app_name')
+        root = pathlib.Path(self.get_path('/', project=project))
+        full_path = pathlib.Path(full_path)
+        if recursive is True:
+            if full_path in root.parents or full_path == root:
+                raise exc.DataOutsideProject(
+                    f'{full_path}: Cannot delete project directory {root} '
+                    f'or anything above it.')
         ddata = globus_sdk.DeleteData(
             tc, endpoint, recursive=recursive, notify_on_succeeded=False,
             label='File Deletion with {}'.format(app_name))
