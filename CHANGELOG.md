@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.6.2](https://github.com/globus/globus-pilot/compare/v0.6.1...v0.6.2) (2021-06-22)
+
+
+### Bug Fixes
+
+* Destination paths not properly generated for get_globus_transfer_paths ([9568ece](https://github.com/globus/globus-pilot/commit/9568ece31f6a8d89849f520e783e36f7bc273fb6))
+* Gathering metadata for file or directory that does not exist ([3005ccb](https://github.com/globus/globus-pilot/commit/3005ccb5e96c67abad0aa1dcf83dd6e50ac7a0f1))
+
 ### [0.6.1](https://github.com/globus/globus-pilot/compare/v0.6.0...v0.6.1) (2021-06-22)
 
 
