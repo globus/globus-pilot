@@ -132,13 +132,13 @@ def test_get_short_path_invalid_urls(mock_cli):
 
 def test_get_globus_transfer_paths(mock_cli):
     paths = mock_cli.get_globus_transfer_paths(MULTI_FILE_DIR, '/')
-    destinations = [dest for src, dest in paths]
-    assert destinations == [
+    destinations = {dest for src, dest in paths}
+    assert destinations == {
          '/foo_folder/multi_file/text_metadata.txt',
          '/foo_folder/multi_file/folder/tinyimage.png',
          '/foo_folder/multi_file/folder/tsv1.tsv',
          '/foo_folder/multi_file/folder/folder2/tsv2.tsv',
-    ]
+    }
 
 
 def test_get_globus_transfer_paths_trailing_slash(mock_cli):
@@ -146,13 +146,13 @@ def test_get_globus_transfer_paths_trailing_slash(mock_cli):
     # the 'multi_file' part of the destination path would be omitted
     dataframe = MULTI_FILE_DIR.rstrip('/') + '/'
     paths = mock_cli.get_globus_transfer_paths(dataframe, '/')
-    destinations = [dest for src, dest in paths]
-    assert destinations == [
+    destinations = {dest for src, dest in paths}
+    assert destinations == {
          '/foo_folder/multi_file/text_metadata.txt',
          '/foo_folder/multi_file/folder/tinyimage.png',
          '/foo_folder/multi_file/folder/tsv1.tsv',
          '/foo_folder/multi_file/folder/folder2/tsv2.tsv',
-    ]
+    }
 
 
 def test_resolve_project(mock_cli, mock_paths):
