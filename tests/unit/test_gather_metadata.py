@@ -1,3 +1,6 @@
+import pytest
+import pilot.exc
+
 from tests.unit.mocks import MULTI_FILE_DIR
 
 
@@ -17,6 +20,11 @@ def test_gather_metadata(mock_cli):
     urls = [f['url'] for f in metadata['files']]
     for url in urls:
         assert url in expected_urls
+
+
+def test_gather_metadata_file_does_not_exist(mock_cli):
+    with pytest.raises(pilot.exc.FileOrFolderDoesNotExist):
+        mock_cli.gather_metadata('foo/', '/')
 
 
 def test_gather_metadata_with_trailing_slash(mock_cli):

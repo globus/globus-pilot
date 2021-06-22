@@ -239,6 +239,7 @@ class PilotClient(NativeClient):
         return self.project.get_info(project)['search_index']
 
     def get_valid_dataframe(self, dataframe):
+        dataframe = os.path.abspath(dataframe)
         if not dataframe:
             raise exc.InvalidDataframeName(fmt=[dataframe])
         if not isinstance(dataframe, str):
@@ -246,7 +247,9 @@ class PilotClient(NativeClient):
         if any([dataframe.startswith(s)
                for s in list(self.DISALLOWED_FILENAME_SYMBOLS)]):
             raise exc.InvalidDataframeName(fmt=[dataframe])
-        return os.path.abspath(dataframe)
+        if not os.path.exists(dataframe):
+            raise exc.FileOrFolderDoesNotExist(dataframe)
+        return dataframe
 
     def resolve_endpoint(self, url):
         """

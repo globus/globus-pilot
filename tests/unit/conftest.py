@@ -114,6 +114,12 @@ def mock_multi_file_result(mock_search_results):
 
 
 @pytest.fixture
+def mock_os_file_exists(monkeypatch):
+    setattr(os.path, 'exists', Mock(return_value=True))
+    return os.path.exists
+
+
+@pytest.fixture
 def mock_search_result(mock_search_results):
     return mock_search_results['gmeta'][0]
 

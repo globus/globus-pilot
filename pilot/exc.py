@@ -23,6 +23,10 @@ class PilotClientException(Exception):
     pass
 
 
+class FileOrFolderDoesNotExist(Exception):
+    pass
+
+
 class InvalidProject(PilotClientException):
     pass
 
