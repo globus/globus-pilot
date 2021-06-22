@@ -130,6 +130,7 @@ def mock_transfer_client(monkeypatch, mock_transfer_data):
     tc = Mock()
     monkeypatch.setattr(globus_sdk, 'TransferClient', Mock(return_value=tc))
     tc.submit_transfer.return_value = GlobusTransferTaskResponse()
+    monkeypatch.setattr(globus_sdk, 'DeleteData', Mock())
     return tc
 
 

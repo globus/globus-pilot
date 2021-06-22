@@ -199,3 +199,25 @@ def test_delete_entry_no_result(monkeypatch, mock_cli_basic):
     mock_cli_basic.get_full_search_entry = Mock(return_value=None)
     with pytest.raises(exc.RecordDoesNotExist):
         mock_cli_basic.delete_entry('foo', 'bar')
+
+
+def test_delete_file(mock_cli_basic, mock_transfer_client):
+    mock_cli_basic.delete('foo.txt')
+    assert mock_transfer_client.submit_delete.called
+
+
+def test_delete_multifile_entry(mock_cli_basic, mock_transfer_client):
+    mock_cli_basic.delete('foo/', recursive=True)
+    assert mock_transfer_client.submit_delete.called
+
+
+def test_delete_will_not_delete_base_dir(mock_cli_basic,
+                                         mock_transfer_client):
+    with pytest.raises(exc.DataOutsideProject):
+        mock_cli_basic.delete('/', recursive=True)
+
+
+def test_delete_will_not_delete_above_base_dir(mock_cli_basic,
+                                               mock_transfer_client):
+    with pytest.raises(exc.DataOutsideProject):
+        mock_cli_basic.delete('/', recursive=True, relative=False)

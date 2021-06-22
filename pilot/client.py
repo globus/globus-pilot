@@ -3,6 +3,7 @@ import time
 import globus_sdk
 import urllib
 import logging
+import pathlib
 from fair_research_login import NativeClient, LoadError, ScopesMismatch
 from pilot import (
     profile, config, globus_clients, exc, logging_cfg, context, search,
@@ -851,11 +852,13 @@ class PilotClient(NativeClient):
           The project to use as the base path. Defaults to current project
         **Examples**
         """
-        log.info('Gathering metadata on file {}'.format(dataframe))
-        short_path = os.path.join(destination, os.path.basename(dataframe))
+        dframe = self.get_valid_dataframe(dataframe)
+        log.info(f'Gathering metadata on file {dataframe}')
+        short_path = self.build_short_path(dframe, destination,
+                                           project=project)
         url = self.get_globus_http_url(short_path, project=project)
         new_metadata = search.scrape_metadata(
-            dataframe, url, self.profile, self.project.current,
+            dframe, url, self.profile, self.project.current,
             skip_analysis=skip_analysis
         )
         if foreign_keys:
@@ -930,7 +933,7 @@ class PilotClient(NativeClient):
                 raise exc.DirectoryDoesNotExist(fmt=[destination]) from None
             else:
                 raise exc.GlobusTransferError(tapie.message) from None
-        short_path = os.path.join(destination, os.path.basename(dframe))
+        short_path = self.build_short_path(dframe, destination)
         subject = self.get_subject_url(short_path)
         # Get a list of all entries to check if the new record already exists
         prev_candidates = self.list_entries()
@@ -1281,6 +1284,13 @@ class PilotClient(NativeClient):
         endpoint = self.get_endpoint(project)
         full_path = self.get_path(path, project=project, relative=relative)
         app_name = self.context.get_value('app_name')
+        root = pathlib.Path(self.get_path('/', project=project))
+        full_path = pathlib.Path(full_path)
+        if recursive is True:
+            if full_path in root.parents or full_path == root:
+                raise exc.DataOutsideProject(
+                    f'{full_path}: Cannot delete project directory {root} '
+                    f'or anything above it.')
         ddata = globus_sdk.DeleteData(
             tc, endpoint, recursive=recursive, notify_on_succeeded=False,
             label='File Deletion with {}'.format(app_name))

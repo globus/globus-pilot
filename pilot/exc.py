@@ -31,6 +31,10 @@ class SubjectOutsideProject(PilotClientException):
     pass
 
 
+class DataOutsideProject(PilotClientException):
+    pass
+
+
 class PilotContextException(Exception):
     pass
 
