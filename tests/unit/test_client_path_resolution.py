@@ -3,7 +3,7 @@ from urllib.parse import urlparse
 from pilot.client import PilotClient
 from pilot.exc import PilotInvalidProject
 
-from tests.unit.mocks import MOCK_PROJECTS
+from tests.unit.mocks import MOCK_PROJECTS, MULTI_FILE_DIR
 
 
 def test_get_index(mock_projects):
@@ -128,6 +128,31 @@ def test_get_short_path_invalid_urls(mock_cli):
     for i in invalid:
         with pytest.raises(PilotInvalidProject):
             mock_cli.get_short_path(i)
+
+
+def test_get_globus_transfer_paths(mock_cli):
+    paths = mock_cli.get_globus_transfer_paths(MULTI_FILE_DIR, '/')
+    destinations = [dest for src, dest in paths]
+    assert destinations == [
+         '/foo_folder/multi_file/text_metadata.txt',
+         '/foo_folder/multi_file/folder/tinyimage.png',
+         '/foo_folder/multi_file/folder/tsv1.tsv',
+         '/foo_folder/multi_file/folder/folder2/tsv2.tsv',
+    ]
+
+
+def test_get_globus_transfer_paths_trailing_slash(mock_cli):
+    # Files with a trailing slash previously caused problems,
+    # the 'multi_file' part of the destination path would be omitted
+    dataframe = MULTI_FILE_DIR.rstrip('/') + '/'
+    paths = mock_cli.get_globus_transfer_paths(dataframe, '/')
+    destinations = [dest for src, dest in paths]
+    assert destinations == [
+         '/foo_folder/multi_file/text_metadata.txt',
+         '/foo_folder/multi_file/folder/tinyimage.png',
+         '/foo_folder/multi_file/folder/tsv1.tsv',
+         '/foo_folder/multi_file/folder/folder2/tsv2.tsv',
+    ]
 
 
 def test_resolve_project(mock_cli, mock_paths):

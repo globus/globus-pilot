@@ -1052,8 +1052,9 @@ class PilotClient(NativeClient):
         """Returns a list of tuples, with each tuple consisting of a src,
         destination to be used as the 'transfer items' in starting a globus
         transfer."""
+        dframe = self.get_valid_dataframe(dataframe)
         paths = []
-        for file_path, remote_short_path in search.get_subdir_paths(dataframe):
+        for file_path, remote_short_path in search.get_subdir_paths(dframe):
             rel_dest = os.path.join(destination, remote_short_path)
             paths.append((file_path, self.get_path(rel_dest, project=project)))
         return paths
