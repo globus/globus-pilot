@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.6.1](https://github.com/globus/globus-pilot/compare/v0.6.0...v0.6.1) (2021-06-22)
+
+
+### Bug Fixes
+
+* delete now refuses to delete base project or higher ([d44ff0c](https://github.com/globus/globus-pilot/commit/d44ff0c11d5f9116b78b848bd4244ffb0bdd27e2))
+* trailing slash causing dataset directory names to be ignored ([b55e2e9](https://github.com/globus/globus-pilot/commit/b55e2e920debe5fde85b6fe913507b00392bc041))
+
 ## [0.6.0](https://github.com/globusonline/pilot1-tools/compare/v0.5.0...v0.6.0) (2021-06-18)
 
 
