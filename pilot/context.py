@@ -124,7 +124,7 @@ class Context(config.ConfigSection):
             result = sc.get_subject(index, sub,
                                     result_format_version='2019-08-27')
             manifest = result.data['entries'][0]['content']
-        except globus_sdk.exc.SearchAPIError as sapie:
+        except globus_sdk.SearchAPIError as sapie:
             if sapie.code == 'NotFound.Generic':
                 self.client.project.purge()
                 raise exc.NoManifestException(

@@ -100,7 +100,7 @@ def validate_slug_to_path_unique(v, slug):
         if slug in existing:
             raise exc.PilotValidator('"{}" is not available, please choose '
                                      'another'.format(slug))
-    except globus_sdk.exc.TransferAPIError as tapie:
+    except globus_sdk.TransferAPIError as tapie:
         log.exception(tapie.message)
         raise exc.PilotValidator('An error occurred, please try a different '
                                  'value or notify a system administrator.')
@@ -128,7 +128,7 @@ def validate_is_globus_endpoint(v, entity):
     log.debug(f'Checking ep: {entity}')
     try:
         tc.get_endpoint(entity)
-    except globus_sdk.exc.TransferAPIError:
+    except globus_sdk.TransferAPIError:
         log.debug(f'Failed to fetch endpoint {entity}', exc_info=True)
         raise exc.PilotValidator(
             f'Failed to get endpoint {entity}, please choose '

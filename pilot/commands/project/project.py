@@ -84,7 +84,7 @@ def update(dry_run, update_groups_cache):
                 click.echo('\t{}:'.format(change_type))
                 for name, value in items.items():
                     click.echo('\t\t{} -> {}'.format(name, value))
-    except globus_sdk.exc.SearchAPIError as sapie:
+    except globus_sdk.SearchAPIError as sapie:
         click.secho(str(sapie), fg='red')
         click.secho('You can create the manifest for this index with `pilot '
                     'context push`', fg='blue')
@@ -157,7 +157,7 @@ def info(project=None):
         tc = pc.get_transfer_client()
         ep = tc.get_endpoint(info['endpoint']).data
         ep_name = ep['display_name'] or ep['canonical_name'] or ep_name
-    except globus_sdk.exc.TransferAPIError:
+    except globus_sdk.TransferAPIError:
         click.echo('Failed to lookup endpoint {}, please ensure it is active.'
                    .format(info['endpoint']))
 
@@ -221,7 +221,7 @@ def delete(project, keep_context):
                                       notify_on_succeeded=False)
         ddata.add_item(project_base_path)
         transfer_client.submit_delete(ddata)
-    except globus_sdk.exc.TransferAPIError as tapie:
+    except globus_sdk.TransferAPIError as tapie:
         log.debug('Error deleting base folder', exc_info=tapie)
         click.secho(f'Error deleting project base folder {project_base_path}: '
                     f'{str(tapie)}', fg='red')
@@ -230,7 +230,7 @@ def delete(project, keep_context):
         click.echo(f'Deleting Search Records: {pinfo["search_index"]}')
         log.debug(f'Search Query: {search_query}')
         search_client.delete_by_query(pinfo['search_index'], search_query)
-    except globus_sdk.exc.SearchAPIError as sapie:
+    except globus_sdk.SearchAPIError as sapie:
         log.debug('Error deleting test data', exc_info=sapie)
         click.secho(f'Error deleting search data {pinfo["search_index"]}: '
                     f'{str(sapie)}', fg='red')

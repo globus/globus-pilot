@@ -11,6 +11,6 @@ def test_local_endpoint():
     tc = pc.get_transfer_client()
     try:
         tc.operation_ls(pc.profile.load_option('local_endpoint'))
-    except globus_sdk.exc.TransferAPIError as tapie:
+    except globus_sdk.TransferAPIError as tapie:
         log.exception(tapie)
         raise pilot.exc.LocalEndpointUnresponsive(fmt=[tapie.message])

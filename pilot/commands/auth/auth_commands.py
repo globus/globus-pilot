@@ -122,7 +122,7 @@ def profile_command(interactive, local_endpoint):
             pc.profile.save_option('local_endpoint_path', matchd['path'])
             pc.profile.save_option('local_endpoint_name', name)
             click.secho('Your local endpoint has been set!', fg='green')
-        except globus_sdk.exc.TransferAPIError as tapie:
+        except globus_sdk.TransferAPIError as tapie:
             click.secho('Unable to access endpoint, please choose a path where'
                         ' you have read/write access: {}'
                         ''.format(tapie.message), fg='red')
