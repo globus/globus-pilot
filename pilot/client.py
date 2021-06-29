@@ -684,7 +684,7 @@ class PilotClient(NativeClient):
         try:
             return sc.get_subject(self.get_index(project), subject,
                                   result_format_version='2017-09-01')
-        except globus_sdk.exc.SearchAPIError as sapie:
+        except globus_sdk.SearchAPIError as sapie:
             if sapie.code == 'NotFound.Generic' and resolve_collections:
                 ent = search_discovery.get_sub_in_collection(
                     subject, self.list_entries(), precise=precise
@@ -931,7 +931,7 @@ class PilotClient(NativeClient):
         dframe = self.get_valid_dataframe(dataframe)
         try:
             self.ls(destination)
-        except globus_sdk.exc.TransferAPIError as tapie:
+        except globus_sdk.TransferAPIError as tapie:
             if tapie.code == 'ClientError.NotFound':
                 raise exc.DirectoryDoesNotExist(fmt=[destination]) from None
             else:

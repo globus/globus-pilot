@@ -39,7 +39,7 @@ def cli(ctx):
                                 '"pilot project update"'
                                 ' to get the newest changes.', fg='yellow')
                 log.debug('Update was successful.')
-            except globus_sdk.exc.SearchAPIError as sapie:
+            except globus_sdk.SearchAPIError as sapie:
                 if not sapie.code == 'NotFound.Generic':
                     log.error('This error is unexpected!')
                     log.exception(sapie)

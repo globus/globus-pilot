@@ -101,7 +101,7 @@ def test_upload_without_destination(mock_cli):
 
 def test_upload_to_nonexistant_dir(mock_cli, mock_transfer_error):
     mock_transfer_error.code = 'ClientError.NotFound'
-    mock_cli.ls = Mock(side_effect=globus_sdk.exc.TransferAPIError)
+    mock_cli.ls = Mock(side_effect=globus_sdk.TransferAPIError)
     with pytest.raises(exc.DirectoryDoesNotExist):
         mock_cli.upload(EMPTY_TEST_FILE, 'my_folder')
 
@@ -114,7 +114,7 @@ def test_upload_destination_is_record(mock_cli, mock_multi_file_result):
 
 def test_upload_unexpected_ls_error(mock_cli, mock_transfer_error):
     mock_transfer_error.code = 'UnexpectedError'
-    mock_cli.ls = Mock(side_effect=globus_sdk.exc.TransferAPIError)
+    mock_cli.ls = Mock(side_effect=globus_sdk.TransferAPIError)
     with pytest.raises(exc.GlobusTransferError):
         mock_cli.upload(EMPTY_TEST_FILE, 'my_folder')
 
