@@ -82,6 +82,8 @@ class PilotClient(NativeClient):
         'urn:globus:auth:scope:transfer.api.globus.org:all',
     ]
     GROUPS_SCOPE = 'urn:globus:auth:scope:nexus.api.globus.org:groups'
+    DEFAULT_APP_NAME = 'Globus Pilot'
+    DEFAULT_CLIENT_ID = 'e4d82438-00df-4dbd-ab90-b6258933c335'
     DISALLOWED_FILENAME_SYMBOLS = '.*~$%'
     DEFAULT_CONFIG = '~/.pilot1.cfg'
 
@@ -99,13 +101,19 @@ class PilotClient(NativeClient):
         self.config = config.Config(self.config_file)
         self.context = context.Context(self, config=self.config,
                                        index_uuid=index_uuid)
-        default_scopes = self.context.get_value('scopes')
-        default_scopes = default_scopes or self.DEFAULT_SCOPES
+        try:
+            default_scopes = self.context.get_value('scopes')
+            client_id = self.context.get_value('client_id')
+            app_name = self.context.get_value('app_name')
+        except exc.PilotContextException:
+            default_scopes = self.DEFAULT_SCOPES
+            client_id = self.DEFAULT_CLIENT_ID
+            app_name = self.DEFAULT_APP_NAME
 
-        super().__init__(client_id=self.context.get_value('client_id'),
+        super().__init__(client_id=client_id,
                          token_storage=self.config,
                          default_scopes=default_scopes,
-                         app_name=self.context.get_value('app_name'))
+                         app_name=app_name)
         self.project = project_module.Project(config=self.config)
         self.profile = profile.Profile(config=self.config)
         self.transfer_log = transfer_log.TransferLog(config=self.config)
@@ -146,7 +154,12 @@ class PilotClient(NativeClient):
     def is_logged_in(self):
         """Check if the user is logged in and tokens are active."""
         try:
-            self.load_tokens(requested_scopes=self.context.get_value('scopes'))
+            if self.context.is_set():
+                scopes = (self.context.get_value('scopes') or
+                          self.DEFAULT_SCOPES)
+            else:
+                scopes = self.DEFAULT_SCOPES
+            self.load_tokens(requested_scopes=scopes)
             return True
         except LoadError:
             return False
