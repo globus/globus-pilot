@@ -31,12 +31,21 @@ def login(refresh_tokens, force, local_server, browser):
         pc.logout()
 
     prev_info = pc.profile.load_user_info()
-    scopes = pc.context.get_value('scopes') or pc.DEFAULT_SCOPES
+    try:
+        scopes = pc.context.get_value('scopes')
+    except pilot.exc.PilotContextException:
+        scopes = pc.DEFAULT_SCOPES
     pc.login(refresh_tokens=refresh_tokens,
              no_local_server=not local_server,
              no_browser=not browser,
              force=force,
              requested_scopes=scopes)
+
+    if not pc.context.is_set():
+        click.secho('No index set, please set it with '
+                    '"pilot index set [index uuid]"', fg='blue')
+        return
+
     if not pc.project.load_all():
         log.debug('NO project info saved, updating...')
         pc.context.update_with_diff()

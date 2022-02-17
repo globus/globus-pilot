@@ -30,7 +30,7 @@ def cli(ctx):
             click.secho(f'Failed! Try removing '
                         f'{pc.config_file} and logging in '
                         f'again.', fg='red')
-    if pc.is_logged_in():
+    if pc.is_logged_in() and pc.context.is_set():
         if pc.context.is_cache_stale():
             log.debug('Cache is stale! Updating...')
             try:
@@ -53,7 +53,7 @@ def cli(ctx):
                         'and "pilot project set <myproject>" '
                         'to set your current project.', fg='yellow')
             sys.exit(exc.ExitCodes.INVALID_CLIENT_CONFIGURATION)
-    else:
+    elif not pc.is_logged_in():
         if (ctx.invoked_subcommand and
                 ctx.invoked_subcommand not in INVOKABLE_WITHOUT_LOGIN):
             click.echo('You are not logged in.')

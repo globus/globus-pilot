@@ -62,6 +62,14 @@ class Context(config.ConfigSection):
             raise ValueError(f'Context must be one of: {", ".join(contexts)}')
         self.save_option('current', value)
 
+    def is_set(self):
+        """Returns true if the context is set, false otherwise. Does not throw
+        an exception."""
+        try:
+            return bool(self.current)
+        except exc.PilotContextException:
+            return False
+
     def load_all(self):
         return self.config.load().get('contexts', {})
 
@@ -93,7 +101,7 @@ class Context(config.ConfigSection):
         self.save_option(ctx_name, ctx, section='contexts')
 
     def set_context(self, context):
-        if self.current == context:
+        if self.is_set() and self.current == context:
             return
         self.current = context
         self.update()
