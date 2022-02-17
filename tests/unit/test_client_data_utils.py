@@ -115,14 +115,14 @@ def test_get_search_entry(monkeypatch, mock_cli_basic):
     search_cli.get_subject.assert_called_with(
         'foo-search-index',
         'globus://foo-project-endpoint/foo_folder/foo',
-        result_format_version='2017-09-01',
+        query_params=dict(result_format_version='2017-09-01'),
     )
 
     class MockException(Exception):
         code = 'random_exception.generic'
 
-    monkeypatch.setattr(globus_sdk.exc, 'SearchAPIError', MockException)
-    search_cli.get_subject.side_effect = globus_sdk.exc.SearchAPIError
+    monkeypatch.setattr(globus_sdk, 'SearchAPIError', MockException)
+    search_cli.get_subject.side_effect = globus_sdk.SearchAPIError
     assert mock_cli_basic.get_search_entry('foo') is None
 
 
@@ -155,8 +155,8 @@ def test_get_search_entry_dir(monkeypatch, mock_cli_basic,
     class MockException(Exception):
         code = 'NotFound.Generic'
 
-    monkeypatch.setattr(globus_sdk.exc, 'SearchAPIError', MockException)
-    search_cli.get_subject.side_effect = globus_sdk.exc.SearchAPIError
+    monkeypatch.setattr(globus_sdk, 'SearchAPIError', MockException)
+    search_cli.get_subject.side_effect = globus_sdk.SearchAPIError
     ps_response = Mock()
     ps_response.data = mock_multi_file_result
     search_cli.post_search.return_value = ps_response

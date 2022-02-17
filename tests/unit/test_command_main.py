@@ -48,7 +48,7 @@ def test_main_error_fetching_projects(monkeypatch, mock_cli,
     is_cache_stale = Mock(return_value=True)
     monkeypatch.setattr(mock_cli.context, 'is_cache_stale', is_cache_stale)
 
-    monkeypatch.setattr(globus_sdk.exc, 'SearchAPIError',
+    monkeypatch.setattr(globus_sdk, 'SearchAPIError',
                         mock_globus_exception)
     err = Mock(side_effect=mock_globus_exception)
     monkeypatch.setattr(mock_cli.context, 'update_with_diff', err)

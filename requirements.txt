@@ -1,5 +1,6 @@
 pytz
 fair-research-login>=0.2.0
+globus-sdk<4.0.0>=3.0.0
 click>=7.0
 colorama>=0.4.1
 jsonschema>=3.2.0

@@ -161,7 +161,7 @@ def mock_globus_exception():
 
 @pytest.fixture
 def mock_transfer_error(monkeypatch, mock_globus_exception):
-    monkeypatch.setattr(globus_sdk.exc, 'TransferAPIError',
+    monkeypatch.setattr(globus_sdk, 'TransferAPIError',
                         mock_globus_exception)
     return mock_globus_exception
 

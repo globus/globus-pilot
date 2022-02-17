@@ -178,7 +178,7 @@ def pilot_code_handler(dataframe, destination, verbose):
             traceback.print_exception(*ae.original_exc_info)
         else:
             click.secho('(Use --verbose to see full error)', fg='yellow')
-    except globus_sdk.exc.TransferAPIError as tapie:
+    except globus_sdk.TransferAPIError as tapie:
         click.secho(tapie.message, fg='yellow')
 
 
@@ -239,7 +239,7 @@ def mkdir(path):
     try:
         pc.mkdir(path)
         click.secho('Created directory {}'.format(path), fg='green')
-    except globus_sdk.exc.TransferAPIError as tapie:
+    except globus_sdk.TransferAPIError as tapie:
         if tapie.code == 'ExternalError.MkdirFailed.Exists':
             click.secho('Directory already exists')
         elif 'No such file or directory' in tapie.message:

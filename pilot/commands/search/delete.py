@@ -83,7 +83,7 @@ def delete_command(path, entry_id, subject, dry_run, data_only,
             pc.delete_entry(path, entry_id=entry_id, full_subject=subject)
         click.secho('{} has been deleted successfully'.format(path),
                     fg='green')
-    except globus_sdk.exc.SearchAPIError as se:
+    except globus_sdk.SearchAPIError as se:
         if se.code == 'NotFound.Generic':
             click.secho('\n{} does not exist, or cannot be found at your '
                         'permission level.'.format(path), fg='yellow')

@@ -1,8 +1,16 @@
 import re
 import logging
+import globus_sdk.version
 from globus_sdk import AccessTokenAuthorizer, RefreshTokenAuthorizer
-from globus_sdk.base import BaseClient, slash_join
-from globus_sdk.response import GlobusResponse
+try:
+    # Globus SDK v3
+    from globus_sdk import BaseClient
+    from globus_sdk.utils import slash_join
+    from globus_sdk.response import GlobusHTTPResponse
+except ImportError:
+    # Globus SDK v2
+    from globus_sdk.base import BaseClient, slash_join
+    from globus_sdk.response import GlobusResponse as GlobusHTTPResponse
 from pilot.exc import HTTPSClientException
 from globus_sdk import exc
 import requests
@@ -14,7 +22,7 @@ log = logging.getLogger(__name__)
 RANGE = re.compile(r'^(\d+-\d+)(,\d+-\d+)*$')
 
 
-class FileContentResponse(GlobusResponse):
+class FileContentResponse(GlobusHTTPResponse):
 
     def __init__(self, response, client):
         super().__init__(response, client)
@@ -47,14 +55,16 @@ class HTTPFileClient(BaseClient):
     allowed_authorizer_types = (AccessTokenAuthorizer, RefreshTokenAuthorizer)
 
     error_class = HTTPSClientException
-    default_response_class = GlobusResponse
+    default_response_class = GlobusHTTPResponse
     file_content_response_class = FileContentResponse
+    service_name = 'http_file_client'
 
-    def __init__(self, authorizer=None, base_url='', **kwargs):
-        super().__init__(
-            self, "http_client", base_url=base_url,
-            authorizer=authorizer, **kwargs
-        )
+    def __init__(self, *args, **kwargs):
+        major, _, _ = globus_sdk.version.__version__.split('.')
+        if major == '2':
+            super().__init__(self.service_name, *args, **kwargs)
+        else:
+            super().__init__(*args, **kwargs)
 
     def get(self, path, params=None, headers=None, allow_redirects=False,
             filename=None, response_class=None, retry_401=True, range=None):
@@ -175,7 +185,7 @@ class NexusClient(BaseClient):
     outside of this client."""
     allowed_authorizer_types = (AccessTokenAuthorizer, RefreshTokenAuthorizer)
     error_class = HTTPSClientException
-    default_response_class = GlobusResponse
+    default_response_class = GlobusHTTPResponse
     file_content_response_class = FileContentResponse
 
     def __init__(self, authorizer=None, base_url='', **kwargs):

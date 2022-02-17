@@ -1,4 +1,4 @@
-from globus_sdk.exc import GlobusAPIError
+from globus_sdk import GlobusAPIError
 from enum import IntEnum
 
 
