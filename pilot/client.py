@@ -682,8 +682,9 @@ class PilotClient(NativeClient):
         else:
             subject = self.get_subject_url(path, project, relative)
         try:
+            query_params = dict(result_format_version='2017-09-01')
             return sc.get_subject(self.get_index(project), subject,
-                                  result_format_version='2017-09-01')
+                                  query_params=query_params)
         except globus_sdk.SearchAPIError as sapie:
             if sapie.code == 'NotFound.Generic' and resolve_collections:
                 ent = search_discovery.get_sub_in_collection(

@@ -115,7 +115,7 @@ def test_get_search_entry(monkeypatch, mock_cli_basic):
     search_cli.get_subject.assert_called_with(
         'foo-search-index',
         'globus://foo-project-endpoint/foo_folder/foo',
-        result_format_version='2017-09-01',
+        query_params=dict(result_format_version='2017-09-01'),
     )
 
     class MockException(Exception):

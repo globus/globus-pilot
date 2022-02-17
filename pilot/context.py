@@ -121,8 +121,8 @@ class Context(config.ConfigSection):
         log.debug('Fetching manifest {} from index {}'.format(sub, index))
         try:
             sc = self.get_search_client()
-            result = sc.get_subject(index, sub,
-                                    result_format_version='2019-08-27')
+            query_params = dict(result_format_version='2019-08-27')
+            result = sc.get_subject(index, sub, query_params=query_params)
             manifest = result.data['entries'][0]['content']
         except globus_sdk.SearchAPIError as sapie:
             if sapie.code == 'NotFound.Generic':
