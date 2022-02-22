@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.7.0](https://github.com/globus/globus-pilot/compare/v0.6.2...v0.7.0) (2022-02-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* Globus SDK v2 will no longer be supported
+
+### Bug Fixes
+
+* Fix bug on first run when pilot has no context ([0b1d6b1](https://github.com/globus/globus-pilot/commit/0b1d6b1dc48d53869b47b7ffb405b1c43e130dec))
+* Support Globus SDK v3 ([ad9cdcc](https://github.com/globus/globus-pilot/commit/ad9cdcc604ee865e0e3c05ee8a2a7381e61e4896))
+
+
+* Drop support for globus SDK v2 ([e3ca0c4](https://github.com/globus/globus-pilot/commit/e3ca0c4da362ceaff1df7f10db5323734ca4b0fa))
+
 ### [0.6.2](https://github.com/globus/globus-pilot/compare/v0.6.1...v0.6.2) (2021-06-22)
 
 
