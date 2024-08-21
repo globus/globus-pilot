@@ -18,6 +18,14 @@ Globus Pilot
 A Command Line tool for managing data in Globus Search as well as transferring corresponding data to and from a Globus Endpoint.
 
 
+Deprecation
+-----------
+
+Globus Pilot has now been retired as a method of cataloguing records in Globus Search in favor
+of new and better methods. Most search record keeping is now automated through the use of Globus
+Flows: https://gladier.readthedocs.io/en/latest/gladier_tools/publish/publishv2.html
+
+
 Installation
 ------------
 
